@@ -1,0 +1,64 @@
+/* ─── CSS Reset & Design Tokens ────────────────────────────────── */
+
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
+
+:root {
+  /* Colors */
+  --color-bg: #0a0f1c;
+  --color-surface: #0f172a;
+  --color-border: rgba(148, 163, 184, 0.1);
+  --color-text: #e2e8f0;
+  --color-text-muted: #64748b;
+  --color-primary: #10b981;
+  --color-primary-glow: rgba(16, 185, 129, 0.3);
+  --color-danger: #ef4444;
+  --color-warning: #f59e0b;
+
+  /* Typography */
+  font-family: "Inter", system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+  font-size: 16px;
+  line-height: 1.5;
+  font-weight: 400;
+
+  /* Rendering */
+  color-scheme: dark;
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+*,
+*::before,
+*::after {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  min-height: 100vh;
+  background: var(--color-bg);
+  color: var(--color-text);
+}
+
+a {
+  color: var(--color-primary);
+  text-decoration: none;
+}
+
+img {
+  max-width: 100%;
+  display: block;
+}
+
+/* ─── Selection ──────────────────────────────────────────────────── */
+
+::selection {
+  background: var(--color-primary);
+  color: var(--color-bg);
+}

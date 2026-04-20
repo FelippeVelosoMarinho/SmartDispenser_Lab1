@@ -1,0 +1,94 @@
+.status-indicator-wrapper {
+  position: relative;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  width: 140px;
+  height: 140px;
+  margin: 0 auto;
+}
+
+.status-indicator {
+  position: relative;
+  z-index: 2;
+  width: 100px;
+  height: 100px;
+  border-radius: 50%;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  transition: all 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.status-indicator.on {
+  background: radial-gradient(circle at 35% 35%, #4ade80, #16a34a);
+  box-shadow:
+    0 0 30px rgba(74, 222, 128, 0.4),
+    0 0 60px rgba(74, 222, 128, 0.2),
+    inset 0 -3px 6px rgba(0, 0, 0, 0.15);
+}
+
+.status-indicator.off {
+  background: radial-gradient(circle at 35% 35%, #64748b, #334155);
+  box-shadow:
+    0 0 15px rgba(100, 116, 139, 0.2),
+    inset 0 -3px 6px rgba(0, 0, 0, 0.2);
+}
+
+.status-indicator.loading {
+  background: radial-gradient(circle at 35% 35%, #818cf8, #4f46e5);
+  box-shadow: 0 0 25px rgba(129, 140, 248, 0.3);
+}
+
+.indicator-inner {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.indicator-icon {
+  font-size: 2rem;
+  filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.3));
+}
+
+.spinner {
+  width: 28px;
+  height: 28px;
+  border: 3px solid rgba(255, 255, 255, 0.3);
+  border-top-color: #fff;
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* Pulse ring */
+.pulse-ring {
+  position: absolute;
+  z-index: 1;
+  width: 100px;
+  height: 100px;
+  border-radius: 50%;
+  border: 2px solid transparent;
+  transition: border-color 0.3s ease;
+}
+
+.pulse-ring.active {
+  border-color: rgba(74, 222, 128, 0.3);
+  animation: pulse 2s cubic-bezier(0, 0, 0.2, 1) infinite;
+}
+
+@keyframes pulse {
+  0% {
+    transform: scale(1);
+    opacity: 1;
+  }
+  100% {
+    transform: scale(1.8);
+    opacity: 0;
+  }
+}
