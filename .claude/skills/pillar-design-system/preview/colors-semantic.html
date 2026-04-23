@@ -1,0 +1,25 @@
+<!doctype html><html><head><meta charset="utf-8"><title>Semantic states</title>
+<link rel="stylesheet" href="_preview.css">
+<script src="https://unpkg.com/@phosphor-icons/web@2.1.1"></script>
+<style>
+  body{padding:20px}
+  .row{display:grid;grid-template-columns:repeat(4,1fr);gap:10px}
+  .pill{display:flex;align-items:center;gap:10px;padding:14px 16px;border-radius:var(--radius);border:1px solid var(--border-subtle)}
+  .pill i{font-size:22px}
+  .pill .lab{font-weight:600;color:var(--ink);font-size:14px}
+  .pill .sub{font-size:11px;color:var(--ink-3);margin-top:2px;font-family:var(--font-mono)}
+  .s{background:var(--success-soft)}.s i{color:var(--success-ink)}
+  .w{background:var(--warning-soft)}.w i{color:var(--warning-ink)}
+  .d{background:var(--danger-soft)}.d i{color:var(--danger-ink)}
+  .i{background:var(--info-soft)}.i i{color:var(--primary-press)}
+  .hint{font-size:11px;color:var(--ink-3);margin-top:10px;text-align:center}
+</style></head>
+<body>
+  <div class="row">
+    <div class="pill s"><i class="ph-duotone ph-check-circle"></i><div><div class="lab">Taken</div><div class="sub">success</div></div></div>
+    <div class="pill w"><i class="ph-duotone ph-bell-ringing"></i><div><div class="lab">Due soon</div><div class="sub">warning</div></div></div>
+    <div class="pill d"><i class="ph-duotone ph-warning-octagon"></i><div><div class="lab">Missed</div><div class="sub">danger</div></div></div>
+    <div class="pill i"><i class="ph-duotone ph-info"></i><div><div class="lab">Note</div><div class="sub">info</div></div></div>
+  </div>
+  <div class="hint">every state pairs color + icon + label. never color alone.</div>
+</body></html>

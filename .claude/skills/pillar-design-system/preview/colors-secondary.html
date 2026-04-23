@@ -1,0 +1,33 @@
+<!doctype html><html><head><meta charset="utf-8"><title>Secondary + accent</title>
+<link rel="stylesheet" href="_preview.css">
+<style>
+  body{padding:20px}
+  .grid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px}
+  .sw{border-radius:var(--radius-sm);overflow:hidden;border:1px solid var(--border-subtle)}
+  .sw .color{height:56px}
+  .sw .meta{padding:8px 10px;background:var(--surface);font-family:var(--font-mono);font-size:10.5px;line-height:1.45}
+  .sw .name{color:var(--ink);font-weight:700}
+  .sw .hex{color:var(--ink-3)}
+  .section{margin-bottom:12px}
+  .section-label{font-size:10px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--ink-3);margin-bottom:6px}
+</style></head>
+<body>
+  <div class="section">
+    <div class="section-label">secondary · sage teal (the "well" state)</div>
+    <div class="grid">
+      <div class="sw"><div class="color" style="background:#E8F1F0"></div><div class="meta"><div class="name">secondary-soft</div><div class="hex">#E8F1F0</div></div></div>
+      <div class="sw"><div class="color" style="background:#5A9A98"></div><div class="meta"><div class="name">secondary</div><div class="hex">#5A9A98</div></div></div>
+      <div class="sw"><div class="color" style="background:#2E5C5A"></div><div class="meta"><div class="name">secondary-ink</div><div class="hex">#2E5C5A</div></div></div>
+      <div class="sw"><div class="color" style="background:#0F1B2D"></div><div class="meta"><div class="name">ink</div><div class="hex">#0F1B2D</div></div></div>
+    </div>
+  </div>
+  <div class="section" style="margin-top:14px">
+    <div class="section-label">accent · warm ochre (highlight moments only)</div>
+    <div class="grid">
+      <div class="sw"><div class="color" style="background:#F6ECD7"></div><div class="meta"><div class="name">accent-soft</div><div class="hex">#F6ECD7</div></div></div>
+      <div class="sw"><div class="color" style="background:#C8913A"></div><div class="meta"><div class="name">accent</div><div class="hex">#C8913A</div></div></div>
+      <div class="sw"><div class="color" style="background:#8A5F1D"></div><div class="meta"><div class="name">accent-ink</div><div class="hex">#8A5F1D</div></div></div>
+      <div class="sw"><div class="color" style="background:#FFFFFF;border:1px dashed var(--border)"></div><div class="meta"><div class="name">—</div><div class="hex">reserved</div></div></div>
+    </div>
+  </div>
+</body></html>

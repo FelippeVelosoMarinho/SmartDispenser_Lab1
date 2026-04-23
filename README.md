@@ -20,6 +20,18 @@ Este projeto utiliza uma estrutura de monorepo organizada para facilitar o desen
 
 ## 🚀 Como Iniciar (Ordem Recomendada)
 
+### Pré-requisitos
+
+Este projeto utiliza **Bun** como gerenciador de pacotes e runtime para o frontend:
+
+```bash
+# Instalar Bun (se ainda não tiver)
+curl -fsSL https://bun.sh/install | bash
+
+# Verificar instalação
+bun --version
+```
+
 ### 1. Hardware (Firmware)
 
 O cérebro do sistema. Ele precisa estar na rede para que o resto funcione.
@@ -39,8 +51,19 @@ A ponte de comunicação.
 
 A interface do usuário.
 
-1. Siga o [README do Frontend](frontend/README.md) para iniciar o servidor Vite.
-2. Abra `http://localhost:5173` no navegador.
+```bash
+# Instalar dependências (da raiz do projeto)
+bun install
+
+# Iniciar servidor de desenvolvimento
+bun run dev
+
+# OU, alternativamente:
+cd frontend
+bun run dev
+```
+
+Abra `http://localhost:5173` no navegador.
 
 ---
 

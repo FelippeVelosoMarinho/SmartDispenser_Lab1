@@ -7,13 +7,7 @@
   },
   "files": {
     "ignoreUnknown": true,
-    "ignore": [
-      "node_modules",
-      "dist",
-      "build",
-      ".moon",
-      "firmware"
-    ]
+    "ignore": ["node_modules", "dist", "build", ".moon", "firmware"]
   },
   "formatter": {
     "enabled": true,

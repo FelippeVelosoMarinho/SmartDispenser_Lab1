@@ -1,0 +1,107 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Pillar docs — Quickstart</title>
+<link rel="stylesheet" href="../../colors_and_type.css">
+<script src="https://unpkg.com/@phosphor-icons/web@2.1.1"></script>
+<style>
+  body{margin:0;background:var(--canvas);display:grid;grid-template-columns:280px 1fr 240px;min-height:100vh}
+  aside{background:var(--surface);border-right:1px solid var(--border-subtle);padding:24px 20px;position:sticky;top:0;height:100vh;overflow:auto}
+  aside .brand{display:flex;align-items:center;gap:8px;margin-bottom:24px}
+  aside .brand img{height:28px}
+  aside .search{width:100%;height:40px;border:1px solid var(--border);border-radius:10px;padding:0 12px;font:14px var(--font-sans);background:var(--surface-sunk);margin-bottom:16px}
+  aside .section{font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--ink-3);margin:16px 8px 6px}
+  aside a{display:flex;align-items:center;gap:8px;padding:7px 10px;border-radius:8px;text-decoration:none;color:var(--ink-2);font-size:14px}
+  aside a.active{background:var(--primary-soft);color:var(--primary-press);font-weight:600}
+  aside a:hover:not(.active){background:var(--surface-sunk)}
+  main{padding:40px 56px;max-width:760px;min-width:0}
+  .breadcrumb{font-size:13px;color:var(--ink-3);margin-bottom:10px}
+  h1{font-size:40px;font-weight:600;margin:0 0 8px;letter-spacing:-0.01em}
+  .lede{font-size:18px;color:var(--ink-2);max-width:62ch;margin:0 0 28px}
+  main h2{font-size:24px;font-weight:600;margin:36px 0 12px;letter-spacing:-0.01em}
+  main p{font-size:16px;line-height:1.65;color:var(--ink-2);margin:0 0 14px;max-width:64ch}
+  main ol, main ul{font-size:16px;line-height:1.7;color:var(--ink-2);padding-left:22px}
+  main li{margin-bottom:4px}
+  .callout{background:var(--secondary-soft);border-left:3px solid var(--secondary);padding:14px 18px;border-radius:8px;margin:18px 0;display:flex;gap:12px}
+  .callout i{font-size:20px;color:var(--secondary-ink);flex-shrink:0;margin-top:2px}
+  .callout .title{font-weight:600;color:var(--secondary-ink);margin-bottom:2px}
+  .callout .body{color:var(--secondary-ink);font-size:15px;line-height:1.5}
+  pre{background:#0F1B2D;color:#E8EEF5;border-radius:10px;padding:16px 18px;font:14px/1.55 var(--font-mono);overflow:auto;margin:12px 0}
+  pre .k{color:#7FB3D9}
+  pre .c{color:#64748B}
+  code{font:0.92em var(--font-mono);background:var(--surface-sunk);padding:2px 6px;border-radius:4px}
+  nav.toc{padding:40px 24px;position:sticky;top:0;height:100vh;font-size:13px}
+  nav.toc .label{font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--ink-3);margin-bottom:8px}
+  nav.toc a{display:block;color:var(--ink-3);text-decoration:none;padding:4px 0;border-left:2px solid var(--border-subtle);padding-left:12px}
+  nav.toc a.on{color:var(--primary);border-color:var(--primary);font-weight:600}
+  .step-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin:16px 0}
+  .step{background:var(--surface);border:1px solid var(--border-subtle);border-radius:12px;padding:14px 16px}
+  .step .n{font-family:"Atkinson Hyperlegible",sans-serif;font-weight:700;color:var(--primary);font-size:13px;margin-bottom:4px}
+  .step .t{font-size:14px;font-weight:600}
+  .step .s{font-size:13px;color:var(--ink-3);margin-top:4px}
+</style>
+</head>
+<body>
+
+<aside>
+  <div class="brand"><img src="../../assets/mark-pillar.svg"><span style="font-weight:700;font-size:17px">Pillar</span><span style="font-size:12px;color:var(--ink-3);margin-left:auto">docs</span></div>
+  <input class="search" placeholder="Search…">
+  <div class="section">Getting started</div>
+  <a href="#"><i class="ph ph-book-open"/>Overview</a>
+  <a href="#" class="active"><i class="ph-fill ph-rocket"/>Quickstart</a>
+  <a href="#"><i class="ph ph-wrench"/>Hardware build</a>
+  <a href="#"><i class="ph ph-download"/>Flashing firmware</a>
+  <div class="section">Using Pillar</div>
+  <a href="#"><i class="ph ph-pill"/>Adding a medication</a>
+  <a href="#"><i class="ph ph-clock"/>Schedules</a>
+  <a href="#"><i class="ph ph-heart-straight"/>Sharing with caregivers</a>
+  <div class="section">Developing</div>
+  <a href="#"><i class="ph ph-code"/>Architecture</a>
+  <a href="#"><i class="ph ph-terminal-window"/>Local dev</a>
+  <a href="#"><i class="ph ph-plug"/>API reference</a>
+</aside>
+
+<main>
+  <div class="breadcrumb">Docs · Getting started · Quickstart</div>
+  <h1>Quickstart</h1>
+  <p class="lede">Get your Pillar dispenser talking to the companion app in about twenty minutes. You'll need a flashed device, a Wi-Fi network, and a phone.</p>
+
+  <div class="callout"><i class="ph-duotone ph-info"></i><div><div class="title">Before you begin</div><div class="body">If you haven't flashed firmware yet, start with <a href="#" style="color:inherit;font-weight:600">Flashing firmware</a> and come back here. This guide assumes a device on first boot.</div></div></div>
+
+  <h2>1. Power on the device</h2>
+  <p>Plug Pillar into its power adapter. The top ring breathes blue for ten seconds while it boots, then glows a steady blue. That's your signal to continue.</p>
+
+  <h2>2. Open the companion app</h2>
+  <p>On your phone, open Pillar and tap <strong>Connect a dispenser</strong>. You'll see a six-digit code on your device.</p>
+  <div class="step-grid">
+    <div class="step"><div class="n">STEP A</div><div class="t">Tap Connect</div><div class="s">Bottom of the Setup screen.</div></div>
+    <div class="step"><div class="n">STEP B</div><div class="t">Enter the code</div><div class="s">The six digits on the device screen.</div></div>
+  </div>
+
+  <h2>3. Join your Wi-Fi</h2>
+  <p>Pillar prefers 2.4&nbsp;GHz networks for range. Pick yours from the list and enter the password. Connection usually takes under 30 seconds.</p>
+
+  <pre><span class="c"># Optional: connect over SSH for debugging</span>
+<span class="k">ssh</span> pillar@pillar.local
+<span class="k">sudo</span> journalctl -u pillar-dispenser -f</pre>
+
+  <h2>4. Add your first medication</h2>
+  <p>Back in the app, tap <strong>Add medication</strong>. Enter the name, dose, and schedule. Pillar will ask you to pour the pills into a chamber and confirm the count.</p>
+
+  <div class="callout" style="background:var(--warning-soft);border-color:var(--warning)"><i class="ph-duotone ph-warning-octagon" style="color:var(--warning-ink)"/><div><div class="title" style="color:var(--warning-ink)">Double-check the count</div><div class="body" style="color:var(--warning-ink)">Pillar trusts what you tell it. If the pill count is off, the refill reminder will be off too.</div></div></div>
+
+  <h2>That's it.</h2>
+  <p>Your first dose will dispense at the scheduled time. If you want to pull a reading from the sensors, see <a href="#">API reference</a>.</p>
+</main>
+
+<nav class="toc">
+  <div class="label">On this page</div>
+  <a href="#" class="on">Power on the device</a>
+  <a href="#">Open the companion app</a>
+  <a href="#">Join your Wi-Fi</a>
+  <a href="#">Add your first medication</a>
+</nav>
+
+</body>
+</html>

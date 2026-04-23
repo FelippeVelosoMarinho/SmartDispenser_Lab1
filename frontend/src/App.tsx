@@ -63,11 +63,7 @@ function App() {
               onClick={() => toggle("on")}
               disabled={isToggling || isLoading || !hardwareReachable}
             >
-              {isToggling && !isOn ? (
-                <span className="btn-spinner" />
-              ) : (
-                "Ligar"
-              )}
+              {isToggling && !isOn ? <span className="btn-spinner" /> : "Ligar"}
             </button>
             <button
               className={`btn btn-off ${!isOn && !isLoading ? "active" : ""}`}

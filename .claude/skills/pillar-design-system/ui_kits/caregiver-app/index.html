@@ -1,0 +1,67 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Pillar — Caregiver app</title>
+<link rel="stylesheet" href="../../colors_and_type.css">
+<script src="https://unpkg.com/@phosphor-icons/web@2.1.1"></script>
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+<style>body{margin:0;min-height:100vh;display:flex;align-items:center;justify-content:center;padding:40px 20px;background:#EEF2F6}</style>
+</head>
+<body>
+<div id="root"></div>
+<script type="text/babel" src="../companion-app/Phone.jsx"></script>
+<script type="text/babel">
+function CareScreen() {
+  const person = { name: 'Alex', rel: 'Your parent', avatar: 'A' };
+  const timeline = [
+    { t:'7:04 AM', label:'Took Metformin 500 mg', state:'ok' },
+    { t:'8:02 AM', label:'Took Sertraline 10 mg', state:'ok' },
+    { t:'2:00 PM', label:'Upcoming · Vitamin D', state:'next' },
+    { t:'6:00 PM', label:'Upcoming · Lisinopril', state:'next' },
+  ];
+  return (
+    <div style={{flex:1, overflow:'auto', padding:'8px 20px 120px'}}>
+      <div style={{fontSize:13, fontWeight:600, letterSpacing:'.08em', textTransform:'uppercase', color:'var(--ink-3)'}}>People you care for</div>
+      <h1 style={{fontSize:26, fontWeight:600, margin:'4px 0 16px', letterSpacing:'-0.01em'}}>Wednesday with {person.name}</h1>
+
+      <div style={{background:'var(--surface)', border:'1px solid var(--border-subtle)', borderRadius:20, padding:18, boxShadow:'var(--shadow-1)', marginBottom:16}}>
+        <div style={{display:'flex', alignItems:'center', gap:12, marginBottom:12}}>
+          <div style={{width:48, height:48, borderRadius:'50%', background:'var(--primary)', color:'#fff', fontSize:20, fontWeight:600, display:'flex', alignItems:'center', justifyContent:'center'}}>{person.avatar}</div>
+          <div>
+            <div style={{fontSize:17, fontWeight:600}}>{person.name}</div>
+            <div style={{fontSize:13, color:'var(--ink-3)'}}>{person.rel} · sharing status</div>
+          </div>
+        </div>
+        <div style={{display:'flex', alignItems:'center', gap:8, background:'var(--success-soft)', color:'var(--success-ink)', padding:'10px 14px', borderRadius:12, fontSize:14, fontWeight:500}}>
+          <i className="ph-duotone ph-check-circle" style={{fontSize:20}}/>
+          On track today · 2 of 4 taken
+        </div>
+      </div>
+
+      <div style={{fontSize:13, fontWeight:600, letterSpacing:'.08em', textTransform:'uppercase', color:'var(--ink-3)', margin:'8px 0 10px'}}>Timeline</div>
+      <div style={{background:'var(--surface)', border:'1px solid var(--border-subtle)', borderRadius:18, overflow:'hidden'}}>
+        {timeline.map((e,i)=>(
+          <div key={i} style={{display:'flex', alignItems:'center', gap:14, padding:'14px 16px', borderBottom: i<timeline.length-1?'1px solid var(--border-subtle)':'none'}}>
+            <div style={{width:10, height:10, borderRadius:'50%', background: e.state==='ok'?'var(--success)':'var(--border)'}}/>
+            <div style={{fontFamily:'"Atkinson Hyperlegible",sans-serif', fontWeight:700, fontVariantNumeric:'tabular-nums', fontSize:14, width:68, flexShrink:0}}>{e.t}</div>
+            <div style={{flex:1, fontSize:15, color: e.state==='ok'?'var(--ink)':'var(--ink-3)'}}>{e.label}</div>
+          </div>
+        ))}
+      </div>
+
+      <div style={{marginTop:18, padding:16, background:'var(--secondary-soft)', borderRadius:14, display:'flex', gap:12}}>
+        <i className="ph-duotone ph-heart-straight" style={{fontSize:22, color:'var(--secondary-ink)', flexShrink:0}}/>
+        <div style={{fontSize:14, color:'var(--secondary-ink)', lineHeight:1.45}}>
+          {person.name} chose what you see. Their journal and clinician notes stay private.
+        </div>
+      </div>
+    </div>
+  );
+}
+ReactDOM.createRoot(document.getElementById('root')).render(<Phone><CareScreen/></Phone>);
+</script>
+</body>
+</html>

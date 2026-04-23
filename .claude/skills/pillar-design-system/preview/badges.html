@@ -1,0 +1,34 @@
+<!doctype html><html><head><meta charset="utf-8"><title>Badges & chips</title>
+<link rel="stylesheet" href="_preview.css">
+<script src="https://unpkg.com/@phosphor-icons/web@2.1.1"></script>
+<style>
+  body{padding:22px 24px;display:flex;flex-direction:column;gap:14px}
+  .row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+  .b{display:inline-flex;align-items:center;gap:6px;padding:6px 12px;border-radius:999px;font:600 13px var(--font-sans);border:1px solid transparent}
+  .b i{font-size:14px}
+  .b--ok{background:var(--success-soft);color:var(--success-ink)}
+  .b--warn{background:var(--warning-soft);color:var(--warning-ink)}
+  .b--danger{background:var(--danger-soft);color:var(--danger-ink)}
+  .b--info{background:var(--info-soft);color:var(--primary-press)}
+  .b--neutral{background:var(--surface-sunk);color:var(--ink-2);border-color:var(--border-subtle)}
+  .chip{display:inline-flex;align-items:center;gap:6px;padding:8px 14px;border-radius:999px;background:var(--surface);border:1.5px solid var(--border);font:500 14px var(--font-sans);color:var(--ink);cursor:pointer}
+  .chip.on{background:var(--primary-soft);border-color:var(--primary);color:var(--primary-press)}
+  .tag{font-family:var(--font-mono);font-size:10.5px;color:var(--ink-3);width:60px;flex-shrink:0}
+</style></head>
+<body>
+  <div class="row">
+    <div class="tag">status</div>
+    <span class="b b--ok"><i class="ph-duotone ph-check-circle"></i>Taken</span>
+    <span class="b b--warn"><i class="ph-duotone ph-bell-ringing"></i>Due soon</span>
+    <span class="b b--danger"><i class="ph-duotone ph-warning-octagon"></i>Missed</span>
+    <span class="b b--info"><i class="ph-duotone ph-info"></i>Adjusted</span>
+    <span class="b b--neutral">Skipped</span>
+  </div>
+  <div class="row">
+    <div class="tag">chips</div>
+    <button class="chip on">Morning</button>
+    <button class="chip">Afternoon</button>
+    <button class="chip">Evening</button>
+    <button class="chip">Bedtime</button>
+  </div>
+</body></html>

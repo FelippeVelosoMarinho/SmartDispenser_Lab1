@@ -1,0 +1,155 @@
+/* =========================================================================
+   Alert Component — Pillar Design System
+   ========================================================================= */
+
+.pillar-alert {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-4); /* 16px */
+  padding: var(--space-5) var(--space-6); /* 20px 24px */
+  border-radius: var(--radius);
+  border: 1.5px solid;
+  font-family: var(--font-sans);
+}
+
+/* ── Variants ────────────────────────────────────────────────────────── */
+
+.pillar-alert--success {
+  background: var(--success-soft);
+  border-color: var(--success);
+}
+
+.pillar-alert--success .pillar-alert__icon {
+  color: var(--success);
+}
+
+.pillar-alert--success .pillar-alert__title {
+  color: var(--success-ink);
+}
+
+.pillar-alert--warning {
+  background: var(--warning-soft);
+  border-color: var(--warning);
+}
+
+.pillar-alert--warning .pillar-alert__icon {
+  color: var(--warning);
+}
+
+.pillar-alert--warning .pillar-alert__title {
+  color: var(--warning-ink);
+}
+
+.pillar-alert--danger {
+  background: var(--danger-soft);
+  border-color: var(--danger);
+}
+
+.pillar-alert--danger .pillar-alert__icon {
+  color: var(--danger);
+}
+
+.pillar-alert--danger .pillar-alert__title {
+  color: var(--danger-ink);
+}
+
+.pillar-alert--info {
+  background: var(--info-soft);
+  border-color: var(--info);
+}
+
+.pillar-alert--info .pillar-alert__icon {
+  color: var(--info);
+}
+
+.pillar-alert--info .pillar-alert__title {
+  color: var(--primary);
+}
+
+/* ── Icon ────────────────────────────────────────────────────────────── */
+
+.pillar-alert__icon {
+  font-size: 1.5rem;
+  flex-shrink: 0;
+  margin-top: 2px; /* Optical alignment with title */
+}
+
+/* ── Content ─────────────────────────────────────────────────────────── */
+
+.pillar-alert__content {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.pillar-alert__title {
+  font-size: var(--text-base);
+  font-weight: 600;
+  line-height: var(--lh-snug);
+}
+
+.pillar-alert__description {
+  font-size: var(--text-sm);
+  line-height: var(--lh-normal);
+  color: var(--ink-2);
+}
+
+.pillar-alert__action {
+  margin-top: var(--space-2);
+}
+
+/* ── Dismiss Button ──────────────────────────────────────────────────── */
+
+.pillar-alert__dismiss {
+  flex-shrink: 0;
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+  border: none;
+  border-radius: var(--radius-sm);
+  color: var(--ink-3);
+  cursor: pointer;
+  transition: background-color var(--dur) var(--ease-out), color var(--dur)
+    var(--ease-out);
+}
+
+.pillar-alert__dismiss:hover {
+  background: rgba(0, 0, 0, 0.05);
+  color: var(--ink);
+}
+
+.pillar-alert__dismiss:active {
+  transform: scale(0.95);
+}
+
+.pillar-alert__dismiss:focus-visible {
+  outline: none;
+  box-shadow: var(--focus-ring);
+}
+
+.pillar-alert__dismiss i {
+  font-size: 1.25rem;
+}
+
+/* ── Compact Variant ─────────────────────────────────────────────────── */
+
+.pillar-alert--compact {
+  padding: var(--space-3) var(--space-4);
+  gap: var(--space-3);
+}
+
+.pillar-alert--compact .pillar-alert__icon {
+  font-size: 1.25rem;
+}
+
+.pillar-alert--compact .pillar-alert__title {
+  font-size: var(--text-sm);
+}
+
+.pillar-alert--compact .pillar-alert__description {
+  font-size: var(--text-xs);
+}

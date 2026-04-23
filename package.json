@@ -7,8 +7,11 @@
     "frontend"
   ],
   "scripts": {
-    "dev:frontend": "cd frontend && bun run dev",
+    "dev": "bun run dev:frontend",
+    "dev:frontend": "bun --filter frontend run dev",
     "dev:backend": "cd backend && uvicorn main:app --reload",
+    "build:frontend": "bun --filter frontend run build",
+    "test:frontend": "bun --filter frontend run test",
     "lint": "bunx @biomejs/biome check .",
     "lint:fix": "bunx @biomejs/biome check --write .",
     "format": "bunx @biomejs/biome format --write ."

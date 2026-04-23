@@ -1,0 +1,15 @@
+<!doctype html><html><head><meta charset="utf-8"><title>Shadows</title>
+<link rel="stylesheet" href="_preview.css">
+<style>
+  body{padding:32px 24px 40px;display:flex;gap:24px;align-items:flex-end;justify-content:center;background:var(--canvas)}
+  .box{display:flex;flex-direction:column;align-items:center;gap:14px}
+  .b{background:#fff;width:130px;height:82px;border-radius:var(--radius);border:1px solid var(--border-subtle)}
+  .cap{font-family:var(--font-mono);font-size:11px;color:var(--ink-3);text-align:center}
+  .cap b{color:var(--ink);display:block;margin-bottom:2px}
+</style></head>
+<body>
+  <div class="box"><div class="b" style="box-shadow:var(--shadow-1)"></div><div class="cap"><b>shadow-1</b>rest · card</div></div>
+  <div class="box"><div class="b" style="box-shadow:var(--shadow-2)"></div><div class="cap"><b>shadow-2</b>popover · cta</div></div>
+  <div class="box"><div class="b" style="box-shadow:var(--shadow-3)"></div><div class="cap"><b>shadow-3</b>sheet · modal</div></div>
+  <div class="box"><div class="b" style="box-shadow:var(--shadow-inset);background:var(--surface-sunk)"></div><div class="cap"><b>inset</b>input · well</div></div>
+</body></html>

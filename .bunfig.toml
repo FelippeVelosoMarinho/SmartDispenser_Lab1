@@ -1,0 +1,27 @@
+# Bun configuration for Eco-Dispenser project
+# https://bun.sh/docs/runtime/configuration
+
+[install]
+# Use exact versions from lockfile
+exact = true
+
+# Frozen lockfile in CI (set via BUN_LOCKFILE_FROZEN env var)
+# frozen-lockfile = true
+
+# Cache behavior
+cache = "~/.bun/install/cache"
+
+[install.scopes]
+# Configure npm scopes if needed
+# "@myorg" = { url = "https://registry.myorg.com/", token = "$NPM_TOKEN" }
+
+[test]
+# Use bun test by default
+preload = []
+
+[run]
+# Shell to use for running scripts
+shell = "bun"
+
+# Automatically install missing dependencies
+auto-install = false

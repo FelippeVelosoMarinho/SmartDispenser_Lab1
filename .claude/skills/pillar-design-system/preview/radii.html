@@ -1,0 +1,18 @@
+<!doctype html><html><head><meta charset="utf-8"><title>Radii</title>
+<link rel="stylesheet" href="_preview.css">
+<style>
+  body{padding:24px;display:flex;gap:16px;align-items:flex-end;justify-content:center}
+  .box{display:flex;flex-direction:column;align-items:center;gap:10px}
+  .b{background:var(--primary-soft);border:1.5px solid var(--primary);width:84px;height:84px}
+  .pill{border-radius:999px;width:140px;height:52px}
+  .cap{font-family:var(--font-mono);font-size:11px;color:var(--ink-3)}
+  .cap b{color:var(--ink)}
+</style></head>
+<body>
+  <div class="box"><div class="b" style="border-radius:6px"></div><div class="cap"><b>xs</b> · 6</div></div>
+  <div class="box"><div class="b" style="border-radius:10px"></div><div class="cap"><b>sm</b> · 10</div></div>
+  <div class="box"><div class="b" style="border-radius:14px"></div><div class="cap"><b>base</b> · 14</div></div>
+  <div class="box"><div class="b" style="border-radius:20px"></div><div class="cap"><b>lg</b> · 20</div></div>
+  <div class="box"><div class="b" style="border-radius:28px"></div><div class="cap"><b>xl</b> · 28</div></div>
+  <div class="box"><div class="b pill"></div><div class="cap"><b>pill</b> · 999</div></div>
+</body></html>

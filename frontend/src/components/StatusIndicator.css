@@ -22,17 +22,14 @@
 
 .status-indicator.on {
   background: radial-gradient(circle at 35% 35%, #4ade80, #16a34a);
-  box-shadow:
-    0 0 30px rgba(74, 222, 128, 0.4),
-    0 0 60px rgba(74, 222, 128, 0.2),
+  box-shadow: 0 0 30px rgba(74, 222, 128, 0.4), 0 0 60px rgba(74, 222, 128, 0.2),
     inset 0 -3px 6px rgba(0, 0, 0, 0.15);
 }
 
 .status-indicator.off {
   background: radial-gradient(circle at 35% 35%, #64748b, #334155);
-  box-shadow:
-    0 0 15px rgba(100, 116, 139, 0.2),
-    inset 0 -3px 6px rgba(0, 0, 0, 0.2);
+  box-shadow: 0 0 15px rgba(100, 116, 139, 0.2), inset 0 -3px 6px
+    rgba(0, 0, 0, 0.2);
 }
 
 .status-indicator.loading {
