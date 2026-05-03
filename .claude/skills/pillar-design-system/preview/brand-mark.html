@@ -1,0 +1,21 @@
+<!doctype html><html><head><meta charset="utf-8"><title>Brand mark</title>
+<link rel="stylesheet" href="_preview.css">
+<style>
+  body{padding:24px}
+  .marks{display:flex;gap:16px;align-items:center}
+  .m{width:104px;height:104px;border-radius:var(--radius);border:1px solid var(--border-subtle);background:var(--surface);display:flex;align-items:center;justify-content:center}
+  .m--sm{width:64px;height:64px}
+  .m--xs{width:40px;height:40px}
+  .m--dark{background:var(--primary);border-color:var(--primary)}
+  .m img{width:70%;height:70%}
+  .caption{margin-top:10px;font-family:var(--font-mono);font-size:11px;color:var(--ink-3)}
+  .pair{display:flex;flex-direction:column;align-items:center}
+</style></head>
+<body>
+  <div class="marks">
+    <div class="pair"><div class="m"><img src="../assets/mark-pillar.svg"></div><div class="caption">104×104</div></div>
+    <div class="pair"><div class="m m--sm"><img src="../assets/mark-pillar.svg"></div><div class="caption">64×64</div></div>
+    <div class="pair"><div class="m m--xs"><img src="../assets/mark-pillar.svg"></div><div class="caption">40×40 · favicon</div></div>
+    <div class="pair"><div class="m m--dark"><img src="../assets/mark-pillar.svg" style="filter:brightness(0) invert(1)"></div><div class="caption">on primary</div></div>
+  </div>
+</body></html>

@@ -1,0 +1,152 @@
+/* =========================================================================
+   Card Component — Pillar Design System
+   ========================================================================= */
+
+.pillar-card {
+  /* Base card styles */
+  background: var(--surface);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-lg); /* 20px */
+  overflow: hidden;
+  transition: box-shadow var(--dur) var(--ease-out), transform var(--dur)
+    var(--ease-out), border-color var(--dur) var(--ease-out);
+}
+
+/* ── Variants ────────────────────────────────────────────────────────── */
+
+.pillar-card--default {
+  box-shadow: var(--shadow-1);
+}
+
+.pillar-card--elevated {
+  box-shadow: var(--shadow-2);
+}
+
+.pillar-card--interactive {
+  cursor: pointer;
+  box-shadow: var(--shadow-1);
+}
+
+.pillar-card--interactive:hover {
+  box-shadow: var(--shadow-2);
+  border-color: var(--border);
+  transform: translateY(-2px);
+}
+
+.pillar-card--interactive:active {
+  transform: translateY(0) scale(0.99);
+  box-shadow: var(--shadow-1);
+}
+
+.pillar-card--interactive:focus-visible {
+  outline: none;
+  box-shadow: var(--focus-ring);
+}
+
+/* ── Header ──────────────────────────────────────────────────────────── */
+
+.pillar-card__header {
+  padding: var(--space-5) var(--space-6); /* 20px 24px */
+  border-bottom: 1px solid var(--border-subtle);
+}
+
+/* When no border needed (e.g., card with only header) */
+.pillar-card__header:last-child {
+  border-bottom: none;
+}
+
+.pillar-card__eyebrow {
+  font-size: var(--text-xs);
+  font-weight: 600;
+  letter-spacing: var(--tracking-wide);
+  text-transform: uppercase;
+  color: var(--ink-3);
+  margin-bottom: var(--space-2);
+}
+
+.pillar-card__title {
+  font-size: var(--text-lg);
+  font-weight: 600;
+  line-height: var(--lh-snug);
+  letter-spacing: var(--tracking-tight);
+  color: var(--ink);
+  margin: 0;
+}
+
+/* ── Content ─────────────────────────────────────────────────────────── */
+
+.pillar-card__content {
+  padding: var(--space-6); /* 24px */
+  color: var(--ink-2);
+  line-height: var(--lh-normal);
+}
+
+/* Reduce top padding if following header */
+.pillar-card__header + .pillar-card__content {
+  padding-top: var(--space-5); /* 20px */
+}
+
+/* ── Footer ──────────────────────────────────────────────────────────── */
+
+.pillar-card__footer {
+  padding: var(--space-5) var(--space-6); /* 20px 24px */
+  border-top: 1px solid var(--border-subtle);
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+.pillar-card__footer--left {
+  justify-content: flex-start;
+}
+
+.pillar-card__footer--center {
+  justify-content: center;
+}
+
+.pillar-card__footer--right {
+  justify-content: flex-end;
+}
+
+/* Remove top border if footer is the first child */
+.pillar-card__footer:first-child {
+  border-top: none;
+}
+
+/* ── Compact Variant (for dense layouts) ─────────────────────────────── */
+
+.pillar-card--compact .pillar-card__header {
+  padding: var(--space-4) var(--space-5);
+}
+
+.pillar-card--compact .pillar-card__content {
+  padding: var(--space-5);
+}
+
+.pillar-card--compact .pillar-card__footer {
+  padding: var(--space-4) var(--space-5);
+}
+
+/* ── Nested Elements Spacing ─────────────────────────────────────────── */
+
+/* Add spacing between paragraphs and elements in content */
+.pillar-card__content > * + * {
+  margin-top: var(--space-4);
+}
+
+/* Remove bottom margin from last element */
+.pillar-card__content > *:last-child {
+  margin-bottom: 0;
+}
+
+/* ── Focus State ─────────────────────────────────────────────────────── */
+
+/* Interactive cards need to be focusable */
+.pillar-card--interactive[tabindex] {
+  outline: none;
+}
+
+.pillar-card--interactive[tabindex]:focus-visible {
+  box-shadow: var(--focus-ring);
+  border-color: var(--border-focus);
+}

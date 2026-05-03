@@ -39,7 +39,7 @@ export function useLed(): UseLedReturn {
       setBackendReachable(false);
       setHardwareReachable(false);
       setError(
-        err instanceof Error ? err.message : "Failed to fetch LED status"
+        err instanceof Error ? err.message : "Failed to fetch LED status",
       );
     } finally {
       setIsLoading(false);
@@ -59,9 +59,7 @@ export function useLed(): UseLedReturn {
 
       if (!res.ok) {
         const errorData = await res.json().catch(() => ({}));
-        throw new Error(
-          errorData.detail || `HTTP ${res.status}`
-        );
+        throw new Error(errorData.detail || `HTTP ${res.status}`);
       }
 
       const data = await res.json();
@@ -69,9 +67,7 @@ export function useLed(): UseLedReturn {
       setLatencyMs(data.latency_ms);
       setHardwareReachable(true);
     } catch (err) {
-      setError(
-        err instanceof Error ? err.message : "Failed to toggle LED"
-      );
+      setError(err instanceof Error ? err.message : "Failed to toggle LED");
     } finally {
       setIsToggling(false);
     }

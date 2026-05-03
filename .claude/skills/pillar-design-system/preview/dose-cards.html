@@ -1,0 +1,22 @@
+<!doctype html><html><head><meta charset="utf-8"><title>Dose card</title>
+<link rel="stylesheet" href="_preview.css">
+<script src="https://unpkg.com/@phosphor-icons/web@2.1.1"></script>
+<style>
+  body{padding:20px;display:flex;flex-direction:column;gap:12px}
+  .card2{background:var(--surface);border:1px solid var(--border-subtle);border-radius:var(--radius-lg);padding:18px 20px;display:flex;align-items:center;gap:16px;box-shadow:var(--shadow-1)}
+  .ico{width:52px;height:52px;border-radius:var(--radius);display:flex;align-items:center;justify-content:center;font-size:28px;flex-shrink:0}
+  .ico--due{background:var(--primary-soft);color:var(--primary)}
+  .ico--taken{background:var(--success-soft);color:var(--success-ink)}
+  .ico--missed{background:var(--danger-soft);color:var(--danger-ink)}
+  .body{flex:1;min-width:0}
+  .name{font-size:19px;font-weight:600;color:var(--ink);margin-bottom:2px}
+  .meta{font-size:14px;color:var(--ink-3)}
+  .time{font-family:"Atkinson Hyperlegible",sans-serif;font-variant-numeric:tabular-nums;font-weight:700;font-size:22px;color:var(--ink)}
+  .time-sub{font-size:12px;color:var(--ink-3);text-align:right}
+  .tag{font-family:var(--font-mono);font-size:10.5px;color:var(--ink-3)}
+</style></head>
+<body>
+  <div class="card2"><div class="ico ico--due"><i class="ph-duotone ph-pill"></i></div><div class="body"><div class="name">Sertraline · 10 mg</div><div class="meta">1 tablet · chamber A</div></div><div><div class="time">8:00 AM</div><div class="time-sub">in 25 minutes</div></div></div>
+  <div class="card2"><div class="ico ico--taken"><i class="ph-duotone ph-check-circle"></i></div><div class="body"><div class="name">Metformin · 500 mg</div><div class="meta">Taken at 7:04 AM</div></div><div class="tag">✓ logged</div></div>
+  <div class="card2" style="border-color:var(--danger);background:var(--danger-soft)"><div class="ico ico--missed"><i class="ph-duotone ph-warning-octagon"></i></div><div class="body"><div class="name">Vitamin D · 1 capsule</div><div class="meta" style="color:var(--danger-ink)">Missed · yesterday 6:00 PM</div></div><button style="background:var(--surface);border:1.5px solid var(--border);border-radius:var(--radius);height:40px;padding:0 14px;font:600 14px var(--font-sans);color:var(--ink);cursor:pointer">Log it now</button></div>
+</body></html>

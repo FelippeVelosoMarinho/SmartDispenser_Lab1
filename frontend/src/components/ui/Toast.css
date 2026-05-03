@@ -1,0 +1,163 @@
+/* =========================================================================
+   Toast Component — Pillar Design System
+   ========================================================================= */
+
+.pillar-toast-container {
+  position: fixed;
+  bottom: var(--space-6); /* 24px */
+  right: var(--space-6);
+  z-index: 9999;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  max-width: 420px;
+  width: calc(100% - var(--space-7) * 2); /* Leave margin on mobile */
+  pointer-events: none;
+}
+
+/* Mobile: center bottom */
+@media (max-width: 768px) {
+  .pillar-toast-container {
+    bottom: var(--space-5);
+    left: 50%;
+    right: auto;
+    transform: translateX(-50%);
+    max-width: calc(100% - var(--space-6) * 2);
+  }
+}
+
+/* ── Toast Item ──────────────────────────────────────────────────────── */
+
+.pillar-toast {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-3);
+  padding: var(--space-4) var(--space-5); /* 16px 20px */
+  background: var(--surface);
+  border: 1.5px solid var(--border);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-3);
+  pointer-events: auto;
+
+  /* Animation */
+  animation: pillar-toast-slide-in var(--dur-slow) var(--ease-out);
+}
+
+@keyframes pillar-toast-slide-in {
+  from {
+    opacity: 0;
+    transform: translateY(16px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Respect reduced motion */
+@media (prefers-reduced-motion: reduce) {
+  .pillar-toast {
+    animation: pillar-toast-fade-in var(--dur) ease-out;
+  }
+
+  @keyframes pillar-toast-fade-in {
+    from {
+      opacity: 0;
+    }
+    to {
+      opacity: 1;
+    }
+  }
+}
+
+/* ── Variants ────────────────────────────────────────────────────────── */
+
+.pillar-toast--success {
+  background: var(--success-soft);
+  border-color: var(--success);
+}
+
+.pillar-toast--success .pillar-toast__icon {
+  color: var(--success);
+}
+
+.pillar-toast--warning {
+  background: var(--warning-soft);
+  border-color: var(--warning);
+}
+
+.pillar-toast--warning .pillar-toast__icon {
+  color: var(--warning);
+}
+
+.pillar-toast--danger {
+  background: var(--danger-soft);
+  border-color: var(--danger);
+}
+
+.pillar-toast--danger .pillar-toast__icon {
+  color: var(--danger);
+}
+
+.pillar-toast--info {
+  background: var(--info-soft);
+  border-color: var(--info);
+}
+
+.pillar-toast--info .pillar-toast__icon {
+  color: var(--info);
+}
+
+/* ── Icon ────────────────────────────────────────────────────────────── */
+
+.pillar-toast__icon {
+  font-size: 1.5rem;
+  flex-shrink: 0;
+  margin-top: 2px; /* Optical alignment */
+}
+
+/* ── Message ─────────────────────────────────────────────────────────── */
+
+.pillar-toast__message {
+  flex: 1;
+  font-family: var(--font-sans);
+  font-size: var(--text-base);
+  line-height: var(--lh-snug);
+  color: var(--ink);
+}
+
+/* ── Close Button ────────────────────────────────────────────────────── */
+
+.pillar-toast__close {
+  flex-shrink: 0;
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+  border: none;
+  border-radius: var(--radius-sm);
+  color: var(--ink-3);
+  cursor: pointer;
+  transition: background-color var(--dur) var(--ease-out), color var(--dur)
+    var(--ease-out);
+}
+
+.pillar-toast__close:hover {
+  background: var(--surface-dim);
+  color: var(--ink);
+}
+
+.pillar-toast__close:active {
+  transform: scale(0.95);
+}
+
+.pillar-toast__close:focus-visible {
+  outline: none;
+  box-shadow: var(--focus-ring);
+}
+
+.pillar-toast__close i {
+  font-size: 1.25rem;
+}

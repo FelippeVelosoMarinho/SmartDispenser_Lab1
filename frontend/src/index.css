@@ -1,34 +1,149 @@
-/* ─── CSS Reset & Design Tokens ────────────────────────────────── */
+/* ─── Tailwind CSS v4 ───────────────────────────────────────── */
+@import "tailwindcss";
 
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
+/* ─── Theme Configuration ────────────────────────────────────── */
+/* Map Pillar Design System tokens to Tailwind theme */
+@theme {
+  /* ──────────────────────────────────────────────────────────
+     COLORS
+     ────────────────────────────────────────────────────────── */
 
-:root {
-  /* Colors */
-  --color-bg: #0a0f1c;
-  --color-surface: #0f172a;
-  --color-border: rgba(148, 163, 184, 0.1);
-  --color-text: #e2e8f0;
-  --color-text-muted: #64748b;
-  --color-primary: #10b981;
-  --color-primary-glow: rgba(16, 185, 129, 0.3);
-  --color-danger: #ef4444;
-  --color-warning: #f59e0b;
+  /* Canvas & Surface */
+  --color-canvas: var(--canvas);
+  --color-surface: var(--surface);
+  --color-surface-sunk: var(--surface-sunk);
+  --color-surface-raised: var(--surface-raised);
+  --color-surface-dim: var(--surface-dim);
 
-  /* Typography */
-  font-family: "Inter", system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
-  font-size: 16px;
-  line-height: 1.5;
-  font-weight: 400;
+  /* Ink (text colors) */
+  --color-ink: var(--ink);
+  --color-ink-2: var(--ink-2);
+  --color-ink-3: var(--ink-3);
+  --color-ink-4: var(--ink-4);
+  --color-ink-inverse: var(--ink-inverse);
 
-  /* Rendering */
-  color-scheme: dark;
-  font-synthesis: none;
-  text-rendering: optimizeLegibility;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
+  /* Borders */
+  --color-border-subtle: var(--border-subtle);
+  --color-border: var(--border);
+  --color-border-strong: var(--border-strong);
+  --color-border-focus: var(--border-focus);
+
+  /* Primary */
+  --color-primary: var(--primary);
+  --color-primary-hover: var(--primary-hover);
+  --color-primary-press: var(--primary-press);
+  --color-primary-soft: var(--primary-soft);
+  --color-primary-on: var(--primary-on);
+
+  /* Secondary */
+  --color-secondary: var(--secondary);
+  --color-secondary-ink: var(--secondary-ink);
+  --color-secondary-soft: var(--secondary-soft);
+
+  /* Accent */
+  --color-accent: var(--accent);
+  --color-accent-ink: var(--accent-ink);
+  --color-accent-soft: var(--accent-soft);
+
+  /* Semantic states */
+  --color-success: var(--success);
+  --color-success-ink: var(--success-ink);
+  --color-success-soft: var(--success-soft);
+
+  --color-warning: var(--warning);
+  --color-warning-ink: var(--warning-ink);
+  --color-warning-soft: var(--warning-soft);
+
+  --color-danger: var(--danger);
+  --color-danger-ink: var(--danger-ink);
+  --color-danger-soft: var(--danger-soft);
+
+  --color-info: var(--info);
+  --color-info-soft: var(--info-soft);
+
+  /* ──────────────────────────────────────────────────────────
+     SPACING
+     Note: Using Tailwind's default spacing scale instead of custom values
+     to ensure compatibility with existing components. Custom spacing values
+     from design-tokens.css can still be used via CSS variables.
+     ────────────────────────────────────────────────────────── */
+  --spacing: 0.25rem;
+  /* ──────────────────────────────────────────────────────────
+     BORDER RADIUS
+     ────────────────────────────────────────────────────────── */
+  --radius-xs: var(--radius-xs);
+  --radius-sm: var(--radius-sm);
+  --radius-DEFAULT: var(--radius);
+  --radius-lg: var(--radius-lg);
+  --radius-xl: var(--radius-xl);
+  --radius-pill: var(--radius-pill);
+
+  /* ──────────────────────────────────────────────────────────
+     TYPOGRAPHY
+     ────────────────────────────────────────────────────────── */
+
+  /* Font families */
+  --font-family-sans: var(--font-sans);
+  --font-family-num: var(--font-num);
+  --font-family-mono: var(--font-mono);
+
+  /* Font sizes */
+  --font-size-xs: var(--text-xs);
+  --font-size-sm: var(--text-sm);
+  --font-size-base: var(--text-base);
+  --font-size-md: var(--text-md);
+  --font-size-lg: var(--text-lg);
+  --font-size-xl: var(--text-xl);
+  --font-size-2xl: var(--text-2xl);
+  --font-size-3xl: var(--text-3xl);
+  --font-size-4xl: var(--text-4xl);
+  --font-size-5xl: var(--text-5xl);
+
+  /* Line heights */
+  --line-height-tight: var(--lh-tight);
+  --line-height-snug: var(--lh-snug);
+  --line-height-normal: var(--lh-normal);
+  --line-height-loose: var(--lh-loose);
+
+  /* Letter spacing */
+  --letter-spacing-tight: var(--tracking-tight);
+  --letter-spacing-normal: var(--tracking-normal);
+  --letter-spacing-wide: var(--tracking-wide);
+
+  /* ──────────────────────────────────────────────────────────
+     SHADOWS
+     ────────────────────────────────────────────────────────── */
+  --box-shadow-sm: var(--shadow-1);
+  --box-shadow-DEFAULT: var(--shadow-2);
+  --box-shadow-md: var(--shadow-2);
+  --box-shadow-lg: var(--shadow-3);
+  --box-shadow-inset: var(--shadow-inset);
+
+  /* ──────────────────────────────────────────────────────────
+     CUSTOM UTILITIES (not standard Tailwind)
+     ────────────────────────────────────────────────────────── */
+
+  /* Touch targets */
+  --size-target-min: var(--target-min);
+  --size-target-cozy: var(--target-cozy);
+  --size-target-spacious: var(--target-spacious);
+
+  /* Animation timing */
+  --transition-duration-fast: var(--dur-fast);
+  --transition-duration-DEFAULT: var(--dur);
+  --transition-duration-slow: var(--dur-slow);
+  --transition-duration-slower: var(--dur-slower);
+
+  /* Easing functions */
+  --transition-timing-function-ease-out: var(--ease-out);
+  --transition-timing-function-ease-in: var(--ease-in);
+  --transition-timing-function-ease-soft: var(--ease-soft);
+  --transition-timing-function-ease-spring: var(--ease-spring);
 }
 
-*,
+/* ─── App-specific Styles ────────────────────────────────────── */
+/* Pillar Design System tokens are imported via design-tokens.css */
+
 *::before,
 *::after {
   margin: 0;
@@ -42,23 +157,25 @@ html {
 
 body {
   min-height: 100vh;
-  background: var(--color-bg);
-  color: var(--color-text);
 }
 
 a {
-  color: var(--color-primary);
+  color: var(--primary);
   text-decoration: none;
+  transition: color var(--dur) var(--ease-out);
+}
+
+a:hover {
+  color: var(--primary-hover);
+}
+
+a:focus-visible {
+  outline: none;
+  box-shadow: var(--focus-ring);
+  border-radius: var(--radius-xs);
 }
 
 img {
   max-width: 100%;
   display: block;
-}
-
-/* ─── Selection ──────────────────────────────────────────────────── */
-
-::selection {
-  background: var(--color-primary);
-  color: var(--color-bg);
 }

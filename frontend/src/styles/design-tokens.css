@@ -1,0 +1,328 @@
+/* =========================================================================
+   Pillar Design System — Colors & Type
+   An open-source medication dispenser built for neurodivergent users
+   and people with disabilities.
+
+   All color pairs are verified against WCAG AA (4.5:1) for body text and
+   AAA (7:1) for critical/interactive copy where feasible.
+   ========================================================================= */
+
+/* --- Fonts ----------------------------------------------------------- */
+/* Primary: Lexend — tuned for reading proficiency, dyslexia-friendly.
+   Secondary: Atkinson Hyperlegible — used for numerals, dosage, times.
+   Mono: JetBrains Mono — code and documentation only. */
+
+@font-face {
+  font-family: "Lexend";
+  src: url("/fonts/Lexend-Variable.woff2") format("woff2-variations");
+  font-weight: 100 900;
+  font-display: swap;
+}
+@font-face {
+  font-family: "Atkinson Hyperlegible";
+  src: url("/fonts/AtkinsonHyperlegible-Regular.woff2") format("woff2");
+  font-weight: 400;
+  font-display: swap;
+}
+@font-face {
+  font-family: "Atkinson Hyperlegible";
+  src: url("/fonts/AtkinsonHyperlegible-Bold.woff2") format("woff2");
+  font-weight: 700;
+  font-display: swap;
+}
+
+:root {
+  /* =========================================================
+     COLOR SYSTEM — calm, accessible, trust-forward
+     ========================================================= */
+
+  /* Canvas / surface ladder (warm off-white → deep ink) */
+  --canvas: #f7f9fb; /* page background */
+  --surface: #ffffff; /* cards, sheets */
+  --surface-sunk: #eef2f6; /* input backgrounds, inset panels */
+  --surface-raised: #ffffff; /* elevated cards (use shadow, not color) */
+  --surface-dim: #e3e9ee; /* dividers, subtle bands */
+
+  /* Ink / foreground ladder */
+  --ink: #0f1b2d; /* primary text — 16.2:1 on canvas */
+  --ink-2: #334155; /* body secondary — 9.1:1 */
+  --ink-3: #64748b; /* tertiary / meta — 4.8:1 */
+  --ink-4: #94a3b8; /* disabled, placeholders — 3.1:1 (non-text only) */
+  --ink-inverse: #ffffff;
+
+  /* Border ladder */
+  --border-subtle: #e3e9ee;
+  --border: #cbd5df;
+  --border-strong: #94a3b8;
+  --border-focus: #2b5f8a; /* matches primary */
+
+  /* Primary — Still Blue. Trustworthy, medical, calm. */
+  --primary: #2b5f8a; /* 6.5:1 on white */
+  --primary-hover: #234e72;
+  --primary-press: #1c3f5c;
+  --primary-soft: #e3edf5; /* tinted background */
+  --primary-on: #ffffff;
+
+  /* Secondary — Sage Teal. Living, gentle, the "well" state. */
+  --secondary: #5a9a98; /* 3.9:1 (non-text / accent only) */
+  --secondary-ink: #2e5c5a; /* use for text — 7.1:1 */
+  --secondary-soft: #e8f1f0;
+
+  /* Accent — Warm Ochre. Only for highlight moments; never as a signal. */
+  --accent: #c8913a;
+  --accent-ink: #8a5f1d; /* 6.9:1 */
+  --accent-soft: #f6ecd7;
+
+  /* =========================================================
+     SEMANTIC STATES — each pair includes BOTH a color AND an icon
+     cue in the components layer, so we never signal by color alone.
+     ========================================================= */
+
+  /* Success — "taken", "on track" */
+  --success: #2e7d57; /* 5.1:1 */
+  --success-ink: #1f5a3d;
+  --success-soft: #e4f1ea;
+
+  /* Warning — "due soon", "attention" */
+  --warning: #b6701c; /* 4.9:1; paired with a triangle/⚠ icon */
+  --warning-ink: #7f4d14;
+  --warning-soft: #faefdf;
+
+  /* Danger — "missed", "overdue", "error" — paired with octagon icon */
+  --danger: #b3261e; /* 5.9:1 */
+  --danger-ink: #7f1a15;
+  --danger-soft: #fae6e5;
+
+  /* Info — neutral notification */
+  --info: #2b5f8a;
+  --info-soft: #e3edf5;
+
+  /* =========================================================
+     FOCUS RING — ALWAYS visible, never suppressed.
+     Double-ring so it shows on any background.
+     ========================================================= */
+  --focus-ring: 0 0 0 3px #ffffff, 0 0 0 6px #2b5f8a;
+  --focus-ring-dark: 0 0 0 3px #0f1b2d, 0 0 0 6px #7fb3d9;
+
+  /* =========================================================
+     SHADOWS — soft, low, never harsh. Calm elevation.
+     ========================================================= */
+  --shadow-1: 0 1px 2px rgba(15, 27, 45, 0.04), 0 1px 3px rgba(15, 27, 45, 0.06);
+  --shadow-2: 0 2px 4px rgba(15, 27, 45, 0.04), 0 4px 12px
+    rgba(15, 27, 45, 0.06);
+  --shadow-3: 0 4px 8px rgba(15, 27, 45, 0.05), 0 12px 28px
+    rgba(15, 27, 45, 0.08);
+  --shadow-inset: inset 0 1px 2px rgba(15, 27, 45, 0.05);
+
+  /* =========================================================
+     RADII — 14px base, soft but not pill-y
+     ========================================================= */
+  --radius-xs: 6px;
+  --radius-sm: 10px;
+  --radius: 14px; /* base */
+  --radius-lg: 20px;
+  --radius-xl: 28px;
+  --radius-pill: 999px;
+
+  /* =========================================================
+     SPACING — 4px base grid, generous scale for clarity
+     ========================================================= */
+  --space-0: 0;
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 20px;
+  --space-6: 24px;
+  --space-7: 32px;
+  --space-8: 40px;
+  --space-9: 56px;
+  --space-10: 72px;
+  --space-11: 96px;
+
+  /* =========================================================
+     TOUCH TARGETS — minimum sizes per surface
+     ========================================================= */
+  --target-min: 44px; /* WCAG AAA — mobile/web minimum */
+  --target-cozy: 48px; /* default interactive */
+  --target-spacious: 56px; /* primary actions on mobile */
+
+  /* =========================================================
+     TYPOGRAPHY — scale tuned for readability
+     Base 17px (not 16) because of the audience.
+     Line heights generous; tracking opened slightly on headers.
+     ========================================================= */
+  --font-sans: "Lexend", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-num: "Atkinson Hyperlegible", "Lexend", system-ui, sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, "SF Mono", Menlo, monospace;
+
+  /* Type scale */
+  --text-xs: 13px;
+  --text-sm: 15px;
+  --text-base: 17px;
+  --text-md: 19px;
+  --text-lg: 22px;
+  --text-xl: 26px;
+  --text-2xl: 32px;
+  --text-3xl: 40px;
+  --text-4xl: 52px;
+  --text-5xl: 64px;
+
+  --lh-tight: 1.2;
+  --lh-snug: 1.35;
+  --lh-normal: 1.55;
+  --lh-loose: 1.7;
+
+  --tracking-tight: -0.01em;
+  --tracking-normal: 0;
+  --tracking-wide: 0.02em;
+
+  /* =========================================================
+     MOTION — expressive but calm. Respect reduce-motion.
+     ========================================================= */
+  --ease-out: cubic-bezier(0.2, 0.8, 0.2, 1);
+  --ease-in: cubic-bezier(0.4, 0, 1, 1);
+  --ease-soft: cubic-bezier(0.33, 1, 0.68, 1);
+  --ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
+
+  --dur-fast: 120ms;
+  --dur: 200ms;
+  --dur-slow: 320ms;
+  --dur-slower: 480ms;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :root {
+    --dur-fast: 0ms;
+    --dur: 0ms;
+    --dur-slow: 0ms;
+    --dur-slower: 0ms;
+  }
+}
+
+/* =========================================================
+   DARK MODE — same hues, deeper canvas. Maintains AA.
+   ========================================================= */
+@media (prefers-color-scheme: dark) {
+  :root.auto-dark,
+  :root[data-theme="dark"] {
+    --canvas: #0b1320;
+    --surface: #11192a;
+    --surface-sunk: #0b1320;
+    --surface-raised: #152038;
+    --surface-dim: #1e2a44;
+
+    --ink: #e8eef5;
+    --ink-2: #b6c2d2;
+    --ink-3: #8494a8;
+    --ink-4: #5b6a80;
+
+    --border-subtle: #1e2a44;
+    --border: #2c3a56;
+    --border-strong: #4a5a78;
+
+    --primary: #7fb3d9;
+    --primary-hover: #9ac5e1;
+    --primary-press: #b6d4eb;
+    --primary-soft: #1a2b42;
+
+    --secondary-ink: #8fd0cd;
+    --secondary-soft: #143232;
+
+    --success: #70c291;
+    --warning: #e6a25f;
+    --danger: #f08b83;
+  }
+}
+
+/* =========================================================
+   SEMANTIC ELEMENT DEFAULTS
+   Drop into any project; elements inherit Pillar styles.
+   ========================================================= */
+html,
+body {
+  background: var(--canvas);
+  color: var(--ink);
+  font-family: var(--font-sans);
+  font-size: var(--text-base);
+  line-height: var(--lh-normal);
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+h1,
+.h1 {
+  font-family: var(--font-sans);
+  font-size: var(--text-3xl);
+  font-weight: 600;
+  line-height: var(--lh-tight);
+  letter-spacing: var(--tracking-tight);
+  color: var(--ink);
+  margin: 0 0 var(--space-5);
+}
+h2,
+.h2 {
+  font-size: var(--text-2xl);
+  font-weight: 600;
+  line-height: var(--lh-tight);
+  letter-spacing: var(--tracking-tight);
+  margin: 0 0 var(--space-4);
+}
+h3,
+.h3 {
+  font-size: var(--text-xl);
+  font-weight: 600;
+  line-height: var(--lh-snug);
+  margin: 0 0 var(--space-3);
+}
+h4,
+.h4 {
+  font-size: var(--text-lg);
+  font-weight: 600;
+  line-height: var(--lh-snug);
+  margin: 0 0 var(--space-3);
+}
+p,
+.p {
+  font-size: var(--text-base);
+  line-height: var(--lh-normal);
+  color: var(--ink-2);
+  margin: 0 0 var(--space-4);
+  max-width: 68ch;
+  text-wrap: pretty;
+}
+.lede {
+  font-size: var(--text-md);
+  line-height: var(--lh-normal);
+  color: var(--ink-2);
+}
+.eyebrow {
+  font-size: var(--text-xs);
+  font-weight: 600;
+  letter-spacing: var(--tracking-wide);
+  text-transform: uppercase;
+  color: var(--ink-3);
+}
+.num,
+.numeric {
+  font-family: var(--font-num);
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: "tnum";
+}
+code,
+kbd,
+.mono {
+  font-family: var(--font-mono);
+  font-size: 0.92em;
+}
+
+:focus-visible {
+  outline: none;
+  box-shadow: var(--focus-ring);
+  border-radius: var(--radius-sm);
+}
+
+::selection {
+  background: var(--primary-soft);
+  color: var(--primary-press);
+}

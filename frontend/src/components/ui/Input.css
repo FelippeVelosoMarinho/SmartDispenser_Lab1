@@ -1,0 +1,153 @@
+/* =========================================================================
+   Input Component — Pillar Design System
+   ========================================================================= */
+
+.pillar-input-wrapper {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+/* ── Label ───────────────────────────────────────────────────────────── */
+
+.pillar-input__label {
+  font-family: var(--font-sans);
+  font-size: var(--text-base);
+  font-weight: 500;
+  color: var(--ink);
+  line-height: var(--lh-snug);
+}
+
+/* ── Input Container ─────────────────────────────────────────────────── */
+
+.pillar-input-container {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+/* ── Input ───────────────────────────────────────────────────────────── */
+
+.pillar-input {
+  /* Base styles */
+  width: 100%;
+  min-height: var(--target-min); /* 44px */
+  padding: var(--space-3) var(--space-4); /* 12px 16px */
+  font-family: var(--font-sans);
+  font-size: var(--text-base);
+  line-height: var(--lh-normal);
+  color: var(--ink);
+  background: var(--surface-sunk);
+  border: 1.5px solid var(--border);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-inset);
+  transition: border-color var(--dur) var(--ease-out), box-shadow var(--dur)
+    var(--ease-out);
+}
+
+/* Placeholder */
+.pillar-input::placeholder {
+  color: var(--ink-4);
+}
+
+/* Hover */
+.pillar-input:hover:not(:disabled) {
+  border-color: var(--border-strong);
+}
+
+/* Focus */
+.pillar-input:focus {
+  outline: none;
+  border-color: var(--border-focus);
+  box-shadow: var(--focus-ring);
+  background: var(--surface);
+}
+
+/* Disabled */
+.pillar-input:disabled {
+  cursor: not-allowed;
+  opacity: 0.6;
+  background: var(--surface-dim);
+  color: var(--ink-4);
+}
+
+/* ── With Icon ───────────────────────────────────────────────────────── */
+
+.pillar-input--with-icon {
+  padding-left: var(--space-9); /* 56px — space for icon */
+}
+
+.pillar-input__icon {
+  position: absolute;
+  left: var(--space-4); /* 16px */
+  font-size: 1.5rem;
+  color: var(--ink-3);
+  pointer-events: none;
+  transition: color var(--dur) var(--ease-out);
+}
+
+.pillar-input:focus ~ .pillar-input__icon,
+.pillar-input:not(:placeholder-shown) ~ .pillar-input__icon {
+  color: var(--primary);
+}
+
+/* ── Error State ─────────────────────────────────────────────────────── */
+
+.pillar-input--error {
+  border-color: var(--danger);
+  background: var(--danger-soft);
+}
+
+.pillar-input--error:focus {
+  box-shadow: 0 0 0 3px #ffffff, 0 0 0 6px var(--danger);
+}
+
+.pillar-input__icon--error {
+  color: var(--danger);
+}
+
+.pillar-input__error-icon {
+  position: absolute;
+  right: var(--space-4);
+  font-size: 1.25rem;
+  color: var(--danger);
+  pointer-events: none;
+}
+
+.pillar-input__error {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-size: var(--text-sm);
+  color: var(--danger-ink);
+  line-height: var(--lh-snug);
+}
+
+/* ── Helper Text ─────────────────────────────────────────────────────── */
+
+.pillar-input__helper {
+  font-size: var(--text-sm);
+  color: var(--ink-3);
+  line-height: var(--lh-snug);
+}
+
+/* ── Number Input Specific ───────────────────────────────────────────── */
+
+/* Use Atkinson Hyperlegible for number inputs */
+.pillar-input[type="number"],
+.pillar-input[type="tel"] {
+  font-family: var(--font-num);
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: "tnum";
+}
+
+/* Remove spinner buttons (can be customized if needed) */
+.pillar-input[type="number"]::-webkit-inner-spin-button,
+.pillar-input[type="number"]::-webkit-outer-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+.pillar-input[type="number"] {
+  -moz-appearance: textfield;
+}

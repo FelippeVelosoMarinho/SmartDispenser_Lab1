@@ -1,0 +1,28 @@
+<!doctype html><html><head><meta charset="utf-8"><title>Schedule list</title>
+<link rel="stylesheet" href="_preview.css">
+<script src="https://unpkg.com/@phosphor-icons/web@2.1.1"></script>
+<style>
+  body{padding:18px 20px}
+  .wrap{background:var(--surface);border:1px solid var(--border-subtle);border-radius:var(--radius-lg);overflow:hidden}
+  .head{padding:12px 16px;background:var(--surface-sunk);border-bottom:1px solid var(--border-subtle);display:flex;justify-content:space-between;align-items:center}
+  .title{font-size:13px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--ink-3)}
+  .items > div{display:flex;align-items:center;gap:14px;padding:14px 16px;border-bottom:1px solid var(--border-subtle)}
+  .items > div:last-child{border:none}
+  .dot{width:10px;height:10px;border-radius:50%;flex-shrink:0}
+  .dot--ok{background:var(--success)}.dot--up{background:var(--primary)}.dot--miss{background:var(--danger)}.dot--next{background:var(--border)}
+  .t{font-family:"Atkinson Hyperlegible",sans-serif;font-variant-numeric:tabular-nums;font-weight:700;font-size:15px;color:var(--ink);width:66px}
+  .name{font-size:15px;color:var(--ink);flex:1}
+  .stat{font-size:13px;color:var(--ink-3)}
+  .stat--miss{color:var(--danger-ink);font-weight:600}
+</style></head>
+<body>
+  <div class="wrap">
+    <div class="head"><div class="title">Wednesday · April 21</div><div class="stat">3 of 4 taken</div></div>
+    <div class="items">
+      <div><span class="dot dot--ok"></span><span class="t">7:00 AM</span><span class="name">Metformin 500 mg</span><span class="stat">Taken</span></div>
+      <div><span class="dot dot--up"></span><span class="t">8:00 AM</span><span class="name">Sertraline 10 mg</span><span class="stat">Due now</span></div>
+      <div><span class="dot dot--next"></span><span class="t">2:00 PM</span><span class="name">Vitamin D 1000 IU</span><span class="stat">Upcoming</span></div>
+      <div><span class="dot dot--miss"></span><span class="t">6:00 PM</span><span class="name">Lisinopril 20 mg</span><span class="stat stat--miss">Missed yesterday</span></div>
+    </div>
+  </div>
+</body></html>

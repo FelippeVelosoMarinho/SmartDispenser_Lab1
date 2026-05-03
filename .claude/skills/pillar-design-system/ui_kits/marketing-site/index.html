@@ -1,0 +1,139 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Pillar — calm medication that remembers for you</title>
+<link rel="stylesheet" href="../../colors_and_type.css">
+<script src="https://unpkg.com/@phosphor-icons/web@2.1.1"></script>
+<style>
+  body{margin:0;background:var(--canvas);color:var(--ink)}
+  .wrap{max-width:1120px;margin:0 auto;padding:0 28px}
+  .nav{display:flex;align-items:center;justify-content:space-between;padding:22px 0}
+  .nav img{height:34px}
+  .nav-links{display:flex;gap:28px;align-items:center}
+  .nav-links a{color:var(--ink-2);text-decoration:none;font-weight:500;font-size:15px}
+  .nav-links a:hover{color:var(--ink)}
+  .btn{display:inline-flex;align-items:center;gap:8px;height:44px;padding:0 18px;border-radius:14px;font-weight:600;font-size:15px;text-decoration:none;cursor:pointer;border:1.5px solid transparent}
+  .btn-primary{background:var(--primary);color:#fff}
+  .btn-primary:hover{background:var(--primary-hover)}
+  .btn-ghost{background:transparent;color:var(--ink);border-color:var(--border)}
+  .hero{padding:80px 0 100px;position:relative}
+  .hero::before{content:'';position:absolute;inset:0;background-image:radial-gradient(circle,#CBD5DF 1px,transparent 1px);background-size:32px 32px;opacity:0.35;mask-image:radial-gradient(ellipse at top,#000 30%,transparent 75%);pointer-events:none}
+  .hero .wrap{position:relative;display:grid;grid-template-columns:1.1fr 1fr;gap:60px;align-items:center}
+  .eyebrow{font-size:13px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--primary);margin-bottom:16px;display:inline-flex;align-items:center;gap:8px;background:var(--primary-soft);padding:6px 12px;border-radius:999px}
+  h1.h{font-size:56px;font-weight:600;line-height:1.05;letter-spacing:-0.02em;margin:0 0 20px;max-width:10ch}
+  .lede{font-size:20px;color:var(--ink-2);line-height:1.55;max-width:52ch;margin:0 0 28px}
+  .hero-actions{display:flex;gap:12px;align-items:center}
+  .hero-device{background:var(--surface);border:1px solid var(--border-subtle);border-radius:28px;padding:28px;box-shadow:var(--shadow-3);aspect-ratio:4/5;display:flex;flex-direction:column;justify-content:space-between;position:relative;overflow:hidden}
+  .chambers{display:grid;grid-template-columns:repeat(4,1fr);gap:10px}
+  .ch{aspect-ratio:1;background:var(--surface-sunk);border:1.5px solid var(--border-subtle);border-radius:12px;display:flex;align-items:center;justify-content:center;color:var(--ink-4);font-family:"Atkinson Hyperlegible",sans-serif;font-weight:700;font-size:13px}
+  .ch.on{background:var(--primary);border-color:var(--primary);color:#fff}
+  .ch.on::after{content:'';width:10px;height:10px;border-radius:50%;background:#fff;margin-left:4px}
+  .dev-status{padding:18px;background:var(--success-soft);border-radius:14px;display:flex;gap:10px;align-items:center;color:var(--success-ink)}
+
+  section.band{padding:96px 0}
+  .band--tinted{background:var(--surface)}
+  h2.s{font-size:40px;font-weight:600;line-height:1.1;letter-spacing:-0.015em;margin:0 0 12px;max-width:18ch}
+  .sub{font-size:18px;color:var(--ink-3);max-width:56ch;margin:0 0 56px}
+  .pillars{display:grid;grid-template-columns:repeat(3,1fr);gap:20px}
+  .pillar{background:var(--surface);border:1px solid var(--border-subtle);border-radius:20px;padding:28px}
+  .band--tinted .pillar{background:var(--canvas)}
+  .pillar i{font-size:32px;color:var(--primary);margin-bottom:16px;display:block}
+  .pillar h3{font-size:20px;font-weight:600;margin:0 0 8px}
+  .pillar p{margin:0;color:var(--ink-3);font-size:15px;line-height:1.55}
+
+  .values{display:grid;grid-template-columns:1fr 1fr;gap:24px}
+  .vcard{padding:28px;border-radius:20px;background:var(--secondary-soft);display:flex;gap:16px}
+  .vcard i{font-size:28px;color:var(--secondary-ink);flex-shrink:0}
+  .vcard h3{margin:0 0 6px;font-size:19px;font-weight:600;color:var(--secondary-ink)}
+  .vcard p{margin:0;color:var(--secondary-ink);opacity:.85;font-size:15px;line-height:1.5}
+
+  .cta{background:var(--primary);color:#fff;border-radius:28px;padding:60px;text-align:center;margin:60px 0}
+  .cta h2{font-size:40px;font-weight:600;margin:0 0 12px;letter-spacing:-0.015em}
+  .cta p{color:#B6D4EB;font-size:18px;margin:0 0 28px}
+  .cta .btn-primary{background:#fff;color:var(--primary)}
+
+  footer{border-top:1px solid var(--border-subtle);padding:32px 0;color:var(--ink-3);font-size:14px;display:flex;justify-content:space-between}
+</style>
+</head>
+<body>
+<header class="wrap">
+  <nav class="nav">
+    <img src="../../assets/logo-pillar.svg" alt="Pillar">
+    <div class="nav-links">
+      <a href="#">How it works</a>
+      <a href="#">For caregivers</a>
+      <a href="#">Docs</a>
+      <a href="#">GitHub</a>
+      <a href="#" class="btn btn-ghost">Sign in</a>
+    </div>
+  </nav>
+</header>
+
+<section class="hero">
+  <div class="wrap">
+    <div>
+      <span class="eyebrow"><i class="ph-duotone ph-code"/> Open source · MIT</span>
+      <h1 class="h">Still, steady, accountable.</h1>
+      <p class="lede">Pillar is an open-source medication dispenser built for people with multiple kinds of neurodivergency and disabilities — and for the people who love them.</p>
+      <div class="hero-actions">
+        <a class="btn btn-primary" href="#">Get started<i class="ph-bold ph-arrow-right"/></a>
+        <a class="btn btn-ghost" href="#"><i class="ph-duotone ph-github-logo"/>Read the code</a>
+      </div>
+    </div>
+    <div class="hero-device">
+      <div>
+        <div style="font-size:12px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--ink-3);margin-bottom:12px">Wednesday · 8:00 AM</div>
+        <div style="font-size:22px;font-weight:600;margin-bottom:20px">Sertraline · 10 mg</div>
+        <div class="chambers">
+          <div class="ch">M</div><div class="ch on">T</div><div class="ch">W</div><div class="ch">T</div>
+          <div class="ch">F</div><div class="ch">S</div><div class="ch">S</div><div class="ch">+</div>
+        </div>
+      </div>
+      <div class="dev-status">
+        <i class="ph-duotone ph-check-circle" style="font-size:22px"></i>
+        <div><div style="font-weight:600;font-size:14px">Ready</div><div style="font-size:13px;opacity:.85">Chamber T · one tablet</div></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="band band--tinted">
+  <div class="wrap">
+    <h2 class="s">Built from the ground up to be kind.</h2>
+    <p class="sub">We started from a simple premise: the software around medication should never make you feel worse about taking it.</p>
+    <div class="pillars">
+      <div class="pillar"><i class="ph-duotone ph-heart-straight"/><h3>Warm, never alarming</h3><p>A missed dose is not a crisis. Pillar adjusts gently and keeps the people you've chosen in the loop.</p></div>
+      <div class="pillar"><i class="ph-duotone ph-eye"/><h3>Accessible to the bone</h3><p>Color, shape, and word — every signal uses all three. Reduced-motion, high-contrast, and screen reader support ship by default.</p></div>
+      <div class="pillar"><i class="ph-duotone ph-lock-key"/><h3>Yours, privately</h3><p>Self-host it. Run it on a Raspberry Pi. Your medication data never leaves your home unless you say so.</p></div>
+    </div>
+  </div>
+</section>
+
+<section class="band">
+  <div class="wrap">
+    <h2 class="s">Made for real lives.</h2>
+    <p class="sub">Pillar is designed with — not for — people with ADHD, autism, memory differences, low vision, tremor, and the caregivers who walk alongside them.</p>
+    <div class="values">
+      <div class="vcard"><i class="ph-duotone ph-brain"/><div><h3>Cognitive load comes first</h3><p>One thing at a time. No dashboards of numbers you have to interpret. Just: what's next, and is it ready.</p></div></div>
+      <div class="vcard"><i class="ph-duotone ph-hand"/><div><h3>Forgiving by design</h3><p>Oversized targets. No pinch-to-zoom required. Every destructive action can be undone.</p></div></div>
+      <div class="vcard"><i class="ph-duotone ph-users-three"/><div><h3>Caregivers, not surveillance</h3><p>You choose what your people see. They never see what you didn't share.</p></div></div>
+      <div class="vcard"><i class="ph-duotone ph-cube"/><div><h3>Hardware that's repairable</h3><p>Standard motors, 3D-printable chambers, commodity boards. If a part breaks, you fix it.</p></div></div>
+    </div>
+  </div>
+</section>
+
+<section class="wrap">
+  <div class="cta">
+    <h2>Build with us.</h2>
+    <p>Pillar is community-built. Contributors welcome — hardware, software, translation, access testing.</p>
+    <a class="btn btn-primary" href="#"><i class="ph-duotone ph-github-logo"/>Contribute on GitHub</a>
+  </div>
+</section>
+
+<footer class="wrap">
+  <div>Pillar · MIT licensed · made with care</div>
+  <div style="display:flex;gap:20px"><a href="#" style="color:inherit">Docs</a><a href="#" style="color:inherit">Community</a><a href="#" style="color:inherit">Security</a></div>
+</footer>
+</body>
+</html>

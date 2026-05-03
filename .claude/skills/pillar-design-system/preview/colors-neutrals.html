@@ -1,0 +1,30 @@
+<!doctype html><html><head><meta charset="utf-8"><title>Neutrals</title>
+<link rel="stylesheet" href="_preview.css">
+<style>
+  body{padding:20px}
+  .grid{display:grid;grid-template-columns:repeat(5,1fr);gap:10px}
+  .sw{border-radius:var(--radius-sm);overflow:hidden;border:1px solid var(--border-subtle)}
+  .sw .color{height:56px}
+  .sw .meta{padding:8px 10px;background:var(--surface);font-family:var(--font-mono);font-size:10.5px;line-height:1.45}
+  .sw .name{color:var(--ink);font-weight:700}
+  .sw .hex{color:var(--ink-3)}
+  .section-label{font-size:10px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--ink-3);margin-bottom:6px}
+</style></head>
+<body>
+  <div class="section-label">surfaces · canvas → raised</div>
+  <div class="grid">
+    <div class="sw"><div class="color" style="background:#F7F9FB"></div><div class="meta"><div class="name">canvas</div><div class="hex">#F7F9FB</div></div></div>
+    <div class="sw"><div class="color" style="background:#EEF2F6"></div><div class="meta"><div class="name">surface-sunk</div><div class="hex">#EEF2F6</div></div></div>
+    <div class="sw"><div class="color" style="background:#E3E9EE"></div><div class="meta"><div class="name">surface-dim</div><div class="hex">#E3E9EE</div></div></div>
+    <div class="sw"><div class="color" style="background:#FFFFFF"></div><div class="meta"><div class="name">surface</div><div class="hex">#FFFFFF</div></div></div>
+    <div class="sw"><div class="color" style="background:#FFFFFF;box-shadow:var(--shadow-2)"></div><div class="meta"><div class="name">raised</div><div class="hex">+shadow-2</div></div></div>
+  </div>
+  <div class="section-label" style="margin-top:14px">ink · primary → disabled</div>
+  <div class="grid">
+    <div class="sw"><div class="color" style="background:#0F1B2D"></div><div class="meta"><div class="name">ink</div><div class="hex">#0F1B2D</div></div></div>
+    <div class="sw"><div class="color" style="background:#334155"></div><div class="meta"><div class="name">ink-2</div><div class="hex">#334155</div></div></div>
+    <div class="sw"><div class="color" style="background:#64748B"></div><div class="meta"><div class="name">ink-3</div><div class="hex">#64748B</div></div></div>
+    <div class="sw"><div class="color" style="background:#94A3B8"></div><div class="meta"><div class="name">ink-4</div><div class="hex">#94A3B8</div></div></div>
+    <div class="sw"><div class="color" style="background:#CBD5DF"></div><div class="meta"><div class="name">border</div><div class="hex">#CBD5DF</div></div></div>
+  </div>
+</body></html>

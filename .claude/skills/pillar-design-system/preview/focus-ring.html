@@ -1,0 +1,17 @@
+<!doctype html><html><head><meta charset="utf-8"><title>Focus ring</title>
+<link rel="stylesheet" href="_preview.css">
+<style>
+  body{padding:28px 24px;display:flex;gap:14px;align-items:center;justify-content:center;flex-wrap:wrap}
+  .x{display:inline-flex;align-items:center;justify-content:center;height:48px;padding:0 20px;border-radius:var(--radius);font:600 15px var(--font-sans)}
+  .p{background:var(--primary);color:#fff}
+  .s{background:var(--surface);border:1.5px solid var(--border);color:var(--ink)}
+  .ring-light{box-shadow:0 0 0 3px #fff, 0 0 0 6px #2B5F8A}
+  .ring-on-dark{box-shadow:0 0 0 3px #0F1B2D, 0 0 0 6px #7FB3D9}
+  .dark{background:var(--ink);padding:20px;border-radius:var(--radius-lg)}
+  .cap{font-family:var(--font-mono);font-size:10.5px;color:var(--ink-3);width:100%;text-align:center;margin-top:4px}
+</style></head>
+<body>
+  <div><div class="x s ring-light">Focused</div><div class="cap">on light surfaces</div></div>
+  <div class="dark"><div class="x p ring-on-dark">Focused</div></div>
+  <div style="width:100%;text-align:center;font-size:12px;color:var(--ink-3);margin-top:6px">Double-ring: inner contrast + outer primary. Always visible.</div>
+</body></html>

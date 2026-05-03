@@ -1,0 +1,89 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Pillar — deck template</title>
+<link rel="stylesheet" href="../colors_and_type.css">
+<script src="https://unpkg.com/@phosphor-icons/web@2.1.1"></script>
+<script src="deck-stage.js"></script>
+<style>
+  html,body{margin:0;background:#000}
+  section{background:var(--canvas);color:var(--ink);font-family:var(--font-sans);padding:96px 120px;box-sizing:border-box;position:relative}
+  .foot{position:absolute;left:120px;right:120px;bottom:60px;display:flex;justify-content:space-between;font-size:20px;color:var(--ink-3);font-weight:500}
+  .foot img{height:40px}
+  .eyebrow{font-size:24px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--primary);margin-bottom:24px}
+  h1{font-size:136px;font-weight:600;margin:0;letter-spacing:-0.02em;line-height:1.02;max-width:22ch}
+  h2{font-size:96px;font-weight:600;margin:0 0 40px;letter-spacing:-0.015em;line-height:1.05}
+  .lede{font-size:36px;color:var(--ink-2);line-height:1.4;max-width:26ch;margin-top:36px}
+  .cols{display:grid;grid-template-columns:1fr 1fr;gap:60px;margin-top:32px}
+  .card{background:var(--surface);border:1px solid var(--border-subtle);border-radius:24px;padding:44px;box-shadow:var(--shadow-1)}
+  .card i{font-size:56px;color:var(--primary);margin-bottom:20px;display:block}
+  .card h3{font-size:36px;font-weight:600;margin:0 0 14px}
+  .card p{font-size:24px;color:var(--ink-2);line-height:1.5;margin:0}
+  .big-stat{font-family:"Atkinson Hyperlegible",sans-serif;font-weight:700;font-size:280px;letter-spacing:-0.04em;line-height:1;color:var(--primary);font-variant-numeric:tabular-nums}
+  .stat-label{font-size:40px;color:var(--ink-2);margin-top:16px;max-width:22ch}
+  section.title-slide{background:var(--primary);color:#fff}
+  section.title-slide h1{color:#fff}
+  section.title-slide .eyebrow{color:#B6D4EB}
+  section.title-slide .foot{color:#B6D4EB}
+  section.quote-slide{background:var(--secondary-soft)}
+  .q{font-size:76px;font-weight:500;line-height:1.2;color:var(--secondary-ink);max-width:20ch;letter-spacing:-0.01em}
+  .q::before{content:'"';color:var(--secondary);font-size:120px}
+  .attrib{font-size:26px;color:var(--secondary-ink);opacity:.75;margin-top:32px}
+</style>
+</head>
+<body>
+
+<deck-stage width="1920" height="1080">
+
+  <!-- 1 TITLE -->
+  <section class="title-slide">
+    <div class="eyebrow">Pillar · open source</div>
+    <h1>Still, steady, accountable.</h1>
+    <div class="lede">A medication dispenser for people with neurodivergency and disabilities.</div>
+    <div class="foot"><img src="../assets/logo-pillar-inverse.svg" alt=""><span>April 2026</span></div>
+  </section>
+
+  <!-- 2 AGENDA -->
+  <section>
+    <div class="eyebrow">Today</div>
+    <h2>Three things.</h2>
+    <div class="cols">
+      <div class="card"><i class="ph-duotone ph-heart-straight"/><h3>Why we built it</h3><p>Medication software fails the people who most need help with medication.</p></div>
+      <div class="card"><i class="ph-duotone ph-pill"/><h3>How it works</h3><p>Hardware, software, and caregiver loop — open source, end to end.</p></div>
+    </div>
+    <div class="foot"><img src="../assets/logo-pillar.svg" alt=""><span>1 of 3</span></div>
+  </section>
+
+  <!-- 3 BIG STAT -->
+  <section>
+    <div class="eyebrow">The problem</div>
+    <div style="display:flex;align-items:center;gap:80px;margin-top:40px">
+      <div>
+        <div class="big-stat">50%</div>
+        <div class="stat-label">of people with chronic conditions miss doses — and most software makes that feel like a personal failure.</div>
+      </div>
+    </div>
+    <div class="foot"><img src="../assets/logo-pillar.svg" alt=""><span>2 of 3</span></div>
+  </section>
+
+  <!-- 4 QUOTE -->
+  <section class="quote-slide">
+    <div class="eyebrow" style="color:var(--secondary-ink)">From our research</div>
+    <div class="q">I don't need another app that nags me. I need something that is kind, and that my mom can see when she worries.</div>
+    <div class="attrib">— Alex, 34, ADHD, type 2 diabetes</div>
+    <div class="foot"><img src="../assets/logo-pillar.svg" alt=""><span>3 of 3</span></div>
+  </section>
+
+  <!-- 5 CLOSING -->
+  <section class="title-slide">
+    <div class="eyebrow">Contribute</div>
+    <h1>Build with us.</h1>
+    <div class="lede">github.com/pillar · MIT licensed · all roles welcome</div>
+    <div class="foot"><img src="../assets/logo-pillar-inverse.svg" alt=""><span>thank you</span></div>
+  </section>
+
+</deck-stage>
+
+</body>
+</html>

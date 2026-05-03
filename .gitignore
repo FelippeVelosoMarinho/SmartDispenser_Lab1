@@ -1,1 +1,6 @@
 node_modules
+
+# Lock files (use bun.lock only)
+package-lock.json
+yarn.lock
+pnpm-lock.yaml
