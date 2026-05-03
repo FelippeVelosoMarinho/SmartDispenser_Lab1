@@ -77,7 +77,7 @@ const Pagination = React.forwardRef<HTMLDivElement, PaginationProps>(
       <nav
         ref={ref}
         className={cn(
-          "flex flex-wrap items-center justify-center gap-1",
+          "flex flex-wrap items-center justify-center gap-1 rounded-sm",
           className,
         )}
         aria-label="Pagination"
@@ -185,7 +185,7 @@ const PaginationButton = React.forwardRef<
     const baseStyles = cn(
       "inline-flex items-center justify-center",
       "min-h-[44px] min-w-[44px]",
-      "rounded-[--radius-sm]",
+      "rounded-sm",
       "font-sans text-sm font-medium",
       "transition-all duration-fast",
       "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2",
