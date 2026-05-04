@@ -67,6 +67,27 @@ Abra `http://localhost:5173` no navegador.
 
 ---
 
+## 🐳 Docker (Execução Simplificada)
+
+A maneira mais rápida de rodar o ecossistema completo (Backend, Frontend e Banco de Dados) é utilizando o Docker Compose.
+
+### Como rodar
+1. Certifique-se de que o IP do seu ESP32 está correto no arquivo `docker-compose.yml`.
+2. Na raiz do projeto, execute:
+   ```bash
+   docker-compose up --build
+   ```
+
+### Serviços Disponíveis
+- **Frontend**: [http://localhost](http://localhost) (Servido via Nginx na porta 80)
+- **Backend**: [http://localhost:8000](http://localhost:8000) (Documentação em [http://localhost:8000/docs](http://localhost:8000/docs))
+- **PostgreSQL**: `localhost:5432` (Usuário: `user`, Senha: `password`, Banco: `smart_dispenser`)
+
+> [!NOTE]
+> O banco de dados é populado automaticamente na primeira execução com o esquema definido em `database/init.sql`.
+
+---
+
 ## 🛠️ Resumo de Soluções (Troubleshooting)
 
 Durante o desenvolvimento deste POC, resolvemos desafios críticos:
