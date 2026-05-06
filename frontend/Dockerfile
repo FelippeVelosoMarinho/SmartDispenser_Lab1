@@ -1,5 +1,5 @@
 # Build stage
-FROM oven/bun:1.1 AS build
+FROM oven/bun:1.2 AS build
 
 WORKDIR /app
 
@@ -24,9 +24,15 @@ FROM nginx:stable-alpine
 # Copy built assets from build stage
 COPY --from=build /app/frontend/dist /usr/share/nginx/html
 
-# Add custom nginx config to handle SPA routing
+# Add custom nginx config to handle SPA routing and API proxy
 RUN echo 'server { \
     listen 80; \
+    location /api { \
+        proxy_pass http://smart_dispenser_backend:8000; \
+        proxy_set_header Host $host; \
+        proxy_set_header X-Real-IP $remote_addr; \
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for; \
+    } \
     location / { \
         root /usr/share/nginx/html; \
         index index.html index.htm; \
