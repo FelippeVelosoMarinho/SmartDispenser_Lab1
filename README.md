@@ -83,6 +83,46 @@ A maneira mais rápida de rodar o ecossistema completo (Backend, Frontend e Banc
 - **Backend**: [http://localhost:8000](http://localhost:8000) (Documentação em [http://localhost:8000/docs](http://localhost:8000/docs))
 - **PostgreSQL**: `localhost:5432` (Usuário: `user`, Senha: `password`, Banco: `smart_dispenser`)
 
+Note: se você já tiver um PostgreSQL rodando na porta `5432` no host, o compose mapeará o banco do projeto para `5433`.
+
+---
+
+## 🔎 Testes rápidos (endpoints Auth)
+
+Após subir os serviços (`docker compose up --build -d`), você pode testar os endpoints de autenticação com estes comandos:
+
+1) Health check:
+```bash
+curl -s http://127.0.0.1:8000/api/health | jq
+```
+
+2) Registrar um cuidador (ex.: `alice`):
+```bash
+curl -s -X POST http://127.0.0.1:8000/auth/register \
+   -H "Content-Type: application/json" \
+   -d '{"username":"alice","password":"secret","full_name":"Alice"}' | jq
+```
+
+3) Login e captura de token:
+```bash
+RESP=$(curl -s -X POST http://127.0.0.1:8000/auth/login \
+   -H "Content-Type: application/json" \
+   -d '{"username":"alice","password":"secret"}')
+echo "$RESP" | jq
+TOKEN=$(echo "$RESP" | jq -r .access_token)
+```
+
+4) Acessar profile com o token:
+```bash
+curl -s http://127.0.0.1:8000/profile -H "Authorization: Bearer $TOKEN" | jq
+```
+
+Se o `curl` não retornar JSON legível, remova `| jq` e verifique a saída bruta.
+
+---
+
+Se quiser, eu posso adicionar estes passos também no `backend/README.md`.
+
 > [!NOTE]
 > O banco de dados é populado automaticamente na primeira execução com o esquema definido em `database/init.sql`.
 
