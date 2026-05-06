@@ -1,7 +1,8 @@
 """User-related Pydantic schemas."""
 
 from typing import Optional
-from pydantic import BaseModel
+import re
+from pydantic import BaseModel, field_validator
 
 
 class UserCreate(BaseModel):
@@ -11,6 +12,22 @@ class UserCreate(BaseModel):
     password: str
     full_name: Optional[str] = None
     email: Optional[str] = None
+
+    @field_validator('password')
+    @classmethod
+    def password_must_be_strong(cls, v: str) -> str:
+        if len(v) < 8:
+            raise ValueError('A senha deve ter no mínimo 8 caracteres.')
+        return v
+
+    @field_validator('email')
+    @classmethod
+    def email_must_be_valid(cls, v: Optional[str]) -> Optional[str]:
+        if v is not None:
+            regex = r'^[\w\.-]+@[\w\.-]+\.\w+$'
+            if not re.match(regex, v):
+                raise ValueError('Formato de e-mail inválido.')
+        return v
 
 
 class UserPublic(BaseModel):
