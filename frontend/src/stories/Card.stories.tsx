@@ -20,6 +20,7 @@ export default meta;
 type Story = StoryObj<typeof meta>;
 
 export const Default: Story = {
+  args: { children: null },
   render: () => (
     <Card style={{ maxWidth: "400px" }}>
       <CardContent>
@@ -30,6 +31,7 @@ export const Default: Story = {
 };
 
 export const WithHeader: Story = {
+  args: { children: null },
   render: () => (
     <Card style={{ maxWidth: "400px" }}>
       <CardHeader title="Medication Details" />
@@ -41,6 +43,7 @@ export const WithHeader: Story = {
 };
 
 export const WithHeaderAndFooter: Story = {
+  args: { children: null },
   render: () => (
     <Card style={{ maxWidth: "400px" }}>
       <CardHeader eyebrow="Morning dose" title="Metformin · 500 mg" />
@@ -55,6 +58,7 @@ export const WithHeaderAndFooter: Story = {
 };
 
 export const Elevated: Story = {
+  args: { children: null },
   render: () => (
     <Card variant="elevated" style={{ maxWidth: "400px" }}>
       <CardHeader eyebrow="Up next" title="Your morning medication" />
@@ -66,6 +70,7 @@ export const Elevated: Story = {
 };
 
 export const Interactive: Story = {
+  args: { children: null },
   render: () => (
     <Card
       variant="interactive"
@@ -82,6 +87,7 @@ export const Interactive: Story = {
 };
 
 export const MedicationCard: Story = {
+  args: { children: null },
   render: () => (
     <Card style={{ maxWidth: "420px" }}>
       <CardHeader eyebrow="Up next" title="Metformin · 500 mg" />
