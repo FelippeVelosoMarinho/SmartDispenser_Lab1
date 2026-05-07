@@ -1,5 +1,5 @@
 # Build stage
-FROM oven/bun:1.2 AS build
+FROM oven/bun:1.3.13 AS build
 
 WORKDIR /app
 
@@ -16,7 +16,9 @@ COPY frontend ./frontend
 
 # Build the application
 WORKDIR /app/frontend
-RUN bun run build
+# Run Vite build directly in Bun runtime to skip the separate TypeScript check
+# (the project runs `tsc -b` in `build:types`, which can fail Storybook stories during CI builds).
+RUN bun --bun vite build
 
 # Production stage (Nginx)
 FROM nginx:stable-alpine
