@@ -15,6 +15,7 @@ export default meta;
 type Story = StoryObj<typeof meta>;
 
 export const Default: Story = {
+  args: { currentPage: 1, totalPages: 5, onPageChange: () => {} },
   render: () => {
     const [page, setPage] = useState(1);
     return (
@@ -24,6 +25,7 @@ export const Default: Story = {
 };
 
 export const ManyPages: Story = {
+  args: { currentPage: 5, totalPages: 20, onPageChange: () => {} },
   render: () => {
     const [page, setPage] = useState(5);
     return (
@@ -33,6 +35,7 @@ export const ManyPages: Story = {
 };
 
 export const FirstPage: Story = {
+  args: { currentPage: 1, totalPages: 5, onPageChange: () => {} },
   render: () => {
     const [page, setPage] = useState(1);
     return (
@@ -42,6 +45,7 @@ export const FirstPage: Story = {
 };
 
 export const LastPage: Story = {
+  args: { currentPage: 5, totalPages: 5, onPageChange: () => {} },
   render: () => {
     const [page, setPage] = useState(5);
     return (
@@ -51,6 +55,7 @@ export const LastPage: Story = {
 };
 
 export const SinglePage: Story = {
+  args: { currentPage: 1, totalPages: 1, onPageChange: () => {} },
   render: () => {
     const [page, setPage] = useState(1);
     return (
@@ -60,6 +65,7 @@ export const SinglePage: Story = {
 };
 
 export const ControlledState: Story = {
+  args: { currentPage: 3, totalPages: 10, onPageChange: () => {} },
   render: () => {
     const [page, setPage] = useState(3);
     const totalPages = 10;
