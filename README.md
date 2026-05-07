@@ -71,20 +71,57 @@ Abra `http://localhost:5173` no navegador.
 
 A maneira mais rápida de rodar o ecossistema completo (Backend, Frontend e Banco de Dados) é utilizando o Docker Compose.
 
-### Como rodar
+### Modo de Produção
+
 1. Certifique-se de que o IP do seu ESP32 está correto no arquivo `docker-compose.yml`.
 2. Na raiz do projeto, execute:
    ```bash
    docker-compose up --build
    ```
 
-### Serviços Disponíveis
+### Serviços Disponíveis (Produção)
 - **Frontend**: [http://localhost](http://localhost) (Servido via Nginx na porta 80)
 - **Backend**: [http://localhost:8000](http://localhost:8000) (Documentação em [http://localhost:8000/docs](http://localhost:8000/docs))
 - **PostgreSQL**: `localhost:5432` (Usuário: `user`, Senha: `password`, Banco: `smart_dispenser`)
 
 > [!NOTE]
 > O banco de dados é populado automaticamente na primeira execução com o esquema definido em `database/init.sql`.
+
+---
+
+### Modo de Desenvolvimento (com Hot Reload)
+
+O ambiente de desenvolvimento mantém o **hot reload** do Vite ativo, ou seja, alterações nos arquivos do frontend refletem no navegador instantaneamente, sem necessidade de rebuildar a imagem.
+
+#### Como rodar
+
+1. Certifique-se de que o IP do seu ESP32 está correto em `docker-compose.yml` (campo `ESP32_IP`).
+2. Suba os serviços com o profile `dev`:
+   ```bash
+   docker-compose --profile dev up --build
+   ```
+
+#### Serviços Disponíveis (Desenvolvimento)
+- **Frontend (dev)**: [http://localhost](http://localhost) — Vite dev server com HMR, mapeado na porta 80
+- **Backend**: [http://localhost:8000](http://localhost:8000) (Documentação em [http://localhost:8000/docs](http://localhost:8000/docs))
+- **PostgreSQL**: `localhost:5432` (Usuário: `user`, Senha: `password`, Banco: `smart_dispenser`)
+
+#### Volumes e Hot Reload
+
+Os seguintes diretórios são montados como volumes, permitindo edição local com reflexo imediato no container:
+
+| Diretório local | Caminho no container |
+|---|---|
+| `frontend/src/` | `/app/frontend/src` |
+| `frontend/public/` | `/app/frontend/public` |
+| `frontend/index.html` | `/app/frontend/index.html` |
+| `frontend/vite.config.ts` | `/app/frontend/vite.config.ts` |
+
+> [!TIP]
+> Para derrubar os containers e remover os volumes anônimos ao finalizar:
+> ```bash
+> docker-compose --profile dev down -v
+> ```
 
 ---
 
@@ -96,3 +133,4 @@ Durante o desenvolvimento deste POC, resolvemos desafios críticos:
 - **Linux**: Permissões de USB via grupo `dialout` (`sudo usermod -a -G dialout $USER`).
 - **Rede**: Uso de `127.0.0.1` no proxy do Vite para evitar conflitos de IPv6.
 - **JSON**: O firmware agora processa JSON manualmente para evitar erros de versão da biblioteca `ArduinoJson`.
+- **Docker (frontend-dev)**: Se uma nova dependência foi adicionada ao `frontend/package.json` e o Vite reclamar com `Failed to resolve import "<pacote>"` dentro do container, o volume nomeado `frontend_node_modules` está com o `bun install` antigo em cache. Derrube com `docker compose --profile dev down -v` (ou remova o volume com `docker volume rm smartdispenser_lab1_frontend_node_modules`) antes de subir novamente.
