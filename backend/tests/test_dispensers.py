@@ -2,31 +2,44 @@ import pytest
 from fastapi.testclient import TestClient
 
 from app.main import app
-from app.crud.dispenser import update_dispenser_status, clear_dispenser_status
-from app.crud.user import create_user, USERS
+from app.core.database import SessionLocal
+from app.models.domain import User, Dispenser
 
 client = TestClient(app)
 
+class MockUser:
+    def __init__(self, username):
+        self.username = username
+
 @pytest.fixture(autouse=True)
 def clear_db():
-    USERS.clear()
-    clear_dispenser_status()
-    create_user("testuser", "hashed_password", "Test User", "test@example.com")
+    db = SessionLocal()
+    db.query(Dispenser).delete()
+    db.query(User).delete()
+    db.commit()
+    
+    db_user = User(username="testuser", hashed_password="hashed_password", full_name="Test User", email="test@example.com")
+    db.add(db_user)
+    db.commit()
+    db.close()
     yield
-    USERS.clear()
-    clear_dispenser_status()
+    db = SessionLocal()
+    db.query(Dispenser).delete()
+    db.query(User).delete()
+    db.commit()
+    db.close()
 
 
 @pytest.fixture
 def mock_get_current_user():
     from app.core.security import get_current_user
-    app.dependency_overrides[get_current_user] = lambda: {"username": "testuser"}
+    app.dependency_overrides[get_current_user] = lambda: MockUser(username="testuser")
     yield
     app.dependency_overrides.pop(get_current_user, None)
 
 
 def test_get_dispenser_status_mock(mock_get_current_user):
-    # It should return a default mock for unknown dispensers
+    # It should return a default mock for unknown dispensers or create it
     resp = client.get("/api/dispensers/disp_new/status")
     assert resp.status_code == 200
     data = resp.json()
@@ -35,12 +48,14 @@ def test_get_dispenser_status_mock(mock_get_current_user):
 
 
 def test_get_dispenser_status_updated(mock_get_current_user):
-    update_dispenser_status("disp_known", {
+    # Mock heartbeat
+    payload = {
         "dispenser_id": "disp_known",
         "battery_level": 15.0,
         "online": False,
         "critical_stock": True
-    })
+    }
+    client.post("/api/heartbeat", json=payload)
 
     resp = client.get("/api/dispensers/disp_known/status")
     assert resp.status_code == 200

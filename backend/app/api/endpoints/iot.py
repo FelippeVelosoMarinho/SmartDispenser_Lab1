@@ -2,7 +2,9 @@
 
 import time
 import httpx
-from fastapi import APIRouter, HTTPException, Request
+from fastapi import APIRouter, HTTPException, Request, Depends
+from sqlalchemy.orm import Session
+from app.core.database import get_db
 
 from app.core.config import ESP32_BASE_URL
 from app.crud import schedule as crud_schedule
@@ -141,19 +143,19 @@ async def toggle_led(command: LedCommand, request: Request):
 
 
 @router.get("/sync/{hardware_id}", response_model=SyncResponse)
-async def sync_dispenser(hardware_id: str):
+async def sync_dispenser(hardware_id: str, db: Session = Depends(get_db)):
     """
     O dispenser baixa a tabela de horários e a configuração dos slots para funcionar offline.
     """
-    schedules = crud_schedule.get_schedules(dispenser_id=hardware_id)
+    schedules = crud_schedule.get_schedules(db, dispenser_id=hardware_id)
     
     slot_configs = []
     for sched in schedules:
         slot_configs.append(SlotConfig(
-            slot_id=sched["slot_id"],
-            medication_id=sched["medication_id"],
-            quantity=sched["quantity"],
-            time=sched["time"],
+            slot_id=sched.slot_id or 0,
+            medication_id=str(sched.medication_id) if sched.medication_id else "",
+            quantity=sched.pills_per_dose or 1,
+            time=sched.time_legacy or "",
         ))
         
     return SyncResponse(
@@ -163,7 +165,10 @@ async def sync_dispenser(hardware_id: str):
 
 
 @router.post("/event", response_model=IotEventResponse)
-async def process_iot_event(event: IotEventCreate):
+async def process_iot_event(
+    event: IotEventCreate,
+    db: Session = Depends(get_db)
+):
     """
     O hardware avisa ao servidor que um comprimido foi liberado ou que o paciente não confirmou a ingestão.
     """
@@ -177,16 +182,19 @@ async def process_iot_event(event: IotEventCreate):
     }
     
     # Store the dispensation log using the crud operation
-    created_log = crud_log.create_dispensation_log(log_data)
+    created_log = crud_log.create_dispensation_log(db, log_data)
     
     return IotEventResponse(
         message=f"Event '{event.event_type}' processed successfully.",
-        log_id=created_log["id"]
+        log_id=str(created_log.id)
     )
 
 
 @router.post("/heartbeat", response_model=HeartbeatResponse)
-async def process_heartbeat(heartbeat: HeartbeatCreate):
+async def process_heartbeat(
+    heartbeat: HeartbeatCreate,
+    db: Session = Depends(get_db)
+):
     """
     O hardware avisa que ainda está ligado e conectado ao Wi-Fi.
     """
@@ -197,7 +205,7 @@ async def process_heartbeat(heartbeat: HeartbeatCreate):
         "critical_stock": heartbeat.critical_stock,
     }
     
-    crud_dispenser.update_dispenser_status(heartbeat.dispenser_id, status_data)
+    crud_dispenser.update_dispenser_status(db, heartbeat.dispenser_id, status_data)
     
     return HeartbeatResponse(
         message="Heartbeat recorded successfully."
