@@ -1,29 +1,47 @@
-"""Dispenser CRUD operations (in-memory store)."""
+"""Dispenser CRUD operations (database store)."""
 
-from typing import Dict
+from typing import Optional
+from sqlalchemy.orm import Session
+from app.models.domain import Dispenser
 
-# Mock in-memory status for dispensers
-DISPENSER_STATUS: Dict[str, dict] = {}
 
-
-def get_dispenser_status(dispenser_id: str) -> dict:
-    """Get the telemetry status for a dispenser. Returns mock data if not set."""
-    if dispenser_id not in DISPENSER_STATUS:
+def get_dispenser_status(db: Session, hardware_id: str) -> dict:
+    """Get the telemetry status for a dispenser."""
+    dispenser = db.query(Dispenser).filter(Dispenser.hardware_id == hardware_id).first()
+    if not dispenser:
         return {
-            "dispenser_id": dispenser_id,
+            "dispenser_id": hardware_id,
             "battery_level": 85.5,
             "online": True,
             "critical_stock": False
         }
-    return DISPENSER_STATUS[dispenser_id]
+        
+    return {
+        "dispenser_id": dispenser.hardware_id,
+        "battery_level": float(dispenser.battery_level) if dispenser.battery_level is not None else 100.0,
+        "online": dispenser.is_online,
+        "critical_stock": dispenser.critical_stock
+    }
 
 
-def update_dispenser_status(dispenser_id: str, status: dict) -> dict:
+def update_dispenser_status(db: Session, hardware_id: str, status: dict) -> dict:
     """Update dispenser telemetry status."""
-    DISPENSER_STATUS[dispenser_id] = status
+    dispenser = db.query(Dispenser).filter(Dispenser.hardware_id == hardware_id).first()
+    
+    if not dispenser:
+        # Create it if it doesn't exist
+        dispenser = Dispenser(
+            hardware_id=hardware_id,
+            battery_level=status.get("battery_level", 100.0),
+            is_online=status.get("online", True),
+            critical_stock=status.get("critical_stock", False)
+        )
+        db.add(dispenser)
+    else:
+        dispenser.battery_level = status.get("battery_level", dispenser.battery_level)
+        dispenser.is_online = status.get("online", dispenser.is_online)
+        dispenser.critical_stock = status.get("critical_stock", dispenser.critical_stock)
+        
+    db.commit()
+    db.refresh(dispenser)
     return status
-
-
-def clear_dispenser_status() -> None:
-    """Clear all dispenser statuses (useful for tests)."""
-    DISPENSER_STATUS.clear()

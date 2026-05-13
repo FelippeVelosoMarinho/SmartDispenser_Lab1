@@ -2,31 +2,56 @@ import pytest
 from fastapi.testclient import TestClient
 
 from app.main import app
-from app.crud.schedule import create_schedule, clear_schedules
-from app.crud.log import get_dispensation_logs, clear_logs
-from app.crud.dispenser import get_dispenser_status, clear_dispenser_status
+from app.crud.schedule import create_schedule
+from app.crud.log import get_dispensation_logs
+from app.crud.dispenser import get_dispenser_status
+from app.core.database import SessionLocal
+from app.models.domain import Dispenser, Schedule, Patient, User, DispensationLog
 
 client = TestClient(app)
 
 @pytest.fixture(autouse=True)
 def clear_db():
-    clear_schedules()
-    clear_logs()
-    clear_dispenser_status()
+    db = SessionLocal()
+    db.query(DispensationLog).delete()
+    db.query(Schedule).delete()
+    db.query(Dispenser).delete()
+    db.query(Patient).delete()
+    db.query(User).delete()
+    db.commit()
+    db.close()
+    
     yield
-    clear_schedules()
-    clear_logs()
-    clear_dispenser_status()
+    
+    db = SessionLocal()
+    db.query(DispensationLog).delete()
+    db.query(Schedule).delete()
+    db.query(Dispenser).delete()
+    db.query(Patient).delete()
+    db.query(User).delete()
+    db.commit()
+    db.close()
 
 def test_sync_dispenser():
-    create_schedule({
-        "patient_id": "p1",
+    db = SessionLocal()
+    # Create patient for schedule
+    user = User(username="testuser", hashed_password="pwd", full_name="User")
+    db.add(user)
+    db.commit()
+    patient = Patient(caregiver_username="testuser", full_name="Pat", name="Pat")
+    db.add(patient)
+    db.commit()
+    db.refresh(patient)
+    
+    create_schedule(db, {
+        "patient_id": str(patient.id),
         "dispenser_id": "disp_iot",
-        "medication_id": "med1",
+        "medication_id": "1",
         "slot_id": 1,
         "time": "08:00",
         "quantity": 2
     })
+    db.close()
     
     resp = client.get("/api/sync/disp_iot")
     assert resp.status_code == 200
@@ -48,9 +73,11 @@ def test_process_iot_event():
     assert "log_id" in data
     assert "message" in data
     
-    logs = get_dispensation_logs(dispenser_id="disp_iot")
+    db = SessionLocal()
+    logs = get_dispensation_logs(db, dispenser_id="disp_iot")
+    db.close()
     assert len(logs) == 1
-    assert logs[0]["success"] is True
+    assert logs[0].success is True
 
 def test_process_heartbeat():
     payload = {
@@ -64,6 +91,9 @@ def test_process_heartbeat():
     data = resp.json()
     assert data["message"] == "Heartbeat recorded successfully."
     
-    status = get_dispenser_status("disp_iot")
+    db = SessionLocal()
+    status = get_dispenser_status(db, "disp_iot")
+    db.close()
+    
     assert status["battery_level"] == 99.5
     assert status["online"] is True

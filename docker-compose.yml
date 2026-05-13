@@ -34,7 +34,7 @@ services:
     container_name: smart_dispenser_frontend
     restart: always
     ports:
-      - "80:80"
+      - "8080:80"
     depends_on:
       - backend
     profiles:
