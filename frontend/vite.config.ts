@@ -23,6 +23,12 @@ export default defineConfig({
         changeOrigin: true,
       },
     },
+    hmr: {
+      // When port-mapped (host:80 → container:5173), tell the HMR client to connect on port 80
+      clientPort: process.env.VITE_HMR_CLIENT_PORT
+        ? Number(process.env.VITE_HMR_CLIENT_PORT)
+        : undefined,
+    },
   },
   test: {
     projects: [
