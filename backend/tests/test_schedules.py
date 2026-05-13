@@ -2,40 +2,71 @@ import pytest
 from fastapi.testclient import TestClient
 
 from app.main import app
-from app.crud.user import create_user, USERS
-from app.crud.patient import create_patient, PATIENTS, clear_patients
-from app.crud.schedule import SCHEDULES, clear_schedules
+from app.core.database import SessionLocal
+from app.models.domain import User, Patient, Schedule
 
 client = TestClient(app)
 
+class MockUser:
+    def __init__(self, username):
+        self.username = username
+
 @pytest.fixture(autouse=True)
 def clear_db():
-    USERS.clear()
-    clear_patients()
-    clear_schedules()
-    create_user("testuser", "hashed_password", "Test User", "test@example.com")
+    db = SessionLocal()
+    db.query(Schedule).delete()
+    db.query(Patient).delete()
+    db.query(User).delete()
+    db.commit()
+    
+    db_user = User(username="testuser", hashed_password="hashed_password", full_name="Test User", email="test@example.com")
+    db.add(db_user)
+    db.commit()
+    db.close()
+    
     yield
-    USERS.clear()
-    clear_patients()
-    clear_schedules()
+    
+    db = SessionLocal()
+    db.query(Schedule).delete()
+    db.query(Patient).delete()
+    db.query(User).delete()
+    db.commit()
+    db.close()
 
 
 @pytest.fixture
 def mock_get_current_user():
     from app.core.security import get_current_user
-    app.dependency_overrides[get_current_user] = lambda: {"username": "testuser"}
+    app.dependency_overrides[get_current_user] = lambda: MockUser(username="testuser")
     yield
     app.dependency_overrides.pop(get_current_user, None)
 
 
+def create_db_patient(username: str, name: str) -> str:
+    db = SessionLocal()
+    # ensure user exists
+    user = db.query(User).filter(User.username == username).first()
+    if not user:
+        user = User(username=username, hashed_password="pwd", full_name="User")
+        db.add(user)
+        db.commit()
+    
+    patient = Patient(caregiver_username=username, full_name=name, name=name)
+    db.add(patient)
+    db.commit()
+    db.refresh(patient)
+    pid = str(patient.id)
+    db.close()
+    return pid
+
+
 def test_create_schedule(mock_get_current_user):
-    # Setup patient
-    patient = create_patient("testuser", {"name": "John Doe"})
+    pid = create_db_patient("testuser", "John Doe")
     
     payload = {
-        "patient_id": patient["id"],
+        "patient_id": pid,
         "dispenser_id": "disp_1",
-        "medication_id": "med_1",
+        "medication_id": "1", # integer compatible string
         "slot_id": 1,
         "time": "08:00",
         "quantity": 2
@@ -49,42 +80,37 @@ def test_create_schedule(mock_get_current_user):
 
 
 def test_list_schedules(mock_get_current_user):
-    patient1 = create_patient("testuser", {"name": "Patient 1"})
-    patient2 = create_patient("testuser", {"name": "Patient 2"})
+    pid1 = create_db_patient("testuser", "Patient 1")
+    pid2 = create_db_patient("testuser", "Patient 2")
 
-    # Create schedules for patient 1
     client.post("/api/schedules", json={
-        "patient_id": patient1["id"],
+        "patient_id": pid1,
         "dispenser_id": "disp_1",
-        "medication_id": "med_1",
+        "medication_id": "1",
         "slot_id": 1,
         "time": "08:00",
         "quantity": 1
     })
 
-    # Create schedules for patient 2
     client.post("/api/schedules", json={
-        "patient_id": patient2["id"],
+        "patient_id": pid2,
         "dispenser_id": "disp_2",
-        "medication_id": "med_2",
+        "medication_id": "2",
         "slot_id": 2,
         "time": "12:00",
         "quantity": 1
     })
 
-    # List all schedules (for current user's patients)
     response = client.get("/api/schedules")
     assert response.status_code == 200
     assert len(response.json()) == 2
 
-    # List schedules for patient 1 only
-    response = client.get(f"/api/schedules?patient_id={patient1['id']}")
+    response = client.get(f"/api/schedules?patient_id={pid1}")
     assert response.status_code == 200
     data = response.json()
     assert len(data) == 1
-    assert data[0]["patient_id"] == patient1["id"]
+    assert data[0]["patient_id"] == pid1
 
-    # Filter by dispenser
     response = client.get("/api/schedules?dispenser_id=disp_2")
     assert response.status_code == 200
     data = response.json()
@@ -93,48 +119,40 @@ def test_list_schedules(mock_get_current_user):
 
 
 def test_delete_schedule(mock_get_current_user):
-    patient = create_patient("testuser", {"name": "Jane Doe"})
+    pid = create_db_patient("testuser", "Jane Doe")
     
-    # Create schedule
     create_resp = client.post("/api/schedules", json={
-        "patient_id": patient["id"],
+        "patient_id": pid,
         "dispenser_id": "disp_1",
-        "medication_id": "med_1",
+        "medication_id": "1",
         "slot_id": 1,
         "time": "10:00",
         "quantity": 1
     })
     schedule_id = create_resp.json()["id"]
 
-    # Delete schedule
     del_resp = client.delete(f"/api/schedules/{schedule_id}")
     assert del_resp.status_code == 204
 
-    # Verify it's gone
-    list_resp = client.get(f"/api/schedules?patient_id={patient['id']}")
+    list_resp = client.get(f"/api/schedules?patient_id={pid}")
     assert len(list_resp.json()) == 0
 
 
 def test_unauthorized_access():
-    # Attempting to access endpoints without authentication
     response = client.get("/api/schedules")
     assert response.status_code == 401
 
 def test_unauthorized_patient_access():
     from app.core.security import get_current_user
     
-    # Setup patient for otheruser
-    create_user("otheruser", "pwd", "Other User")
-    patient = create_patient("otheruser", {"name": "Other Patient"})
+    pid = create_db_patient("otheruser", "Other Patient")
     
-    # Run as testuser
-    app.dependency_overrides[get_current_user] = lambda: {"username": "testuser"}
+    app.dependency_overrides[get_current_user] = lambda: MockUser(username="testuser")
 
-    # Try to create schedule for otheruser's patient
     payload = {
-        "patient_id": patient["id"],
+        "patient_id": pid,
         "dispenser_id": "disp_1",
-        "medication_id": "med_1",
+        "medication_id": "1",
         "slot_id": 1,
         "time": "08:00",
         "quantity": 1
@@ -142,8 +160,7 @@ def test_unauthorized_patient_access():
     response = client.post("/api/schedules", json=payload)
     assert response.status_code == 403
 
-    # Try to list otheruser's patient schedules
-    response = client.get(f"/api/schedules?patient_id={patient['id']}")
+    response = client.get(f"/api/schedules?patient_id={pid}")
     assert response.status_code == 403
 
     app.dependency_overrides.pop(get_current_user, None)
