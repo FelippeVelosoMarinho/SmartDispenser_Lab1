@@ -1,0 +1,16 @@
+FROM oven/bun:1.2
+
+WORKDIR /app
+
+# Copy root package.json and lockfile (workspaces)
+COPY package.json bun.lock ./
+COPY frontend/package.json ./frontend/
+
+# Install dependencies
+RUN bun install
+
+WORKDIR /app/frontend
+
+EXPOSE 5173
+
+CMD ["bun", "--bun", "vite", "--host", "0.0.0.0"]

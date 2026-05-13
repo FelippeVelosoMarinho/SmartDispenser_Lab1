@@ -4,3 +4,9 @@ node_modules
 package-lock.json
 yarn.lock
 pnpm-lock.yaml
+
+# Credentials — never commit these
+firmware/eco-dispenser/secrets.h
+firmware/.env
+**/.env
+backend/.env

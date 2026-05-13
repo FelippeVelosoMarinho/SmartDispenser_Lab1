@@ -1,0 +1,104 @@
+/* =========================================================================
+   ConfirmModal — Pillar Design System
+   ========================================================================= */
+
+.pillar-modal-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-5);
+  background: rgba(0, 0, 0, 0.45);
+  backdrop-filter: blur(2px);
+  animation: pillar-modal-fade-in var(--dur-slow) var(--ease-out);
+}
+
+@keyframes pillar-modal-fade-in {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+.pillar-modal {
+  width: 100%;
+  max-width: 420px;
+  background: var(--surface);
+  border: 1.5px solid var(--border);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-3);
+  padding: var(--space-7);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-5);
+  animation: pillar-modal-slide-in var(--dur-slow) var(--ease-out);
+}
+
+@keyframes pillar-modal-slide-in {
+  from {
+    opacity: 0;
+    transform: translateY(-12px) scale(0.97);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .pillar-modal-overlay,
+  .pillar-modal {
+    animation: none;
+  }
+}
+
+/* ── Icon ─────────────────────────────────────────────────────────────── */
+
+.pillar-modal__icon {
+  width: 48px;
+  height: 48px;
+  border-radius: var(--radius);
+  background: var(--danger-soft);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.pillar-modal__icon i {
+  font-size: 1.75rem;
+  color: var(--danger);
+}
+
+/* ── Body ─────────────────────────────────────────────────────────────── */
+
+.pillar-modal__body {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.pillar-modal__title {
+  font-family: var(--font-sans);
+  font-size: var(--text-lg);
+  font-weight: 700;
+  color: var(--ink);
+  line-height: var(--leading-heading);
+  margin: 0;
+}
+
+.pillar-modal__description {
+  font-family: var(--font-sans);
+  font-size: var(--text-base);
+  color: var(--ink-3);
+  line-height: var(--lh-snug);
+  margin: 0;
+}
+
+/* ── Actions ──────────────────────────────────────────────────────────── */
+
+.pillar-modal__actions {
+  display: flex;
+  gap: var(--space-3);
+  justify-content: flex-end;
+}
