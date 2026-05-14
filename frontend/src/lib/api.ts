@@ -188,6 +188,10 @@ export async function listDispensers() {
   return requestJson<Dispenser[]>("/dispensers");
 }
 
+export async function discoverDispensers() {
+  return requestJson<DiscoveredDispenser[]>("/dispensers/discover");
+}
+
 export async function pairDispenser(hardwareId: string, patientId: string) {
   return requestJson<Dispenser>(`/dispensers/${hardwareId}/pair`, {
     method: "POST",

@@ -6,6 +6,16 @@ from typing import Optional
 from pydantic import BaseModel
 
 
+class DiscoveredDispenser(BaseModel):
+    """Schema for discovered/available dispenser during pairing."""
+
+    id: str
+    serial: str
+    mac: str
+    rssi: int
+    firmware: str
+
+
 class DispenserStatusPublic(BaseModel):
     """Schema for dispenser telemetry status."""
     dispenser_id: str

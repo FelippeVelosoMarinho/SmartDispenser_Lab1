@@ -11,12 +11,45 @@ from app.crud.dispenser import get_dispenser_status, update_dispenser_status
 from app.crud.patient import get_patient, get_patients_by_caregiver
 from app.models.domain import Dispenser
 from app.schemas.dispenser import (
+    DiscoveredDispenser,
     DispenserPairRequest,
     DispenserPublic,
     DispenserStatusPublic,
 )
 
 router = APIRouter(prefix="/api/dispensers", tags=["dispensers"])
+
+# Mock discovered dispensers for testing/demo
+_MOCK_DISCOVERED = [
+    {
+        "id": "d-101",
+        "serial": "ESP-C3-011",
+        "mac": "A4:CF:12:8B:00:11",
+        "rssi": -42,
+        "firmware": "1.4.2",
+    },
+    {
+        "id": "d-102",
+        "serial": "ESP-C3-012",
+        "mac": "A4:CF:12:8B:00:12",
+        "rssi": -58,
+        "firmware": "1.4.2",
+    },
+    {
+        "id": "d-103",
+        "serial": "ESP-C3-013",
+        "mac": "A4:CF:12:8B:00:13",
+        "rssi": -67,
+        "firmware": "1.3.9",
+    },
+    {
+        "id": "d-104",
+        "serial": "ESP-C3-014",
+        "mac": "A4:CF:12:8B:00:14",
+        "rssi": -78,
+        "firmware": "1.4.2",
+    },
+]
 
 
 def _format_dispenser(dispenser: Dispenser) -> dict:
@@ -30,6 +63,18 @@ def _format_dispenser(dispenser: Dispenser) -> dict:
         "critical_stock": bool(dispenser.critical_stock),
         "last_sync": dispenser.last_sync,
     }
+
+
+@router.get("/discover", response_model=List[DiscoveredDispenser])
+async def discover_dispensers(
+    current_user = Depends(get_current_user),
+):
+    """Descobre dispensadores disponíveis para pareamento.
+    
+    Retorna uma lista de dispositivos disponíveis descobertos na rede.
+    Atualmente usa dados mock para fins de teste/demo.
+    """
+    return _MOCK_DISCOVERED
 
 
 @router.get("", response_model=List[DispenserPublic])

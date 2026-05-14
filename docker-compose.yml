@@ -46,7 +46,7 @@ services:
       dockerfile: frontend/Dockerfile.dev
     container_name: smart_dispenser_frontend_dev
     ports:
-      - "80:5173"
+      - "5173:5173"
     volumes:
       - ./frontend/src:/app/frontend/src
       - ./frontend/public:/app/frontend/public

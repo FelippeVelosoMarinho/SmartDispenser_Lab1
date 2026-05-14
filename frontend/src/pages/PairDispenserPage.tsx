@@ -5,15 +5,7 @@ import { Button } from "../components/ui/Button";
 import { Input } from "../components/ui/Input";
 import { Card, CardContent } from "../components/ui/Card";
 import "../components/ui/ConfirmModal.css";
-import { listPatients, pairDispenser, type Patient as ApiPatient } from "../lib/api";
-
-interface DiscoveredDispenser {
-  id: string;
-  serial: string;
-  mac: string;
-  rssi: number;
-  firmware: string;
-}
+import { listPatients, pairDispenser, discoverDispensers, type Patient as ApiPatient, type DiscoveredDispenser } from "../lib/api";
 
 interface Patient {
   id: string;
@@ -21,37 +13,6 @@ interface Patient {
   idade: number;
   medicacao: string;
 }
-
-const MOCK_DISCOVERED: DiscoveredDispenser[] = [
-  {
-    id: "d-101",
-    serial: "ESP-C3-011",
-    mac: "A4:CF:12:8B:00:11",
-    rssi: -42,
-    firmware: "1.4.2",
-  },
-  {
-    id: "d-102",
-    serial: "ESP-C3-012",
-    mac: "A4:CF:12:8B:00:12",
-    rssi: -58,
-    firmware: "1.4.2",
-  },
-  {
-    id: "d-103",
-    serial: "ESP-C3-013",
-    mac: "A4:CF:12:8B:00:13",
-    rssi: -67,
-    firmware: "1.3.9",
-  },
-  {
-    id: "d-104",
-    serial: "ESP-C3-014",
-    mac: "A4:CF:12:8B:00:14",
-    rssi: -78,
-    firmware: "1.4.2",
-  },
-];
 
 function toPatientRow(patient: ApiPatient): Patient {
   return {
@@ -131,6 +92,7 @@ export function PairDispenserPage() {
   const [patients, setPatients] = useState<Patient[]>([]);
   const [patientsLoading, setPatientsLoading] = useState(true);
   const [patientsError, setPatientsError] = useState<string | null>(null);
+  const [scanError, setScanError] = useState<string | null>(null);
   const scanIntervalRef = useRef<number | null>(null);
 
   useEffect(() => {
@@ -160,29 +122,41 @@ export function PairDispenserPage() {
     };
   }, []);
 
-  const startScan = useCallback(() => {
+  const startScan = useCallback(async () => {
     if (scanIntervalRef.current !== null) {
       window.clearInterval(scanIntervalRef.current);
       scanIntervalRef.current = null;
     }
     setScanning(true);
     setDevices([]);
-    let i = 0;
-    scanIntervalRef.current = window.setInterval(() => {
-      const next = MOCK_DISCOVERED[i];
-      if (!next) {
-        if (scanIntervalRef.current !== null) {
-          window.clearInterval(scanIntervalRef.current);
-          scanIntervalRef.current = null;
+    setScanError(null);
+
+    try {
+      // Fetch discovered dispensers from API
+      const discovered = await discoverDispensers();
+      
+      // Simulate gradual device discovery (UX improvement)
+      let i = 0;
+      scanIntervalRef.current = window.setInterval(() => {
+        if (i >= discovered.length) {
+          if (scanIntervalRef.current !== null) {
+            window.clearInterval(scanIntervalRef.current);
+            scanIntervalRef.current = null;
+          }
+          setScanning(false);
+          return;
         }
-        setScanning(false);
-        return;
-      }
-      setDevices((prev) =>
-        prev.some((d) => d.id === next.id) ? prev : [...prev, next],
-      );
-      i += 1;
-    }, 600);
+        
+        const next = discovered[i];
+        setDevices((prev) =>
+          prev.some((d) => d.id === next.id) ? prev : [...prev, next],
+        );
+        i += 1;
+      }, 600);
+    } catch (err) {
+      setScanError(err instanceof Error ? err.message : "Falha ao descobrir dispositivos");
+      setScanning(false);
+    }
   }, []);
 
   useEffect(() => {
@@ -337,6 +311,36 @@ export function PairDispenserPage() {
           </Button>
         </div>
       </div>
+
+      {/* Scan error */}
+      {scanError && (
+        <Card style={{ marginBottom: "var(--space-5)", borderColor: "var(--danger)" }}>
+          <CardContent>
+            <div
+              style={{
+                display: "flex",
+                alignItems: "flex-start",
+                gap: "var(--space-3)",
+                color: "var(--danger)",
+              }}
+            >
+              <i
+                className="ph-duotone ph-warning-octagon"
+                aria-hidden="true"
+                style={{ fontSize: "1.25rem", marginTop: "2px" }}
+              />
+              <div>
+                <p style={{ margin: 0, fontWeight: 600 }}>
+                  Erro ao descobrir dispositivos
+                </p>
+                <p style={{ margin: "var(--space-1) 0 0", fontSize: "var(--text-sm)" }}>
+                  {scanError}
+                </p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Device list */}
       {filtered.length === 0 && !scanning ? (
