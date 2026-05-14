@@ -77,31 +77,22 @@ void setupApiServer(AsyncWebServer& server) {
   );
 
   // POST /confirm
-  // Chamado pelo backend após verificar que o paciente confirmou (via botão).
-  // Limpa o slot confirmado do estado interno.
-  server.on("/confirm", HTTP_POST,
-    [](AsyncWebServerRequest* request) {},
-    NULL,
-    [](AsyncWebServerRequest* request, uint8_t* data, size_t len, size_t index, size_t total) {
-      int confirmed = getLastConfirmedSlot();
-      resetLastConfirmedSlot();
-      clearAlerts();
-      String resp = "{\"success\":true,\"confirmed_slot\":" + String(confirmed) + "}";
-      request->send(200, "application/json", resp);
-    }
-  );
+  // Não precisa de body — usa handler simples para evitar 501 com body vazio.
+  server.on("/confirm", HTTP_POST, [](AsyncWebServerRequest* request) {
+    int confirmed = getLastConfirmedSlot();
+    resetLastConfirmedSlot();
+    clearAlerts();
+    String resp = "{\"success\":true,\"confirmed_slot\":" + String(confirmed) + "}";
+    request->send(200, "application/json", resp);
+  });
 
   // POST /calibrate
-  // Reseta a roleta para o slot 0 após recarga completa.
-  server.on("/calibrate", HTTP_POST,
-    [](AsyncWebServerRequest* request) {},
-    NULL,
-    [](AsyncWebServerRequest* request, uint8_t* data, size_t len, size_t index, size_t total) {
-      calibrateCarousel();
-      clearAlerts();
-      request->send(200, "application/json", "{\"success\":true,\"current_slot\":0}");
-    }
-  );
+  // Não precisa de body — usa handler simples para evitar 501 com body vazio.
+  server.on("/calibrate", HTTP_POST, [](AsyncWebServerRequest* request) {
+    calibrateCarousel();
+    clearAlerts();
+    request->send(200, "application/json", "{\"success\":true,\"current_slot\":0}");
+  });
 
   // GET /
   // Página HTML de diagnóstico — útil para testar via navegador.
