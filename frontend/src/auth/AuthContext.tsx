@@ -1,43 +1,66 @@
 import { createContext, useContext, useState, useCallback } from "react";
 import type { ReactNode } from "react";
+import {
+  getProfile,
+  getStoredAuthSession,
+  loginWithPassword,
+  setAuthSession,
+} from "../lib/api";
 
 interface AuthState {
   isAuthenticated: boolean;
-  user: { email: string } | null;
+  user: { username: string; full_name: string | null; email: string | null } | null;
+  accessToken: string | null;
 }
 
 export interface AuthContextValue extends AuthState {
-  login: (email: string, password: string) => Promise<void>;
+  login: (username: string, password: string) => Promise<void>;
   logout: () => void;
 }
 
 const AuthContext = createContext<AuthContextValue | null>(null);
 
-const SESSION_KEY = "pillar_auth";
-
 function loadSession(): AuthState {
   try {
-    const raw = sessionStorage.getItem(SESSION_KEY);
-    if (raw) return JSON.parse(raw) as AuthState;
+    const stored = getStoredAuthSession();
+    if (stored) {
+      return {
+        isAuthenticated: true,
+        user: stored.user,
+        accessToken: stored.accessToken,
+      };
+    }
   } catch {
     // ignore parse errors
   }
-  return { isAuthenticated: false, user: null };
+  return { isAuthenticated: false, user: null, accessToken: null };
 }
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [auth, setAuth] = useState<AuthState>(loadSession);
 
-  const login = useCallback(async (email: string, _password: string) => {
-    // Replace with real API call when backend auth is ready.
-    const state: AuthState = { isAuthenticated: true, user: { email } };
-    sessionStorage.setItem(SESSION_KEY, JSON.stringify(state));
+  const login = useCallback(async (username: string, password: string) => {
+    console.info("[auth] login started", { username });
+    const accessToken = await loginWithPassword(username, password);
+    console.info("[auth] token received", { username });
+    setAuthSession({ accessToken, user: null });
+
+    const user = await getProfile();
+    console.info("[auth] profile loaded", { username: user.username });
+    const state: AuthState = {
+      isAuthenticated: true,
+      user,
+      accessToken,
+    };
+    setAuthSession({ accessToken, user });
     setAuth(state);
+    console.info("[auth] login completed", { username: user.username });
   }, []);
 
   const logout = useCallback(() => {
-    sessionStorage.removeItem(SESSION_KEY);
-    setAuth({ isAuthenticated: false, user: null });
+    console.info("[auth] logout");
+    setAuthSession(null);
+    setAuth({ isAuthenticated: false, user: null, accessToken: null });
   }, []);
 
   return (

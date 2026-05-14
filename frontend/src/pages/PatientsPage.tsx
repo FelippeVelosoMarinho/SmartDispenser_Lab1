@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "@tanstack/react-router";
 import { Button } from "../components/ui/Button";
 import { Input } from "../components/ui/Input";
@@ -13,6 +13,12 @@ import {
 } from "../components/ui/Table";
 import { Pagination } from "../components/ui/Pagination";
 import { ConfirmModal } from "../components/ui/ConfirmModal";
+import {
+  deletePatient as deletePatientApi,
+  listPatients,
+  mapPatientStatus,
+  type Patient as ApiPatient,
+} from "../lib/api";
 
 type PatientStatus = "ativo" | "inativo";
 
@@ -24,22 +30,17 @@ interface Patient {
   status: PatientStatus;
 }
 
-const MOCK_PATIENTS: Patient[] = [
-  { id: "1", nome: "Ana Souza", idade: 34, medicacao: "Ritalina 10 mg", status: "ativo" },
-  { id: "2", nome: "Bruno Lima", idade: 52, medicacao: "Sertralina 50 mg", status: "ativo" },
-  { id: "3", nome: "Carla Mendes", idade: 28, medicacao: "Clonazepam 0,5 mg", status: "ativo" },
-  { id: "4", nome: "Diego Ferreira", idade: 41, medicacao: "Melatonina 3 mg", status: "inativo" },
-  { id: "5", nome: "Eduarda Costa", idade: 19, medicacao: "Venvanse 30 mg", status: "ativo" },
-  { id: "6", nome: "Fábio Rocha", idade: 63, medicacao: "Atenolol 25 mg", status: "ativo" },
-  { id: "7", nome: "Gabriela Nunes", idade: 45, medicacao: "Fluoxetina 20 mg", status: "inativo" },
-  { id: "8", nome: "Henrique Pinto", idade: 31, medicacao: "Quetiapina 25 mg", status: "ativo" },
-  { id: "9", nome: "Isabela Martins", idade: 57, medicacao: "Topiramato 50 mg", status: "ativo" },
-  { id: "10", nome: "João Alves", idade: 22, medicacao: "Guanfacina 1 mg", status: "ativo" },
-  { id: "11", nome: "Karina Tavares", idade: 38, medicacao: "Bupropiona 150 mg", status: "inativo" },
-  { id: "12", nome: "Lucas Carvalho", idade: 47, medicacao: "Risperidona 2 mg", status: "ativo" },
-];
-
 const PAGE_SIZE = 8;
+
+function toPatientRow(patient: ApiPatient): Patient {
+  return {
+    id: patient.id,
+    nome: patient.name,
+    idade: patient.age ?? 0,
+    medicacao: patient.condition ?? "Sem condição informada",
+    status: mapPatientStatus(patient) as PatientStatus,
+  };
+}
 
 function StatusBadge({ status }: { status: PatientStatus }) {
   const isAtivo = status === "ativo";
@@ -72,13 +73,47 @@ export function PatientsPage() {
   const navigate = useNavigate();
   const [search, setSearch] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
-  const [patients, setPatients] = useState<Patient[]>(MOCK_PATIENTS);
+  const [patients, setPatients] = useState<Patient[]>([]);
   const [patientToDelete, setPatientToDelete] = useState<Patient | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-  function handleDeleteConfirm() {
+  useEffect(() => {
+    let mounted = true;
+
+    async function loadPatients() {
+      setLoading(true);
+      setError(null);
+      try {
+        const data = await listPatients();
+        if (!mounted) return;
+        setPatients(data.map(toPatientRow));
+      } catch (err) {
+        if (!mounted) return;
+        setError(err instanceof Error ? err.message : "Falha ao carregar pacientes");
+      } finally {
+        if (mounted) {
+          setLoading(false);
+        }
+      }
+    }
+
+    void loadPatients();
+
+    return () => {
+      mounted = false;
+    };
+  }, []);
+
+  async function handleDeleteConfirm() {
     if (!patientToDelete) return;
-    setPatients((prev) => prev.filter((p) => p.id !== patientToDelete.id));
-    setPatientToDelete(null);
+    try {
+      await deletePatientApi(patientToDelete.id);
+      setPatients((prev) => prev.filter((p) => p.id !== patientToDelete.id));
+      setPatientToDelete(null);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Falha ao apagar paciente");
+    }
   }
 
   const filtered = useMemo(() => {
@@ -152,13 +187,28 @@ export function PatientsPage() {
       {/* Search */}
       <div style={{ marginBottom: "var(--space-5)", maxWidth: "360px" }}>
         <Input
-          placeholder="Buscar por nome ou medicação"
+          placeholder="Buscar por nome ou condição"
           icon="ph-duotone ph-magnifying-glass"
           value={search}
           onChange={handleSearch}
           aria-label="Buscar pacientes"
         />
       </div>
+
+      {error && (
+        <div
+          style={{
+            marginBottom: "var(--space-5)",
+            padding: "var(--space-4)",
+            borderRadius: "var(--radius)",
+            background: "var(--danger-soft, rgba(220, 38, 38, 0.08))",
+            color: "var(--danger-ink, #991b1b)",
+          }}
+          role="alert"
+        >
+          {error}
+        </div>
+      )}
 
       {/* Table card */}
       <Card>
@@ -168,13 +218,37 @@ export function PatientsPage() {
               <tr>
                 <TableHead>Nome</TableHead>
                 <TableHead>Idade</TableHead>
-                <TableHead>Medicacao ativa</TableHead>
+                <TableHead>Condição</TableHead>
                 <TableHead>Status</TableHead>
-                <TableHead align="right">Acoes</TableHead>
+                <TableHead align="right">Ações</TableHead>
               </tr>
             </TableHeader>
             <TableBody>
-              {pageItems.length === 0 ? (
+              {loading ? (
+                <TableRow>
+                  <TableCell
+                    colSpan={5}
+                    style={{ textAlign: "center", padding: "var(--space-10)" }}
+                  >
+                    <div
+                      style={{
+                        display: "flex",
+                        flexDirection: "column",
+                        alignItems: "center",
+                        gap: "var(--space-3)",
+                        color: "var(--ink-3)",
+                      }}
+                    >
+                      <i
+                        className="ph-duotone ph-users"
+                        style={{ fontSize: "2.5rem" }}
+                        aria-hidden="true"
+                      />
+                      <span>Nenhum paciente encontrado.</span>
+                    </div>
+                  </TableCell>
+                </TableRow>
+              ) : pageItems.length === 0 ? (
                 <TableRow>
                   <TableCell
                     colSpan={5}
@@ -229,7 +303,10 @@ export function PatientsPage() {
                           leftIcon="ph-duotone ph-pencil-simple"
                           aria-label={`Editar ${patient.nome}`}
                           onClick={() =>
-                            navigate({ to: "/patients/$patientId/edit", params: { patientId: patient.id } })
+                            navigate({
+                              to: "/patients/$patientId/edit",
+                              params: { patientId: patient.id },
+                            })
                           }
                         />
                         <Button
@@ -283,7 +360,7 @@ export function PatientsPage() {
         }
         confirmLabel="Apagar"
         cancelLabel="Cancelar"
-        onConfirm={handleDeleteConfirm}
+        onConfirm={() => void handleDeleteConfirm()}
         onCancel={() => setPatientToDelete(null)}
       />
     </div>

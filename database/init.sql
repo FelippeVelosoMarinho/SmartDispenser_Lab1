@@ -15,18 +15,13 @@ CREATE TABLE "patients" (
   "caregiver_username" text
 );
 
-CREATE TABLE "users" (
+CREATE TABLE "caregivers" (
   "id" uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   "username" text UNIQUE NOT NULL,
   "hashed_password" text NOT NULL,
-  "full_name" text,
-  "email" text UNIQUE
-);
-
-CREATE TABLE "caregivers" (
-  "id" uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   "tax_id" text UNIQUE NOT NULL,
   "full_name" text NOT NULL,
+  "email" text UNIQUE,
   "notifications_enabled" boolean DEFAULT true
 );
 

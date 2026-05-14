@@ -8,6 +8,7 @@ from app.core.database import get_db
 from sqlalchemy.orm import Session
 from app.crud.patient import (
     create_patient,
+    delete_patient,
     get_patient,
     get_patients_by_caregiver,
     update_patient,
@@ -79,4 +80,21 @@ async def update_patient_data(
     
     updated = update_patient(db, patient_id, patient_in.model_dump(exclude_unset=True))
     return _format_patient(updated)
+
+
+@router.delete("/{patient_id}", status_code=204)
+async def remove_patient(
+    patient_id: str,
+    current_user = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """Remove um paciente do cuidador autenticado."""
+    patient = get_patient(db, patient_id)
+    if not patient:
+        raise HTTPException(status_code=404, detail="Patient not found")
+    if patient.caregiver_username != current_user.username:
+        raise HTTPException(status_code=403, detail="Not authorized to delete this patient")
+
+    delete_patient(db, patient_id)
+    return None
 

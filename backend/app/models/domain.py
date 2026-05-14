@@ -14,13 +14,19 @@ patient_caregiver = Table(
 )
 
 class User(Base):
-    __tablename__ = 'users'
+    """User model - authenticates as a caregiver."""
+    __tablename__ = 'caregivers'
 
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     username = Column(String, unique=True, nullable=False)
     hashed_password = Column(String, nullable=False)
-    full_name = Column(String)
+    tax_id = Column(String, unique=True, nullable=False)
+    full_name = Column(String, nullable=False)
     email = Column(String, unique=True)
+    notifications_enabled = Column(Boolean, default=True)
+
+    # Relationships
+    patients = relationship('Patient', secondary='patient_caregiver', back_populates='caregivers')
 
 
 class Patient(Base):
@@ -39,18 +45,8 @@ class Patient(Base):
     condition = Column(String)
     caregiver_username = Column(String) # Simple link to User.username for now
 
-    caregivers = relationship('Caregiver', secondary=patient_caregiver, back_populates='patients')
+    caregivers = relationship('User', secondary=patient_caregiver, back_populates='patients')
     dispensers = relationship('Dispenser', back_populates='patient')
-
-class Caregiver(Base):
-    __tablename__ = 'caregivers'
-
-    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    tax_id = Column(String, unique=True, nullable=False)
-    full_name = Column(String, nullable=False)
-    notifications_enabled = Column(Boolean, default=True)
-
-    patients = relationship('Patient', secondary=patient_caregiver, back_populates='caregivers')
 
 class Dispenser(Base):
     __tablename__ = 'dispensers'
@@ -155,4 +151,8 @@ class RefillHistory(Base):
     performed_by_legacy = Column(String, nullable=True)
 
     slot = relationship('Slot')
-    caregiver = relationship('Caregiver')
+    caregiver = relationship('User')
+
+
+# Backwards compatibility alias
+Caregiver = User

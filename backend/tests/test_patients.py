@@ -21,7 +21,7 @@ def clear_db():
     db.commit()
     
     # Create test user
-    db_user = User(username="testuser", hashed_password="hashed_password", full_name="Test User", email="test@example.com")
+    db_user = User(username="testuser", hashed_password="hashed_password", tax_id="12345678901234", full_name="Test User", email="test@example.com")
     db.add(db_user)
     db.commit()
     db.close()

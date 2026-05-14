@@ -11,6 +11,7 @@ def test_register_user_success():
         json={
             "username": "pytest_user",
             "password": "strongpassword123",
+            "tax_id": "12345678901234",
             "full_name": "Pytest User",
             "email": "pytest@example.com"
         }
@@ -28,6 +29,7 @@ def test_register_user_weak_password():
         json={
             "username": "pytest_weak",
             "password": "123", # Less than 8 characters
+            "tax_id": "12345678901234",
             "full_name": "Weak Pass User",
             "email": "weak@example.com"
         }
@@ -43,6 +45,7 @@ def test_register_user_invalid_email():
         json={
             "username": "pytest_email",
             "password": "strongpassword123",
+            "tax_id": "12345678901234",
             "full_name": "Invalid Email User",
             "email": "not-an-email" # Invalid email
         }
@@ -72,3 +75,16 @@ def test_login_and_get_profile():
     )
     assert profile_response.status_code == 200
     assert profile_response.json()["username"] == "pytest_user"
+
+
+def test_login_with_email_identifier():
+    response = client.post(
+        "/api/auth/login",
+        json={
+            "username": "pytest@example.com",
+            "password": "strongpassword123"
+        }
+    )
+    assert response.status_code == 200
+    assert response.json()["access_token"]
+

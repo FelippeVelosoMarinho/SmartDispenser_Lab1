@@ -14,6 +14,7 @@ import { EditPatientPage } from "./pages/EditPatientPage";
 import { DispensersPage } from "./pages/DispensersPage";
 import { PairDispenserPage } from "./pages/PairDispenserPage";
 import { LoginPage } from "./pages/LoginPage";
+import { RegisterPage } from "./pages/RegisterPage";
 import { NotFoundPage } from "./pages/NotFoundPage";
 
 interface RouterContext {
@@ -95,6 +96,11 @@ const pairDispenserRoute = createRoute({
 
 const routeTree = rootRoute.addChildren([
   loginRoute,
+  createRoute({
+    getParentRoute: () => rootRoute,
+    path: "/register",
+    component: RegisterPage,
+  }),
   authenticatedRoute.addChildren([
     indexRoute,
     dashboardRoute,

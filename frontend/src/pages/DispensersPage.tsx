@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "@tanstack/react-router";
 import { Button } from "../components/ui/Button";
 import { Input } from "../components/ui/Input";
@@ -13,113 +13,58 @@ import {
 } from "../components/ui/Table";
 import { Pagination } from "../components/ui/Pagination";
 import { ConfirmModal } from "../components/ui/ConfirmModal";
+import {
+  deleteDispenser as deleteDispenserApi,
+  listDispensers,
+  type Dispenser as ApiDispenser,
+} from "../lib/api";
 
 type DispenserStatus = "conectado" | "desconectado";
 
 interface Dispenser {
   id: string;
   serial: string;
-  localizacao: string;
   status: DispenserStatus;
   pacienteId: string | null;
   pacienteNome: string | null;
+  batteryLevel: number;
+  criticalStock: boolean;
   ultimoContato: string;
 }
 
-const MOCK_DISPENSERS: Dispenser[] = [
-  {
-    id: "1",
-    serial: "ESP-C3-001",
-    localizacao: "Quarto 101",
-    status: "conectado",
-    pacienteId: "3",
-    pacienteNome: "Carla Mendes",
-    ultimoContato: "há 2 min",
-  },
-  {
-    id: "2",
-    serial: "ESP-C3-002",
-    localizacao: "Quarto 205",
-    status: "conectado",
-    pacienteId: "1",
-    pacienteNome: "Ana Souza",
-    ultimoContato: "há 5 min",
-  },
-  {
-    id: "3",
-    serial: "ESP-C3-003",
-    localizacao: "Sala de Estar",
-    status: "desconectado",
-    pacienteId: "4",
-    pacienteNome: "Diego Ferreira",
-    ultimoContato: "há 3 h",
-  },
-  {
-    id: "4",
-    serial: "ESP-C3-004",
-    localizacao: "Quarto 312",
-    status: "conectado",
-    pacienteId: "8",
-    pacienteNome: "Henrique Pinto",
-    ultimoContato: "há 1 min",
-  },
-  {
-    id: "5",
-    serial: "ESP-C3-005",
-    localizacao: "Enfermaria A",
-    status: "conectado",
-    pacienteId: "5",
-    pacienteNome: "Eduarda Costa",
-    ultimoContato: "há 8 min",
-  },
-  {
-    id: "6",
-    serial: "ESP-C3-006",
-    localizacao: "Quarto 408",
-    status: "desconectado",
-    pacienteId: null,
-    pacienteNome: null,
-    ultimoContato: "há 1 dia",
-  },
-  {
-    id: "7",
-    serial: "ESP-C3-007",
-    localizacao: "Enfermaria B",
-    status: "conectado",
-    pacienteId: "12",
-    pacienteNome: "Lucas Carvalho",
-    ultimoContato: "há 4 min",
-  },
-  {
-    id: "8",
-    serial: "ESP-C3-008",
-    localizacao: "Quarto 502",
-    status: "conectado",
-    pacienteId: "9",
-    pacienteNome: "Isabela Martins",
-    ultimoContato: "há 12 min",
-  },
-  {
-    id: "9",
-    serial: "ESP-C3-009",
-    localizacao: "Recepção",
-    status: "desconectado",
-    pacienteId: null,
-    pacienteNome: null,
-    ultimoContato: "há 2 dias",
-  },
-  {
-    id: "10",
-    serial: "ESP-C3-010",
-    localizacao: "Quarto 110",
-    status: "conectado",
-    pacienteId: "2",
-    pacienteNome: "Bruno Lima",
-    ultimoContato: "há 7 min",
-  },
-];
-
 const PAGE_SIZE = 8;
+
+function formatLastSync(lastSync: string | null) {
+  if (!lastSync) return "Sem sincronização";
+
+  const date = new Date(lastSync);
+  if (Number.isNaN(date.getTime())) return lastSync;
+
+  const diffMs = Date.now() - date.getTime();
+  const diffMinutes = Math.round(diffMs / (1000 * 60));
+
+  if (diffMinutes < 1) return "há poucos segundos";
+  if (diffMinutes < 60) return `há ${diffMinutes} min`;
+
+  const diffHours = Math.round(diffMinutes / 60);
+  if (diffHours < 24) return `há ${diffHours} h`;
+
+  const diffDays = Math.round(diffHours / 24);
+  return `há ${diffDays} dia${diffDays !== 1 ? "s" : ""}`;
+}
+
+function toDispenserRow(dispenser: ApiDispenser): Dispenser {
+  return {
+    id: dispenser.id,
+    serial: dispenser.hardware_id,
+    status: dispenser.is_online ? "conectado" : "desconectado",
+    pacienteId: dispenser.patient_id,
+    pacienteNome: dispenser.patient_name,
+    batteryLevel: dispenser.battery_level,
+    criticalStock: dispenser.critical_stock,
+    ultimoContato: formatLastSync(dispenser.last_sync),
+  };
+}
 
 function StatusBadge({ status }: { status: DispenserStatus }) {
   const isConectado = status === "conectado";
@@ -151,15 +96,24 @@ function StatusBadge({ status }: { status: DispenserStatus }) {
 function PacienteCell({
   pacienteId,
   pacienteNome,
+  criticalStock,
 }: {
   pacienteId: string | null;
   pacienteNome: string | null;
+  criticalStock: boolean;
 }) {
   if (!pacienteNome) {
     return (
-      <span style={{ color: "var(--ink-3)", fontStyle: "italic" }}>
-        Não vinculado
-      </span>
+      <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
+        <span style={{ color: "var(--ink-3)", fontStyle: "italic" }}>
+          Não vinculado
+        </span>
+        {criticalStock && (
+          <span style={{ fontSize: "var(--text-xs)", color: "#b42318", fontWeight: 600 }}>
+            Estoque crítico
+          </span>
+        )}
+      </div>
     );
   }
   return (
@@ -178,15 +132,49 @@ export function DispensersPage() {
   const navigate = useNavigate();
   const [search, setSearch] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
-  const [dispensers, setDispensers] = useState<Dispenser[]>(MOCK_DISPENSERS);
+  const [dispensers, setDispensers] = useState<Dispenser[]>([]);
   const [dispenserToDelete, setDispenserToDelete] = useState<Dispenser | null>(
     null,
   );
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-  function handleDeleteConfirm() {
+  useEffect(() => {
+    let mounted = true;
+
+    async function loadDispensers() {
+      setLoading(true);
+      setError(null);
+      try {
+        const data = await listDispensers();
+        if (!mounted) return;
+        setDispensers(data.map(toDispenserRow));
+      } catch (err) {
+        if (!mounted) return;
+        setError(err instanceof Error ? err.message : "Falha ao carregar dispensadores");
+      } finally {
+        if (mounted) {
+          setLoading(false);
+        }
+      }
+    }
+
+    void loadDispensers();
+
+    return () => {
+      mounted = false;
+    };
+  }, []);
+
+  async function handleDeleteConfirm() {
     if (!dispenserToDelete) return;
-    setDispensers((prev) => prev.filter((d) => d.id !== dispenserToDelete.id));
-    setDispenserToDelete(null);
+    try {
+      await deleteDispenserApi(dispenserToDelete.serial);
+      setDispensers((prev) => prev.filter((d) => d.id !== dispenserToDelete.id));
+      setDispenserToDelete(null);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Falha ao remover dispensador");
+    }
   }
 
   const filtered = useMemo(() => {
@@ -195,7 +183,6 @@ export function DispensersPage() {
     return dispensers.filter(
       (d) =>
         d.serial.toLowerCase().includes(q) ||
-        d.localizacao.toLowerCase().includes(q) ||
         (d.pacienteNome?.toLowerCase().includes(q) ?? false),
     );
   }, [search, dispensers]);
@@ -261,13 +248,28 @@ export function DispensersPage() {
       {/* Search */}
       <div style={{ marginBottom: "var(--space-5)", maxWidth: "360px" }}>
         <Input
-          placeholder="Buscar por serial, local ou paciente"
+          placeholder="Buscar por serial ou paciente"
           icon="ph-duotone ph-magnifying-glass"
           value={search}
           onChange={handleSearch}
           aria-label="Buscar dispensadores"
         />
       </div>
+
+      {error && (
+        <div
+          style={{
+            marginBottom: "var(--space-5)",
+            padding: "var(--space-4)",
+            borderRadius: "var(--radius)",
+            background: "var(--danger-soft, rgba(220, 38, 38, 0.08))",
+            color: "var(--danger-ink, #991b1b)",
+          }}
+          role="alert"
+        >
+          {error}
+        </div>
+      )}
 
       {/* Table card */}
       <Card>
@@ -276,18 +278,38 @@ export function DispensersPage() {
             <TableHeader>
               <tr>
                 <TableHead>Serial</TableHead>
-                <TableHead>Localização</TableHead>
                 <TableHead>Paciente vinculado</TableHead>
+                <TableHead>Bateria</TableHead>
                 <TableHead>Último contato</TableHead>
                 <TableHead>Status</TableHead>
                 <TableHead align="right">Ações</TableHead>
               </tr>
             </TableHeader>
             <TableBody>
-              {pageItems.length === 0 ? (
+              {loading ? (
                 <TableRow>
                   <TableCell
-                    colSpan={6}
+                    colSpan={5}
+                    style={{ textAlign: "center", padding: "var(--space-10)" }}
+                  >
+                    <div
+                      style={{
+                        display: "flex",
+                        flexDirection: "column",
+                        alignItems: "center",
+                        gap: "var(--space-3)",
+                        color: "var(--ink-3)",
+                      }}
+                    >
+                      <i className="ph-duotone ph-spinner" aria-hidden="true" />
+                      <span>Carregando dispensadores…</span>
+                    </div>
+                  </TableCell>
+                </TableRow>
+              ) : pageItems.length === 0 ? (
+                <TableRow>
+                  <TableCell
+                    colSpan={5}
                     style={{ textAlign: "center", padding: "var(--space-10)" }}
                   >
                     <div
@@ -316,13 +338,14 @@ export function DispensersPage() {
                         {dispenser.serial}
                       </span>
                     </TableCell>
-                    <TableCell>{dispenser.localizacao}</TableCell>
                     <TableCell>
                       <PacienteCell
                         pacienteId={dispenser.pacienteId}
                         pacienteNome={dispenser.pacienteNome}
+                        criticalStock={dispenser.criticalStock}
                       />
                     </TableCell>
+                    <TableCell>{dispenser.batteryLevel.toFixed(1)}%</TableCell>
                     <TableCell style={{ color: "var(--ink-3)" }}>
                       {dispenser.ultimoContato}
                     </TableCell>
@@ -341,6 +364,7 @@ export function DispensersPage() {
                           size="small"
                           leftIcon="ph-duotone ph-pencil-simple"
                           aria-label={`Editar ${dispenser.serial}`}
+                          onClick={() => navigate({ to: "/dispensers/pair" })}
                         />
                         <Button
                           variant="ghost"
@@ -393,7 +417,7 @@ export function DispensersPage() {
         }
         confirmLabel="Remover"
         cancelLabel="Cancelar"
-        onConfirm={handleDeleteConfirm}
+        onConfirm={() => void handleDeleteConfirm()}
         onCancel={() => setDispenserToDelete(null)}
       />
     </div>

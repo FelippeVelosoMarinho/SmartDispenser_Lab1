@@ -5,6 +5,7 @@ import { Button } from "../components/ui/Button";
 import { Input } from "../components/ui/Input";
 import { Card, CardContent } from "../components/ui/Card";
 import "../components/ui/ConfirmModal.css";
+import { listPatients, pairDispenser, type Patient as ApiPatient } from "../lib/api";
 
 interface DiscoveredDispenser {
   id: string;
@@ -52,18 +53,14 @@ const MOCK_DISCOVERED: DiscoveredDispenser[] = [
   },
 ];
 
-const MOCK_PATIENTS: Patient[] = [
-  { id: "1", nome: "Ana Souza", idade: 34, medicacao: "Ritalina 10 mg" },
-  { id: "2", nome: "Bruno Lima", idade: 52, medicacao: "Sertralina 50 mg" },
-  { id: "6", nome: "Fábio Rocha", idade: 63, medicacao: "Atenolol 25 mg" },
-  { id: "10", nome: "João Alves", idade: 22, medicacao: "Guanfacina 1 mg" },
-  {
-    id: "11",
-    nome: "Karina Tavares",
-    idade: 38,
-    medicacao: "Bupropiona 150 mg",
-  },
-];
+function toPatientRow(patient: ApiPatient): Patient {
+  return {
+    id: patient.id,
+    nome: patient.name,
+    idade: patient.age ?? 0,
+    medicacao: patient.condition ?? "Sem condição informada",
+  };
+}
 
 type SignalLevel = "excelente" | "bom" | "fraco";
 
@@ -131,7 +128,37 @@ export function PairDispenserPage() {
   const [search, setSearch] = useState("");
   const [selected, setSelected] = useState<DiscoveredDispenser | null>(null);
   const [pairing, setPairing] = useState(false);
+  const [patients, setPatients] = useState<Patient[]>([]);
+  const [patientsLoading, setPatientsLoading] = useState(true);
+  const [patientsError, setPatientsError] = useState<string | null>(null);
   const scanIntervalRef = useRef<number | null>(null);
+
+  useEffect(() => {
+    let mounted = true;
+
+    async function loadPatients() {
+      setPatientsLoading(true);
+      setPatientsError(null);
+      try {
+        const data = await listPatients();
+        if (!mounted) return;
+        setPatients(data.map(toPatientRow));
+      } catch (err) {
+        if (!mounted) return;
+        setPatientsError(err instanceof Error ? err.message : "Falha ao carregar pacientes");
+      } finally {
+        if (mounted) {
+          setPatientsLoading(false);
+        }
+      }
+    }
+
+    void loadPatients();
+
+    return () => {
+      mounted = false;
+    };
+  }, []);
 
   const startScan = useCallback(() => {
     if (scanIntervalRef.current !== null) {
@@ -178,12 +205,11 @@ export function PairDispenserPage() {
     );
   }, [devices, search]);
 
-  async function handleConfirmPair(_patient: Patient) {
+  async function handleConfirmPair(patient: Patient) {
     if (!selected) return;
     setPairing(true);
     try {
-      // TODO: integrar com backend quando o endpoint estiver disponível
-      await new Promise((r) => setTimeout(r, 600));
+      await pairDispenser(selected.serial, patient.id);
       navigate({ to: "/dispensers" });
     } finally {
       setPairing(false);
@@ -440,8 +466,9 @@ export function PairDispenserPage() {
       <PatientPickerModal
         open={selected !== null}
         device={selected}
-        patients={MOCK_PATIENTS}
-        loading={pairing}
+        patients={patients}
+        loading={pairing || patientsLoading}
+        error={patientsError}
         onCancel={() => setSelected(null)}
         onConfirm={handleConfirmPair}
       />
@@ -456,6 +483,7 @@ interface PatientPickerModalProps {
   device: DiscoveredDispenser | null;
   patients: Patient[];
   loading: boolean;
+  error: string | null;
   onCancel: () => void;
   onConfirm: (patient: Patient) => void;
 }
@@ -465,6 +493,7 @@ function PatientPickerModal({
   device,
   patients,
   loading,
+  error,
   onCancel,
   onConfirm,
 }: PatientPickerModalProps) {
@@ -548,6 +577,19 @@ function PatientPickerModal({
               paddingRight: "4px",
             }}
           >
+            {error && (
+              <div
+                style={{
+                  padding: "var(--space-4)",
+                  borderRadius: "var(--radius)",
+                  background: "var(--danger-soft, rgba(220, 38, 38, 0.08))",
+                  color: "var(--danger-ink, #991b1b)",
+                }}
+                role="alert"
+              >
+                {error}
+              </div>
+            )}
             {filtered.length === 0 ? (
               <div
                 style={{

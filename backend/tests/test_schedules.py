@@ -3,7 +3,7 @@ from fastapi.testclient import TestClient
 
 from app.main import app
 from app.core.database import SessionLocal
-from app.models.domain import User, Patient, Schedule
+from app.models.domain import User, Patient, Schedule, Dispenser, Drawer, Slot, Medication
 
 client = TestClient(app)
 
@@ -15,11 +15,15 @@ class MockUser:
 def clear_db():
     db = SessionLocal()
     db.query(Schedule).delete()
+    db.query(Slot).delete()
+    db.query(Drawer).delete()
+    db.query(Dispenser).delete()
+    db.query(Medication).delete()
     db.query(Patient).delete()
     db.query(User).delete()
     db.commit()
     
-    db_user = User(username="testuser", hashed_password="hashed_password", full_name="Test User", email="test@example.com")
+    db_user = User(username="testuser", hashed_password="hashed_password", tax_id="12345678901234", full_name="Test User", email="test@example.com")
     db.add(db_user)
     db.commit()
     db.close()
@@ -28,6 +32,10 @@ def clear_db():
     
     db = SessionLocal()
     db.query(Schedule).delete()
+    db.query(Slot).delete()
+    db.query(Drawer).delete()
+    db.query(Dispenser).delete()
+    db.query(Medication).delete()
     db.query(Patient).delete()
     db.query(User).delete()
     db.commit()
@@ -47,7 +55,9 @@ def create_db_patient(username: str, name: str) -> str:
     # ensure user exists
     user = db.query(User).filter(User.username == username).first()
     if not user:
-        user = User(username=username, hashed_password="pwd", full_name="User")
+        # Generate unique tax_id based on username
+        tax_id = f"123456789{len(username):05d}"
+        user = User(username=username, hashed_password="pwd", tax_id=tax_id, full_name="User")
         db.add(user)
         db.commit()
     
@@ -60,8 +70,57 @@ def create_db_patient(username: str, name: str) -> str:
     return pid
 
 
+def create_schedule_dependencies(
+    slot_id: int = 1,
+    medication_id: int = 1,
+    hardware_id: str = "disp_1",
+) -> None:
+    db = SessionLocal()
+    if not db.query(Medication).filter(Medication.id == medication_id).first():
+        medication = Medication(id=medication_id, name=f"Med {medication_id}")
+        db.add(medication)
+    if not db.query(Dispenser).filter(Dispenser.hardware_id == hardware_id).first():
+        dispenser = Dispenser(hardware_id=hardware_id)
+        db.add(dispenser)
+        db.flush()
+        drawer = Drawer(id=slot_id, dispenser_id=dispenser.id, label=f"Drawer {slot_id}")
+        db.add(drawer)
+        db.flush()
+        slot = Slot(
+            id=slot_id,
+            drawer_id=drawer.id,
+            medication_id=medication_id,
+            position_number=1,
+            max_pill_capacity=10,
+            current_pill_count=0,
+        )
+        db.add(slot)
+    elif not db.query(Slot).filter(Slot.id == slot_id).first():
+        drawer = db.query(Drawer).filter(Drawer.id == slot_id).first()
+        if not drawer:
+            drawer = Drawer(
+                id=slot_id,
+                dispenser_id=db.query(Dispenser).filter(Dispenser.hardware_id == hardware_id).first().id,
+                label=f"Drawer {slot_id}",
+            )
+            db.add(drawer)
+            db.flush()
+        slot = Slot(
+            id=slot_id,
+            drawer_id=drawer.id,
+            medication_id=medication_id,
+            position_number=1,
+            max_pill_capacity=10,
+            current_pill_count=0,
+        )
+        db.add(slot)
+    db.commit()
+    db.close()
+
+
 def test_create_schedule(mock_get_current_user):
     pid = create_db_patient("testuser", "John Doe")
+    create_schedule_dependencies()
     
     payload = {
         "patient_id": pid,
@@ -82,6 +141,8 @@ def test_create_schedule(mock_get_current_user):
 def test_list_schedules(mock_get_current_user):
     pid1 = create_db_patient("testuser", "Patient 1")
     pid2 = create_db_patient("testuser", "Patient 2")
+    create_schedule_dependencies()
+    create_schedule_dependencies(slot_id=2, medication_id=2, hardware_id="disp_2")
 
     client.post("/api/schedules", json={
         "patient_id": pid1,
@@ -120,6 +181,7 @@ def test_list_schedules(mock_get_current_user):
 
 def test_delete_schedule(mock_get_current_user):
     pid = create_db_patient("testuser", "Jane Doe")
+    create_schedule_dependencies()
     
     create_resp = client.post("/api/schedules", json={
         "patient_id": pid,
@@ -146,6 +208,7 @@ def test_unauthorized_patient_access():
     from app.core.security import get_current_user
     
     pid = create_db_patient("otheruser", "Other Patient")
+    create_schedule_dependencies()
     
     app.dependency_overrides[get_current_user] = lambda: MockUser(username="testuser")
 
