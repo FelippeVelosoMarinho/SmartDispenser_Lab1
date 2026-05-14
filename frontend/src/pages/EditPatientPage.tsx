@@ -309,13 +309,7 @@ export function EditPatientPage() {
           </CardContent>
 
           <CardFooter align="right">
-            <div
-              style={{
-                display: "flex",
-                gap: "var(--space-3)",
-                flexWrap: "wrap",
-              }}
-            >
+            <div style={{ display: "flex", gap: "var(--space-3)", flexWrap: "wrap" }}>
               <Button
                 type="button"
                 variant="secondary"
@@ -335,6 +329,74 @@ export function EditPatientPage() {
           </CardFooter>
         </form>
       </Card>
+
+      <button
+        type="button"
+        onClick={() => navigate({ to: "/patients/$patientId/medications", params: { patientId } })}
+        style={{
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "space-between",
+          width: "100%",
+          marginTop: "var(--space-4)",
+          padding: "var(--space-4) var(--space-5)",
+          borderRadius: "var(--radius)",
+          border: "1.5px solid var(--primary)",
+          background: "var(--primary-soft)",
+          cursor: "pointer",
+          textAlign: "left",
+          transition: "background 0.15s ease-out",
+        }}
+        onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.background = "var(--primary-soft)"; }}
+      >
+        <div style={{ display: "flex", alignItems: "center", gap: "var(--space-3)" }}>
+          <span
+            style={{
+              display: "inline-flex",
+              alignItems: "center",
+              justifyContent: "center",
+              width: "36px",
+              height: "36px",
+              borderRadius: "var(--radius)",
+              background: "var(--primary)",
+              color: "#fff",
+              fontSize: "1.1rem",
+              flexShrink: 0,
+            }}
+          >
+            <i className="ph-duotone ph-pill" aria-hidden="true" />
+          </span>
+          <div>
+            <p
+              style={{
+                margin: 0,
+                fontFamily: "var(--font-sans)",
+                fontSize: "var(--text-sm)",
+                fontWeight: 700,
+                color: "var(--primary)",
+              }}
+            >
+              Medicamentos e posologia
+            </p>
+            <p
+              style={{
+                margin: 0,
+                fontFamily: "var(--font-sans)",
+                fontSize: "var(--text-xs)",
+                color: "var(--ink-3)",
+                marginTop: "2px",
+              }}
+            >
+              Gerenciar medicamentos, dosagens e horários de administração.
+            </p>
+          </div>
+        </div>
+        <i
+          className="ph-duotone ph-arrow-right"
+          aria-hidden="true"
+          style={{ color: "var(--primary)", fontSize: "1.1rem", flexShrink: 0 }}
+        />
+      </button>
     </div>
   );
 }
