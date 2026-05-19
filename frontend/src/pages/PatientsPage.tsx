@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { useNavigate } from "@tanstack/react-router";
 import { Button } from "../components/ui/Button";
 import { Input } from "../components/ui/Input";
@@ -13,6 +13,7 @@ import {
 } from "../components/ui/Table";
 import { Pagination } from "../components/ui/Pagination";
 import { ConfirmModal } from "../components/ui/ConfirmModal";
+import { useAuth } from "../auth/AuthContext";
 
 type PatientStatus = "ativo" | "inativo";
 
@@ -23,21 +24,6 @@ interface Patient {
   medicacao: string;
   status: PatientStatus;
 }
-
-const MOCK_PATIENTS: Patient[] = [
-  { id: "1", nome: "Ana Souza", idade: 34, medicacao: "Ritalina 10 mg", status: "ativo" },
-  { id: "2", nome: "Bruno Lima", idade: 52, medicacao: "Sertralina 50 mg", status: "ativo" },
-  { id: "3", nome: "Carla Mendes", idade: 28, medicacao: "Clonazepam 0,5 mg", status: "ativo" },
-  { id: "4", nome: "Diego Ferreira", idade: 41, medicacao: "Melatonina 3 mg", status: "inativo" },
-  { id: "5", nome: "Eduarda Costa", idade: 19, medicacao: "Venvanse 30 mg", status: "ativo" },
-  { id: "6", nome: "Fábio Rocha", idade: 63, medicacao: "Atenolol 25 mg", status: "ativo" },
-  { id: "7", nome: "Gabriela Nunes", idade: 45, medicacao: "Fluoxetina 20 mg", status: "inativo" },
-  { id: "8", nome: "Henrique Pinto", idade: 31, medicacao: "Quetiapina 25 mg", status: "ativo" },
-  { id: "9", nome: "Isabela Martins", idade: 57, medicacao: "Topiramato 50 mg", status: "ativo" },
-  { id: "10", nome: "João Alves", idade: 22, medicacao: "Guanfacina 1 mg", status: "ativo" },
-  { id: "11", nome: "Karina Tavares", idade: 38, medicacao: "Bupropiona 150 mg", status: "inativo" },
-  { id: "12", nome: "Lucas Carvalho", idade: 47, medicacao: "Risperidona 2 mg", status: "ativo" },
-];
 
 const PAGE_SIZE = 8;
 
@@ -70,15 +56,61 @@ function StatusBadge({ status }: { status: PatientStatus }) {
 
 export function PatientsPage() {
   const navigate = useNavigate();
+  const { token } = useAuth();
   const [search, setSearch] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
-  const [patients, setPatients] = useState<Patient[]>(MOCK_PATIENTS);
+  const [patients, setPatients] = useState<Patient[]>([]);
+  const [loading, setLoading] = useState(true);
   const [patientToDelete, setPatientToDelete] = useState<Patient | null>(null);
 
-  function handleDeleteConfirm() {
+  useEffect(() => {
+    async function loadPatients() {
+      try {
+        const res = await fetch("/api/patients", {
+          headers: {
+            "Authorization": token ? `Bearer ${token}` : "",
+          },
+        });
+        if (res.ok) {
+          const data = await res.json();
+          const mapped = data.map((p: any) => ({
+            id: p.id,
+            nome: p.name,
+            idade: p.age || 0,
+            medicacao: p.condition || "",
+            status: "ativo" as PatientStatus,
+          }));
+          setPatients(mapped);
+        }
+      } catch (err) {
+        console.error("Erro ao carregar pacientes:", err);
+      } finally {
+        setLoading(false);
+      }
+    }
+    loadPatients();
+  }, [token]);
+
+  async function handleDeleteConfirm() {
     if (!patientToDelete) return;
-    setPatients((prev) => prev.filter((p) => p.id !== patientToDelete.id));
-    setPatientToDelete(null);
+    try {
+      const res = await fetch(`/api/patients/${patientToDelete.id}`, {
+        method: "DELETE",
+        headers: {
+          "Authorization": token ? `Bearer ${token}` : "",
+        },
+      });
+      if (res.ok) {
+        setPatients((prev) => prev.filter((p) => p.id !== patientToDelete.id));
+      } else {
+        const errorData = await res.json().catch(() => ({}));
+        throw new Error(errorData.detail ?? "Erro ao deletar paciente do servidor.");
+      }
+    } catch (err: any) {
+      alert(err.message || "Erro de conexão ao deletar o paciente.");
+    } finally {
+      setPatientToDelete(null);
+    }
   }
 
   const filtered = useMemo(() => {
@@ -174,7 +206,27 @@ export function PatientsPage() {
               </tr>
             </TableHeader>
             <TableBody>
-              {pageItems.length === 0 ? (
+              {loading ? (
+                <TableRow>
+                  <TableCell
+                    colSpan={5}
+                    style={{ textAlign: "center", padding: "var(--space-10)" }}
+                  >
+                    <div
+                      style={{
+                        display: "flex",
+                        flexDirection: "column",
+                        alignItems: "center",
+                        gap: "var(--space-3)",
+                        color: "var(--ink-3)",
+                      }}
+                    >
+                      <div className="btn-spinner" style={{ borderColor: "var(--border-subtle)", borderTopColor: "var(--primary)" }} />
+                      <span>Carregando pacientes...</span>
+                    </div>
+                  </TableCell>
+                </TableRow>
+              ) : pageItems.length === 0 ? (
                 <TableRow>
                   <TableCell
                     colSpan={5}

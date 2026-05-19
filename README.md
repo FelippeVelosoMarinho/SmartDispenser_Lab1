@@ -1,8 +1,4 @@
-# 🌿 Eco-Dispenser Inteligente — MVP POC
-
-Possíveis nomes:
-- [ ] Zé droguinha
-- [ ] ajuda ai gnt...
+# 🌿 Pillar — MVP POC
 
 Sistema de monitoramento e controle em tempo real para dispensers inteligentes, integrando Hardware (ESP32-C3), Backend (FastAPI) e Frontend (React).
 

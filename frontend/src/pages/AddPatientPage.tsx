@@ -3,6 +3,7 @@ import { useNavigate } from "@tanstack/react-router";
 import { Button } from "../components/ui/Button";
 import { Input } from "../components/ui/Input";
 import { Card, CardContent, CardFooter } from "../components/ui/Card";
+import { useAuth } from "../auth/AuthContext";
 
 type PatientStatus = "ativo" | "inativo";
 
@@ -28,6 +29,7 @@ const INITIAL_STATE: FormState = {
 
 export function AddPatientPage() {
   const navigate = useNavigate();
+  const { token } = useAuth();
   const [form, setForm] = useState<FormState>(INITIAL_STATE);
   const [errors, setErrors] = useState<FormErrors>({});
   const [submitting, setSubmitting] = useState(false);
@@ -64,9 +66,28 @@ export function AddPatientPage() {
 
     setSubmitting(true);
     try {
-      // TODO: integrar com backend quando o endpoint estiver disponível
-      await new Promise((r) => setTimeout(r, 400));
+      const res = await fetch("/api/patients", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": token ? `Bearer ${token}` : "",
+        },
+        body: JSON.stringify({
+          name: form.nome,
+          age: Number(form.idade),
+          condition: form.medicacao,
+          dispensers: [],
+        }),
+      });
+
+      if (!res.ok) {
+        const errorData = await res.json().catch(() => ({}));
+        throw new Error(errorData.detail ?? "Erro ao salvar paciente no servidor.");
+      }
+
       navigate({ to: "/patients" });
+    } catch (err: any) {
+      alert(err.message || "Erro de conexão ao criar o paciente.");
     } finally {
       setSubmitting(false);
     }
