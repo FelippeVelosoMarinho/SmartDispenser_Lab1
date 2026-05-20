@@ -13,6 +13,7 @@ import { AddPatientPage } from "./pages/AddPatientPage";
 import { EditPatientPage } from "./pages/EditPatientPage";
 import { DispensersPage } from "./pages/DispensersPage";
 import { PairDispenserPage } from "./pages/PairDispenserPage";
+import { PatientMedicationsPage } from "./pages/PatientMedicationsPage";
 import { LoginPage } from "./pages/LoginPage";
 import { RegisterPage } from "./pages/RegisterPage";
 import { NotFoundPage } from "./pages/NotFoundPage";
@@ -82,6 +83,12 @@ const editPatientRoute = createRoute({
   component: EditPatientPage,
 });
 
+const patientMedicationsRoute = createRoute({
+  getParentRoute: () => authenticatedRoute,
+  path: "/patients/$patientId/medications",
+  component: PatientMedicationsPage,
+});
+
 const dispensersRoute = createRoute({
   getParentRoute: () => authenticatedRoute,
   path: "/dispensers",
@@ -107,6 +114,7 @@ const routeTree = rootRoute.addChildren([
     patientsRoute,
     addPatientRoute,
     editPatientRoute,
+    patientMedicationsRoute,
     dispensersRoute,
     pairDispenserRoute,
   ]),
