@@ -6,10 +6,10 @@ from fastapi import APIRouter, Depends, HTTPException
 
 from app.core.security import get_current_user
 from app.core.database import get_db
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, joinedload
 from app.crud.dispenser import get_dispenser_status, update_dispenser_status
 from app.crud.patient import get_patient, get_patients_by_caregiver
-from app.models.domain import Dispenser
+from app.models.domain import Dispenser, Drawer, Slot
 from app.schemas.dispenser import (
     DiscoveredDispenser,
     DispenserPairRequest,
@@ -65,6 +65,40 @@ def _format_dispenser(dispenser: Dispenser) -> dict:
     }
 
 
+def _format_medication(medication) -> dict | None:
+    if not medication:
+        return None
+
+    return {
+        "id": str(medication.id),
+        "name": medication.name,
+        "dosage": medication.dosage,
+        "description": medication.description,
+    }
+
+
+def _format_slot(slot: Slot) -> dict:
+    return {
+        "id": str(slot.id),
+        "drawer_id": str(slot.drawer_id),
+        "slot_number": slot.position_number,
+        "medication_id": str(slot.medication_id) if slot.medication_id else None,
+        "medication": _format_medication(slot.medication),
+        "current_pill_count": int(slot.current_pill_count or 0),
+        "max_pill_capacity": int(slot.max_pill_capacity or 0),
+    }
+
+
+def _format_drawer(drawer: Drawer) -> dict:
+    return {
+        "id": str(drawer.id),
+        "dispenser_id": str(drawer.dispenser_id),
+        "drawer_number": drawer.id,
+        "label": drawer.label,
+        "slots": [_format_slot(slot) for slot in sorted(drawer.slots, key=lambda item: item.position_number)],
+    }
+
+
 @router.get("/discover", response_model=List[DiscoveredDispenser])
 async def discover_dispensers(
     current_user = Depends(get_current_user),
@@ -90,6 +124,68 @@ async def list_dispensers(
     return [_format_dispenser(dispenser) for dispenser in dispensers]
 
 
+@router.get("/{dispenser_id}")
+async def get_dispenser_details(
+    dispenser_id: str,
+    current_user = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Return a dispenser with drawers, slots and medications for the dashboard."""
+    dispenser = (
+        db.query(Dispenser)
+        .options(
+            joinedload(Dispenser.patient),
+            joinedload(Dispenser.drawers)
+            .joinedload(Drawer.slots)
+            .joinedload(Slot.medication),
+        )
+        .filter(Dispenser.id == dispenser_id)
+        .first()
+    )
+
+    if not dispenser:
+        raise HTTPException(status_code=404, detail="Dispenser not found")
+
+    patient = dispenser.patient
+    if not patient or patient.caregiver_username != current_user.username:
+        raise HTTPException(status_code=403, detail="Not authorized to access this dispenser")
+
+    # Auto-heal: cria a gaveta e os 21 slots se o dispenser estiver vazio (pareado antes da alteração)
+    if not dispenser.drawers:
+        drawer = Drawer(dispenser_id=dispenser.id, label="Principal")
+        db.add(drawer)
+        db.commit()
+        db.refresh(drawer)
+        
+        for i in range(1, 22):
+            slot = Slot(
+                drawer_id=drawer.id,
+                position_number=i,
+                max_pill_capacity=30,
+                current_pill_count=0
+            )
+            db.add(slot)
+        db.commit()
+        
+        # Recarrega o dispenser com as relações recém-criadas
+        dispenser = (
+            db.query(Dispenser)
+            .options(
+                joinedload(Dispenser.patient),
+                joinedload(Dispenser.drawers)
+                .joinedload(Drawer.slots)
+                .joinedload(Slot.medication),
+            )
+            .filter(Dispenser.id == dispenser_id)
+            .first()
+        )
+
+    return {
+        **_format_dispenser(dispenser),
+        "drawers": [_format_drawer(drawer) for drawer in sorted(dispenser.drawers, key=lambda item: item.id)],
+    }
+
+
 @router.post("/{hardware_id}/pair", response_model=DispenserPublic)
 async def pair_dispenser(
     hardware_id: str,
@@ -105,13 +201,35 @@ async def pair_dispenser(
         raise HTTPException(status_code=403, detail="Not authorized to pair this patient")
 
     dispenser = db.query(Dispenser).filter(Dispenser.hardware_id == hardware_id).first()
+    is_new = False
     if not dispenser:
         dispenser = Dispenser(hardware_id=hardware_id)
+        is_new = True
 
     dispenser.patient_id = patient.id
     db.add(dispenser)
     db.commit()
     db.refresh(dispenser)
+
+    # Inicializa gaveta e 21 slots vazios caso seja um dispenser recém-criado ou sem gavetas
+    has_drawers = db.query(Drawer).filter(Drawer.dispenser_id == dispenser.id).first() is not None
+    if is_new or not has_drawers:
+        drawer = Drawer(dispenser_id=dispenser.id, label="Principal")
+        db.add(drawer)
+        db.commit()
+        db.refresh(drawer)
+        
+        for i in range(1, 22):
+            slot = Slot(
+                drawer_id=drawer.id,
+                position_number=i,
+                max_pill_capacity=30,
+                current_pill_count=0
+            )
+            db.add(slot)
+        db.commit()
+        db.refresh(dispenser)
+
     return _format_dispenser(dispenser)
 
 

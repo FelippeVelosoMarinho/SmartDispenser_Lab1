@@ -13,11 +13,15 @@ import {
 } from "../components/ui/Table";
 import { Pagination } from "../components/ui/Pagination";
 import { ConfirmModal } from "../components/ui/ConfirmModal";
+import { ConnectionBadge } from "../components/ConnectionBadge";
+import { StatusIndicator } from "../components/StatusIndicator";
+import { useLed } from "../hooks/useLed";
 import {
   deleteDispenser as deleteDispenserApi,
   listDispensers,
   type Dispenser as ApiDispenser,
 } from "../lib/api";
+import "../App.css";
 
 type DispenserStatus = "conectado" | "desconectado";
 
@@ -138,6 +142,16 @@ export function DispensersPage() {
   );
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const {
+    isOn,
+    isLoading,
+    isToggling,
+    hardwareReachable,
+    backendReachable,
+    latencyMs,
+    error: ledError,
+    toggle,
+  } = useLed();
 
   useEffect(() => {
     let mounted = true;
@@ -243,6 +257,53 @@ export function DispensersPage() {
         >
           Parear dispensador
         </Button>
+      </div>
+
+      <div className="bg-gradient" />
+      <div className="bg-grid" />
+
+      <ConnectionBadge
+        backendReachable={backendReachable}
+        hardwareReachable={hardwareReachable}
+      />
+
+      <div className="card" style={{ marginBottom: "var(--space-5)" }}>
+        <StatusIndicator isOn={isOn} isLoading={isLoading} />
+
+        <p className="status-label">
+          {isLoading ? "Carregando..." : isOn ? "LED Ligado" : "LED Desligado"}
+        </p>
+
+        {latencyMs !== null && (
+          <div className="latency">
+            <span className="latency-icon">&#9889;</span>
+            <span>{latencyMs.toFixed(1)} ms</span>
+          </div>
+        )}
+
+        <div className="controls">
+          <button
+            className={`btn btn-on ${isOn ? "active" : ""}`}
+            onClick={() => toggle("on")}
+            disabled={isToggling || isLoading || !hardwareReachable}
+          >
+            {isToggling && !isOn ? <span className="btn-spinner" /> : "Ligar"}
+          </button>
+          <button
+            className={`btn btn-off ${!isOn && !isLoading ? "active" : ""}`}
+            onClick={() => toggle("off")}
+            disabled={isToggling || isLoading || !hardwareReachable}
+          >
+            {isToggling && isOn ? <span className="btn-spinner" /> : "Desligar"}
+          </button>
+        </div>
+
+        {ledError && (
+          <div className="error-banner">
+            <i className="ph-duotone ph-warning-octagon" aria-hidden="true" />
+            <span>{ledError}</span>
+          </div>
+        )}
       </div>
 
       {/* Search */}

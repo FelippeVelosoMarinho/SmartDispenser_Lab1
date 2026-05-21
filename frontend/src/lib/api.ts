@@ -208,3 +208,171 @@ export async function deleteDispenser(hardwareId: string) {
 export function mapPatientStatus(patient: Patient) {
   return patient.dispensers.length > 0 ? "ativo" : "inativo";
 }
+
+// -- New Endpoints for Dashboard Redesign --
+
+export interface Medication {
+  id: string;
+  name: string;
+  dosage: string;
+  description?: string | null;
+  patient_id?: string;
+}
+
+export interface Slot {
+  id: string;
+  drawer_id: string;
+  slot_number: number;
+  medication_id: string | null;
+  medication: Medication | null;
+  current_pill_count: number;
+  max_pill_capacity: number;
+}
+
+export interface Drawer {
+  id: string;
+  dispenser_id: string;
+  drawer_number: number;
+  slots: Slot[];
+}
+
+export interface DispenserDetails extends Dispenser {
+  drawers: Drawer[];
+}
+
+export interface Schedule {
+  id: string;
+  slot_id: string;
+  medication_id: string;
+  scheduled_time?: string; // Legacy alias
+  time?: string;
+  pills_per_dose?: number; // Legacy alias
+  quantity?: number;
+  is_active: boolean;
+  medication?: Medication;
+}
+
+export interface ScheduleInput {
+  slot_id: string;
+  medication_id: string;
+  time: string;
+  quantity: number;
+  is_active: boolean;
+  patient_id?: string;
+  dispenser_id?: string;
+}
+
+export function getScheduleTime(schedule: Schedule) {
+  return schedule.time ?? schedule.scheduled_time ?? "";
+}
+
+export function getScheduleQuantity(schedule: Schedule) {
+  return schedule.quantity ?? schedule.pills_per_dose ?? 1;
+}
+
+// Medications
+export async function listMedications() {
+  return requestJson<Medication[]>("/medications");
+}
+
+export async function createMedication(input: { name: string; dosage?: string; description?: string | null }) {
+  return requestJson<Medication>("/medications", {
+    method: "POST",
+    body: JSON.stringify(input),
+  });
+}
+
+// Dispenser Status (Telemetry)
+export async function getDispenserStatus(hardwareId: string) {
+  return requestJson<Dispenser>(`/dispensers/${hardwareId}/status`);
+}
+
+// Dispensers with drawers and slots
+// If the backend doesn't support /api/dispensers/{id} fully yet, we will fallback to mock
+export async function getDispenserDetails(dispenserId: string): Promise<DispenserDetails> {
+  try {
+    const data = await requestJson<DispenserDetails>(`/dispensers/${dispenserId}`);
+    return data;
+  } catch (err) {
+    console.warn("Backend might not have /dispensers/:id with drawers. Using mock.");
+    // Mock fallback
+    return {
+      id: dispenserId,
+      hardware_id: dispenserId, // simplified
+      patient_id: null,
+      patient_name: null,
+      is_online: true,
+      battery_level: 85,
+      critical_stock: false,
+      last_sync: new Date().toISOString(),
+      drawers: [
+        {
+          id: "drawer-1",
+          dispenser_id: dispenserId,
+          drawer_number: 1,
+          slots: [
+            {
+              id: "slot-1",
+              drawer_id: "drawer-1",
+              slot_number: 1,
+              medication_id: null,
+              medication: null,
+              current_pill_count: 0,
+              max_pill_capacity: 30,
+            }
+          ]
+        },
+        {
+          id: "drawer-2",
+          dispenser_id: dispenserId,
+          drawer_number: 2,
+          slots: [
+            {
+              id: "slot-2",
+              drawer_id: "drawer-2",
+              slot_number: 1,
+              medication_id: "med-1",
+              medication: { id: "med-1", name: "Aspirina", dosage: "100mg" },
+              current_pill_count: 5,
+              max_pill_capacity: 30,
+            }
+          ]
+        }
+      ]
+    };
+  }
+}
+
+// Update Slot (Gaveta)
+export async function updateSlot(slotId: string, input: Partial<Slot>) {
+  return requestJson<Slot>(`/slots/${slotId}`, {
+    method: "PATCH",
+    body: JSON.stringify(input),
+  });
+}
+
+// Schedules
+export async function listSchedules(dispenserId?: string) {
+  const url = dispenserId ? `/schedules?dispenser_id=${dispenserId}` : "/schedules";
+  return requestJson<Schedule[]>(url);
+}
+
+export async function createSchedule(input: ScheduleInput) {
+  return requestJson<Schedule>("/schedules", {
+    method: "POST",
+    body: JSON.stringify(input),
+  });
+}
+
+export async function updateSchedule(scheduleId: string, input: Partial<ScheduleInput>) {
+  return requestJson<Schedule>(`/schedules/${scheduleId}`, {
+    method: "PATCH",
+    body: JSON.stringify(input),
+  });
+}
+
+export async function deleteSchedule(scheduleId: string) {
+  await requestJson<void>(`/schedules/${scheduleId}`, {
+    method: "DELETE",
+  });
+}

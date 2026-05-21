@@ -1,8 +1,4 @@
-<<<<<<< HEAD
 import { useEffect, useMemo, useState } from "react";
-=======
-import { useState, useMemo, useEffect } from "react";
->>>>>>> origin/main
 import { useNavigate } from "@tanstack/react-router";
 import { Button } from "../components/ui/Button";
 import { Input } from "../components/ui/Input";
@@ -17,16 +13,12 @@ import {
 } from "../components/ui/Table";
 import { Pagination } from "../components/ui/Pagination";
 import { ConfirmModal } from "../components/ui/ConfirmModal";
-<<<<<<< HEAD
 import {
   deletePatient as deletePatientApi,
   listPatients,
   mapPatientStatus,
   type Patient as ApiPatient,
 } from "../lib/api";
-=======
-import { useAuth } from "../auth/AuthContext";
->>>>>>> origin/main
 
 type PatientStatus = "ativo" | "inativo";
 
@@ -79,20 +71,15 @@ function StatusBadge({ status }: { status: PatientStatus }) {
 
 export function PatientsPage() {
   const navigate = useNavigate();
-  const { token } = useAuth();
+
   const [search, setSearch] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
   const [patients, setPatients] = useState<Patient[]>([]);
-<<<<<<< HEAD
-=======
-  const [loading, setLoading] = useState(true);
->>>>>>> origin/main
   const [patientToDelete, setPatientToDelete] = useState<Patient | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-<<<<<<< HEAD
     let mounted = true;
 
     async function loadPatients() {
@@ -118,62 +105,15 @@ export function PatientsPage() {
       mounted = false;
     };
   }, []);
-=======
-    async function loadPatients() {
-      try {
-        const res = await fetch("/api/patients", {
-          headers: {
-            "Authorization": token ? `Bearer ${token}` : "",
-          },
-        });
-        if (res.ok) {
-          const data = await res.json();
-          const mapped = data.map((p: any) => ({
-            id: p.id,
-            nome: p.name,
-            idade: p.age || 0,
-            medicacao: p.condition || "",
-            status: "ativo" as PatientStatus,
-          }));
-          setPatients(mapped);
-        }
-      } catch (err) {
-        console.error("Erro ao carregar pacientes:", err);
-      } finally {
-        setLoading(false);
-      }
-    }
-    loadPatients();
-  }, [token]);
->>>>>>> origin/main
 
   async function handleDeleteConfirm() {
     if (!patientToDelete) return;
     try {
-<<<<<<< HEAD
       await deletePatientApi(patientToDelete.id);
       setPatients((prev) => prev.filter((p) => p.id !== patientToDelete.id));
       setPatientToDelete(null);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Falha ao apagar paciente");
-=======
-      const res = await fetch(`/api/patients/${patientToDelete.id}`, {
-        method: "DELETE",
-        headers: {
-          "Authorization": token ? `Bearer ${token}` : "",
-        },
-      });
-      if (res.ok) {
-        setPatients((prev) => prev.filter((p) => p.id !== patientToDelete.id));
-      } else {
-        const errorData = await res.json().catch(() => ({}));
-        throw new Error(errorData.detail ?? "Erro ao deletar paciente do servidor.");
-      }
-    } catch (err: any) {
-      alert(err.message || "Erro de conexão ao deletar o paciente.");
-    } finally {
-      setPatientToDelete(null);
->>>>>>> origin/main
     }
   }
 
@@ -300,17 +240,12 @@ export function PatientsPage() {
                         color: "var(--ink-3)",
                       }}
                     >
-<<<<<<< HEAD
                       <i
                         className="ph-duotone ph-users"
                         style={{ fontSize: "2.5rem" }}
                         aria-hidden="true"
                       />
                       <span>Nenhum paciente encontrado.</span>
-=======
-                      <div className="btn-spinner" style={{ borderColor: "var(--border-subtle)", borderTopColor: "var(--primary)" }} />
-                      <span>Carregando pacientes...</span>
->>>>>>> origin/main
                     </div>
                   </TableCell>
                 </TableRow>

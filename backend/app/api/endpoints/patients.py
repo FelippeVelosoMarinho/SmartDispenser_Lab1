@@ -89,21 +89,13 @@ async def remove_patient(
     current_user = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
-<<<<<<< HEAD
     """Remove um paciente do cuidador autenticado."""
-=======
-    """Deleta um paciente."""
->>>>>>> origin/main
     patient = get_patient(db, patient_id)
     if not patient:
         raise HTTPException(status_code=404, detail="Patient not found")
     if patient.caregiver_username != current_user.username:
         raise HTTPException(status_code=403, detail="Not authorized to delete this patient")
-<<<<<<< HEAD
 
-=======
-    
->>>>>>> origin/main
     delete_patient(db, patient_id)
     return None
 
