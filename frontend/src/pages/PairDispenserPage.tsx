@@ -8,6 +8,7 @@ import "../components/ui/ConfirmModal.css";
 
 interface DiscoveredDispenser {
   id: string;
+  ip: string;
   serial: string;
   mac: string;
   rssi: number;
@@ -21,48 +22,98 @@ interface Patient {
   medicacao: string;
 }
 
-const MOCK_DISCOVERED: DiscoveredDispenser[] = [
-  {
-    id: "d-101",
-    serial: "ESP-C3-011",
-    mac: "A4:CF:12:8B:00:11",
-    rssi: -42,
-    firmware: "1.4.2",
-  },
-  {
-    id: "d-102",
-    serial: "ESP-C3-012",
-    mac: "A4:CF:12:8B:00:12",
-    rssi: -58,
-    firmware: "1.4.2",
-  },
-  {
-    id: "d-103",
-    serial: "ESP-C3-013",
-    mac: "A4:CF:12:8B:00:13",
-    rssi: -67,
-    firmware: "1.3.9",
-  },
-  {
-    id: "d-104",
-    serial: "ESP-C3-014",
-    mac: "A4:CF:12:8B:00:14",
-    rssi: -78,
-    firmware: "1.4.2",
-  },
-];
+// Shape of GET /status on the ESP32
+interface EspStatus {
+  current_slot: number;
+  total_slots: number;
+  awaiting_confirm: boolean;
+  last_confirmed_slot: number;
+  wifi_rssi: number;
+  uptime_s: number;
+}
+
+const PROBE_TIMEOUT_MS = 1200;
+const MAX_CONCURRENT = 30;
+
+async function probeIp(ip: string): Promise<DiscoveredDispenser | null> {
+  try {
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), PROBE_TIMEOUT_MS);
+    const res = await fetch(`http://${ip}/status`, {
+      signal: controller.signal,
+      mode: "cors",
+    });
+    clearTimeout(timer);
+    if (!res.ok) return null;
+    const data: EspStatus = await res.json();
+    // Verify it looks like our firmware
+    if (typeof data.wifi_rssi !== "number" || typeof data.current_slot !== "number") return null;
+    return {
+      id: ip,
+      ip,
+      serial: `ESP-C3-${ip.split(".").pop()?.padStart(3, "0") ?? ip}`,
+      mac: "—",
+      rssi: data.wifi_rssi,
+      firmware: "—",
+    };
+  } catch {
+    return null;
+  }
+}
+
+// Detect local subnet via WebRTC (best-effort, falls back to 192.168.1.x)
+async function detectSubnet(): Promise<string> {
+  return new Promise((resolve) => {
+    try {
+      const pc = new RTCPeerConnection({ iceServers: [] });
+      pc.createDataChannel("");
+      pc.createOffer().then((offer) => pc.setLocalDescription(offer));
+      pc.onicecandidate = (e) => {
+        if (!e.candidate) {
+          pc.close();
+          resolve("192.168.1");
+          return;
+        }
+        const m = e.candidate.candidate.match(/(\d{1,3}\.\d{1,3}\.\d{1,3})\.\d{1,3}/);
+        if (m) {
+          pc.close();
+          resolve(m[1]);
+        }
+      };
+      setTimeout(() => {
+        pc.close();
+        resolve("192.168.1");
+      }, 2000);
+    } catch {
+      resolve("192.168.1");
+    }
+  });
+}
+
+async function scanSubnet(
+  subnet: string,
+  onFound: (d: DiscoveredDispenser) => void,
+  signal: AbortSignal,
+): Promise<void> {
+  const ips = Array.from({ length: 254 }, (_, i) => `${subnet}.${i + 1}`);
+
+  // Process in batches to cap concurrency
+  for (let i = 0; i < ips.length; i += MAX_CONCURRENT) {
+    if (signal.aborted) break;
+    const batch = ips.slice(i, i + MAX_CONCURRENT);
+    const results = await Promise.all(batch.map((ip) => probeIp(ip)));
+    for (const r of results) {
+      if (r) onFound(r);
+    }
+  }
+}
 
 const MOCK_PATIENTS: Patient[] = [
   { id: "1", nome: "Ana Souza", idade: 34, medicacao: "Ritalina 10 mg" },
   { id: "2", nome: "Bruno Lima", idade: 52, medicacao: "Sertralina 50 mg" },
   { id: "6", nome: "Fábio Rocha", idade: 63, medicacao: "Atenolol 25 mg" },
   { id: "10", nome: "João Alves", idade: 22, medicacao: "Guanfacina 1 mg" },
-  {
-    id: "11",
-    nome: "Karina Tavares",
-    idade: 38,
-    medicacao: "Bupropiona 150 mg",
-  },
+  { id: "11", nome: "Karina Tavares", idade: 38, medicacao: "Bupropiona 150 mg" },
 ];
 
 type SignalLevel = "excelente" | "bom" | "fraco";
@@ -75,10 +126,7 @@ function signalLevel(rssi: number): SignalLevel {
 
 function SignalBadge({ rssi }: { rssi: number }) {
   const level = signalLevel(rssi);
-  const map: Record<
-    SignalLevel,
-    { label: string; icon: string; bg: string; color: string }
-  > = {
+  const map: Record<SignalLevel, { label: string; icon: string; bg: string; color: string }> = {
     excelente: {
       label: "Excelente",
       icon: "ph-wifi-high",
@@ -91,12 +139,7 @@ function SignalBadge({ rssi }: { rssi: number }) {
       bg: "var(--primary-soft)",
       color: "var(--primary)",
     },
-    fraco: {
-      label: "Fraco",
-      icon: "ph-wifi-low",
-      bg: "var(--surface-dim)",
-      color: "var(--ink-3)",
-    },
+    fraco: { label: "Fraco", icon: "ph-wifi-low", bg: "var(--surface-dim)", color: "var(--ink-3)" },
   };
   const cfg = map[level];
   return (
@@ -114,11 +157,7 @@ function SignalBadge({ rssi }: { rssi: number }) {
       }}
       aria-label={`Sinal ${cfg.label} (${rssi} dBm)`}
     >
-      <i
-        className={`ph-duotone ${cfg.icon}`}
-        aria-hidden="true"
-        style={{ fontSize: "1rem" }}
-      />
+      <i className={`ph-duotone ${cfg.icon}`} aria-hidden="true" style={{ fontSize: "1rem" }} />
       {cfg.label} · {rssi} dBm
     </span>
   );
@@ -126,63 +165,82 @@ function SignalBadge({ rssi }: { rssi: number }) {
 
 export function PairDispenserPage() {
   const navigate = useNavigate();
-  const [scanning, setScanning] = useState(true);
+  const [scanning, setScanning] = useState(false);
+  const [subnet, setSubnet] = useState<string | null>(null);
   const [devices, setDevices] = useState<DiscoveredDispenser[]>([]);
   const [search, setSearch] = useState("");
   const [selected, setSelected] = useState<DiscoveredDispenser | null>(null);
   const [pairing, setPairing] = useState(false);
-  const scanIntervalRef = useRef<number | null>(null);
+  const [manualIp, setManualIp] = useState("");
+  const [manualError, setManualError] = useState<string | null>(null);
+  const [manualChecking, setManualChecking] = useState(false);
+  const scanAbortRef = useRef<AbortController | null>(null);
 
-  const startScan = useCallback(() => {
-    if (scanIntervalRef.current !== null) {
-      window.clearInterval(scanIntervalRef.current);
-      scanIntervalRef.current = null;
+  const startScan = useCallback(async () => {
+    if (scanAbortRef.current) {
+      scanAbortRef.current.abort();
     }
+    const controller = new AbortController();
+    scanAbortRef.current = controller;
+
     setScanning(true);
     setDevices([]);
-    let i = 0;
-    scanIntervalRef.current = window.setInterval(() => {
-      const next = MOCK_DISCOVERED[i];
-      if (!next) {
-        if (scanIntervalRef.current !== null) {
-          window.clearInterval(scanIntervalRef.current);
-          scanIntervalRef.current = null;
-        }
-        setScanning(false);
-        return;
-      }
-      setDevices((prev) =>
-        prev.some((d) => d.id === next.id) ? prev : [...prev, next],
-      );
-      i += 1;
-    }, 600);
+
+    const detectedSubnet = await detectSubnet();
+    setSubnet(detectedSubnet);
+
+    await scanSubnet(
+      detectedSubnet,
+      (device) => {
+        setDevices((prev) => (prev.some((d) => d.id === device.id) ? prev : [...prev, device]));
+      },
+      controller.signal,
+    );
+
+    if (!controller.signal.aborted) {
+      setScanning(false);
+    }
   }, []);
 
   useEffect(() => {
     startScan();
     return () => {
-      if (scanIntervalRef.current !== null) {
-        window.clearInterval(scanIntervalRef.current);
-        scanIntervalRef.current = null;
-      }
+      scanAbortRef.current?.abort();
     };
   }, [startScan]);
 
   const filtered = useMemo(() => {
-    const valid = devices.filter((d): d is DiscoveredDispenser => Boolean(d));
     const q = search.trim().toLowerCase();
-    if (!q) return valid;
-    return valid.filter(
+    if (!q) return devices;
+    return devices.filter(
       (d) =>
-        d.serial.toLowerCase().includes(q) || d.mac.toLowerCase().includes(q),
+        d.serial.toLowerCase().includes(q) || d.ip.includes(q) || d.mac.toLowerCase().includes(q),
     );
   }, [devices, search]);
+
+  async function handleManualProbe() {
+    const ip = manualIp.trim();
+    if (!ip) return;
+    setManualError(null);
+    setManualChecking(true);
+    try {
+      const result = await probeIp(ip);
+      if (result) {
+        setDevices((prev) => (prev.some((d) => d.id === result.id) ? prev : [...prev, result]));
+        setManualIp("");
+      } else {
+        setManualError("Nenhum dispensador encontrado neste endereço IP.");
+      }
+    } finally {
+      setManualChecking(false);
+    }
+  }
 
   async function handleConfirmPair(_patient: Patient) {
     if (!selected) return;
     setPairing(true);
     try {
-      // TODO: integrar com backend quando o endpoint estiver disponível
+      // TODO: registrar pareamento no backend com selected.ip e _patient.id
       await new Promise((r) => setTimeout(r, 600));
       navigate({ to: "/dispensers" });
     } finally {
@@ -222,10 +280,7 @@ export function PairDispenserPage() {
           <i className="ph-duotone ph-arrow-left" aria-hidden="true" />
           Voltar para dispensadores
         </button>
-        <p
-          className="eyebrow"
-          style={{ marginBottom: "var(--space-1)", color: "var(--ink-3)" }}
-        >
+        <p className="eyebrow" style={{ marginBottom: "var(--space-1)", color: "var(--ink-3)" }}>
           Eco-Dispenser
         </p>
         <h1
@@ -241,14 +296,18 @@ export function PairDispenserPage() {
           Parear novo dispensador
         </h1>
         <p
-          style={{
-            marginTop: "var(--space-2)",
-            color: "var(--ink-3)",
-            fontSize: "var(--text-sm)",
-          }}
+          style={{ marginTop: "var(--space-2)", color: "var(--ink-3)", fontSize: "var(--text-sm)" }}
         >
-          Coloque o dispensador em modo de pareamento (LED azul piscando) e
-          aguarde aparecer abaixo.
+          Certifique-se de que o dispensador está ligado e conectado à mesma rede Wi-Fi que este
+          dispositivo.
+          {subnet && (
+            <span style={{ marginLeft: "var(--space-2)", color: "var(--ink-2)" }}>
+              Rede detectada:{" "}
+              <code style={{ fontFamily: "var(--font-mono)", fontSize: "0.8rem" }}>
+                {subnet}.0/24
+              </code>
+            </span>
+          )}
         </p>
       </div>
 
@@ -265,20 +324,14 @@ export function PairDispenserPage() {
       >
         <div style={{ flex: "1 1 280px", maxWidth: "360px" }}>
           <Input
-            placeholder="Filtrar por serial ou MAC"
+            placeholder="Filtrar por serial, IP ou MAC"
             icon="ph-duotone ph-magnifying-glass"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             aria-label="Filtrar dispositivos"
           />
         </div>
-        <div
-          style={{
-            display: "flex",
-            alignItems: "center",
-            gap: "var(--space-3)",
-          }}
-        >
+        <div style={{ display: "flex", alignItems: "center", gap: "var(--space-3)" }}>
           {scanning && (
             <span
               style={{
@@ -293,10 +346,7 @@ export function PairDispenserPage() {
               <i
                 className="ph-duotone ph-circle-notch"
                 aria-hidden="true"
-                style={{
-                  fontSize: "1.1rem",
-                  animation: "spin 1s linear infinite",
-                }}
+                style={{ fontSize: "1.1rem", animation: "spin 1s linear infinite" }}
               />
               Procurando dispositivos…
             </span>
@@ -311,6 +361,68 @@ export function PairDispenserPage() {
           </Button>
         </div>
       </div>
+
+      {/* Manual IP entry */}
+      <Card style={{ marginBottom: "var(--space-5)" }}>
+        <CardContent>
+          <p
+            style={{
+              margin: "0 0 var(--space-3)",
+              fontWeight: 600,
+              fontSize: "var(--text-sm)",
+              color: "var(--ink)",
+            }}
+          >
+            <i
+              className="ph-duotone ph-plugs"
+              aria-hidden="true"
+              style={{ marginRight: "var(--space-2)" }}
+            />
+            Adicionar por IP manual
+          </p>
+          <div
+            style={{
+              display: "flex",
+              gap: "var(--space-3)",
+              flexWrap: "wrap",
+              alignItems: "flex-start",
+            }}
+          >
+            <div style={{ flex: "1 1 220px" }}>
+              <Input
+                placeholder="ex: 192.168.1.45"
+                value={manualIp}
+                onChange={(e) => {
+                  setManualIp(e.target.value);
+                  setManualError(null);
+                }}
+                onKeyDown={(e) => e.key === "Enter" && handleManualProbe()}
+                aria-label="Endereço IP do dispensador"
+              />
+              {manualError && (
+                <p
+                  style={{
+                    margin: "var(--space-2) 0 0",
+                    color: "var(--error)",
+                    fontSize: "var(--text-xs)",
+                  }}
+                >
+                  {manualError}
+                </p>
+              )}
+            </div>
+            <Button
+              variant="secondary"
+              leftIcon="ph-duotone ph-magnifying-glass"
+              onClick={handleManualProbe}
+              loading={manualChecking}
+              disabled={!manualIp.trim() || manualChecking}
+            >
+              Verificar
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
 
       {/* Device list */}
       {filtered.length === 0 && !scanning ? (
@@ -336,26 +448,16 @@ export function PairDispenserPage() {
                 <p style={{ margin: 0, fontWeight: 600, color: "var(--ink)" }}>
                   Nenhum dispositivo encontrado
                 </p>
-                <p
-                  style={{
-                    margin: "var(--space-1) 0 0",
-                    fontSize: "var(--text-sm)",
-                  }}
-                >
-                  Verifique se o dispensador está ligado e em modo de
-                  pareamento.
+                <p style={{ margin: "var(--space-1) 0 0", fontSize: "var(--text-sm)" }}>
+                  Verifique se o dispensador está ligado e conectado à mesma rede Wi-Fi. Use o campo
+                  acima para adicionar um IP manualmente.
                 </p>
               </div>
             </div>
           </CardContent>
         </Card>
       ) : (
-        <div
-          style={{
-            display: "grid",
-            gap: "var(--space-3)",
-          }}
-        >
+        <div style={{ display: "grid", gap: "var(--space-3)" }}>
           {filtered.map((device) => (
             <Card key={device.id}>
               <CardContent>
@@ -382,10 +484,7 @@ export function PairDispenserPage() {
                     <i
                       className="ph-duotone ph-device-mobile-speaker"
                       aria-hidden="true"
-                      style={{
-                        fontSize: "1.5rem",
-                        color: "var(--primary)",
-                      }}
+                      style={{ fontSize: "1.5rem", color: "var(--primary)" }}
                     />
                   </div>
                   <div style={{ flex: "1 1 220px", minWidth: 0 }}>
@@ -419,14 +518,19 @@ export function PairDispenserPage() {
                         flexWrap: "wrap",
                       }}
                     >
-                      <span>MAC {device.mac}</span>
-                      <span>Firmware {device.firmware}</span>
+                      <span>
+                        <i
+                          className="ph-duotone ph-globe"
+                          aria-hidden="true"
+                          style={{ marginRight: "4px" }}
+                        />
+                        {device.ip}
+                      </span>
+                      {device.mac !== "—" && <span>MAC {device.mac}</span>}
+                      {device.firmware !== "—" && <span>Firmware {device.firmware}</span>}
                     </div>
                   </div>
-                  <Button
-                    leftIcon="ph-duotone ph-link"
-                    onClick={() => setSelected(device)}
-                  >
+                  <Button leftIcon="ph-duotone ph-link" onClick={() => setSelected(device)}>
                     Parear
                   </Button>
                 </div>
@@ -491,9 +595,7 @@ function PatientPickerModal({
     const q = query.trim().toLowerCase();
     if (!q) return patients;
     return patients.filter(
-      (p) =>
-        p.nome.toLowerCase().includes(q) ||
-        p.medicacao.toLowerCase().includes(q),
+      (p) => p.nome.toLowerCase().includes(q) || p.medicacao.toLowerCase().includes(q),
     );
   }, [patients, query]);
 
@@ -522,7 +624,17 @@ function PatientPickerModal({
           </h2>
           <p className="pillar-modal__description">
             Escolha o paciente que vai usar o dispensador{" "}
-            <strong style={{ color: "var(--ink)" }}>{device.serial}</strong>.
+            <strong style={{ color: "var(--ink)" }}>{device.serial}</strong>{" "}
+            <span
+              style={{
+                color: "var(--ink-3)",
+                fontSize: "var(--text-xs)",
+                fontFamily: "var(--font-mono)",
+              }}
+            >
+              ({device.ip})
+            </span>
+            .
           </p>
 
           <div style={{ marginTop: "var(--space-4)" }}>
@@ -572,9 +684,7 @@ function PatientPickerModal({
                       padding: "var(--space-3) var(--space-4)",
                       borderRadius: "var(--radius)",
                       border: `1.5px solid ${checked ? "var(--primary)" : "var(--border)"}`,
-                      background: checked
-                        ? "var(--primary-soft)"
-                        : "var(--surface)",
+                      background: checked ? "var(--primary-soft)" : "var(--surface)",
                       cursor: "pointer",
                       transition: "all 0.15s ease-out",
                     }}
@@ -592,9 +702,7 @@ function PatientPickerModal({
                         width: "36px",
                         height: "36px",
                         borderRadius: "9999px",
-                        background: checked
-                          ? "var(--primary)"
-                          : "var(--surface-dim)",
+                        background: checked ? "var(--primary)" : "var(--surface-dim)",
                         color: checked ? "var(--primary-on)" : "var(--ink-3)",
                         display: "flex",
                         alignItems: "center",
@@ -610,20 +718,11 @@ function PatientPickerModal({
                     </div>
                     <div style={{ flex: 1, minWidth: 0 }}>
                       <div
-                        style={{
-                          fontWeight: 600,
-                          color: "var(--ink)",
-                          fontSize: "var(--text-sm)",
-                        }}
+                        style={{ fontWeight: 600, color: "var(--ink)", fontSize: "var(--text-sm)" }}
                       >
                         {patient.nome}
                       </div>
-                      <div
-                        style={{
-                          color: "var(--ink-3)",
-                          fontSize: "var(--text-xs)",
-                        }}
-                      >
+                      <div style={{ color: "var(--ink-3)", fontSize: "var(--text-xs)" }}>
                         {patient.idade} anos · {patient.medicacao}
                       </div>
                     </div>
@@ -631,10 +730,7 @@ function PatientPickerModal({
                       <i
                         className="ph-duotone ph-check-circle"
                         aria-hidden="true"
-                        style={{
-                          color: "var(--primary)",
-                          fontSize: "1.25rem",
-                        }}
+                        style={{ color: "var(--primary)", fontSize: "1.25rem" }}
                       />
                     )}
                   </label>
