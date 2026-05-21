@@ -3,7 +3,8 @@ import type { ReactNode } from "react";
 
 interface AuthState {
   isAuthenticated: boolean;
-  user: { email: string } | null;
+  user: { username: string; email?: string; full_name?: string } | null;
+  token: string | null;
 }
 
 export interface AuthContextValue extends AuthState {
@@ -22,22 +23,70 @@ function loadSession(): AuthState {
   } catch {
     // ignore parse errors
   }
-  return { isAuthenticated: false, user: null };
+  return { isAuthenticated: false, user: null, token: null };
 }
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [auth, setAuth] = useState<AuthState>(loadSession);
 
-  const login = useCallback(async (email: string, _password: string) => {
-    // Replace with real API call when backend auth is ready.
-    const state: AuthState = { isAuthenticated: true, user: { email } };
+  const login = useCallback(async (emailOrUsername: string, password: string) => {
+    // Make real backend API call
+    const res = await fetch("/api/auth/login", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        username: emailOrUsername,
+        password: password,
+      }),
+    });
+
+    if (!res.ok) {
+      const errData = await res.json().catch(() => ({}));
+      throw new Error(errData.detail ?? "Incorrect username or password");
+    }
+
+    const tokenData = await res.json();
+    const token = tokenData.access_token;
+
+    // Fetch user profile info
+    const profileRes = await fetch("/api/auth/profile", {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    });
+
+    let userDetails = {
+      username: emailOrUsername,
+      full_name: emailOrUsername,
+      email: emailOrUsername.includes("@") ? emailOrUsername : "",
+    };
+
+    if (profileRes.ok) {
+      const profileData = await profileRes.ok ? await profileRes.json() : null;
+      if (profileData) {
+        userDetails = {
+          username: profileData.username,
+          full_name: profileData.full_name || profileData.username,
+          email: profileData.email || "",
+        };
+      }
+    }
+
+    const state: AuthState = {
+      isAuthenticated: true,
+      user: userDetails,
+      token: token,
+    };
+
     sessionStorage.setItem(SESSION_KEY, JSON.stringify(state));
     setAuth(state);
   }, []);
 
   const logout = useCallback(() => {
     sessionStorage.removeItem(SESSION_KEY);
-    setAuth({ isAuthenticated: false, user: null });
+    setAuth({ isAuthenticated: false, user: null, token: null });
   }, []);
 
   return (

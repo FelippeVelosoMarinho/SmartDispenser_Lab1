@@ -7,8 +7,10 @@ import jwt
 from fastapi import Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordBearer
 from passlib.context import CryptContext
+from sqlalchemy.orm import Session
 
 from app.core.config import ALGORITHM, SECRET_KEY, ACCESS_TOKEN_EXPIRE_MINUTES
+from app.core.database import get_db
 
 # ─── Password Hashing ─────────────────────────────────────────────────
 # Using PBKDF2 to avoid bcrypt native dependency in container
@@ -46,7 +48,8 @@ def create_access_token(
 
 async def get_current_user(
     token: str = Depends(oauth2_scheme),
-) -> dict:
+    db: Session = Depends(get_db),
+):
     """Dependency to get the current authenticated user from JWT token."""
     credentials_exception = HTTPException(
         status_code=status.HTTP_401_UNAUTHORIZED,
@@ -64,7 +67,7 @@ async def get_current_user(
     # Import here to avoid circular imports
     from app.crud.user import get_user
     
-    user = get_user(username)
+    user = get_user(db, username)
     if user is None:
         raise credentials_exception
     return user

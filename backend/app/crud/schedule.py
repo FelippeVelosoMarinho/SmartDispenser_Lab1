@@ -1,51 +1,61 @@
-"""Schedule CRUD operations (in-memory store)."""
+"""Schedule CRUD operations (database store)."""
 
+from typing import List, Optional
 import uuid
-from typing import Dict, List, Optional
-
-# Simple in-memory schedule store (schedule_id -> schedule dict)
-SCHEDULES: Dict[str, dict] = {}
+from sqlalchemy.orm import Session
+from app.models.domain import Schedule
 
 
-def create_schedule(data: dict) -> dict:
+def create_schedule(db: Session, data: dict) -> Schedule:
     """Create a new schedule."""
-    schedule_id = str(uuid.uuid4())
-    schedule = {
-        "id": schedule_id,
-        "patient_id": data["patient_id"],
-        "dispenser_id": data["dispenser_id"],
-        "medication_id": data["medication_id"],
-        "slot_id": data["slot_id"],
-        "time": data["time"],
-        "quantity": data["quantity"],
-    }
-    SCHEDULES[schedule_id] = schedule
-    return schedule
+    # Handle safe parsing of patient_id as UUID
+    try:
+        pid = uuid.UUID(data["patient_id"])
+    except (ValueError, TypeError):
+        pid = None
+        
+    db_schedule = Schedule(
+        patient_id=pid,
+        dispenser_id=data["dispenser_id"],
+        medication_id=int(data["medication_id"]) if str(data["medication_id"]).isdigit() else None,
+        slot_id=data["slot_id"],
+        time_legacy=data["time"],
+        pills_per_dose=data["quantity"],
+    )
+    db.add(db_schedule)
+    db.commit()
+    db.refresh(db_schedule)
+    return db_schedule
 
 
-def get_schedules(patient_id: Optional[str] = None, dispenser_id: Optional[str] = None) -> List[dict]:
+def get_schedules(db: Session, patient_id: Optional[str] = None, dispenser_id: Optional[str] = None) -> List[Schedule]:
     """Get all schedules, optionally filtering by patient or dispenser."""
-    results = list(SCHEDULES.values())
+    query = db.query(Schedule)
     if patient_id:
-        results = [s for s in results if s["patient_id"] == patient_id]
+        try:
+            pid = uuid.UUID(patient_id)
+            query = query.filter(Schedule.patient_id == pid)
+        except ValueError:
+            pass # ignore invalid UUIDs
     if dispenser_id:
-        results = [s for s in results if s["dispenser_id"] == dispenser_id]
-    return results
+        query = query.filter(Schedule.dispenser_id == dispenser_id)
+    return query.all()
 
 
-def get_schedule(schedule_id: str) -> Optional[dict]:
+def get_schedule(db: Session, schedule_id: str) -> Optional[Schedule]:
     """Get a specific schedule by ID."""
-    return SCHEDULES.get(schedule_id)
+    try:
+        sid = uuid.UUID(schedule_id)
+    except ValueError:
+        return None
+    return db.query(Schedule).filter(Schedule.id == sid).first()
 
 
-def delete_schedule(schedule_id: str) -> bool:
+def delete_schedule(db: Session, schedule_id: str) -> bool:
     """Delete a schedule. Returns True if deleted, False if not found."""
-    if schedule_id in SCHEDULES:
-        del SCHEDULES[schedule_id]
+    db_schedule = get_schedule(db, schedule_id)
+    if db_schedule:
+        db.delete(db_schedule)
+        db.commit()
         return True
     return False
-
-
-def clear_schedules() -> None:
-    """Clear all schedules (useful for tests)."""
-    SCHEDULES.clear()

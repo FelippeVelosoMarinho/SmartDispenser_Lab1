@@ -8,6 +8,10 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from app.api.api import api_router
 from app.core.config import CORS_ORIGINS, ESP32_BASE_URL, REQUEST_TIMEOUT
+from app.core.database import engine
+from app.models.domain import Base
+
+Base.metadata.create_all(bind=engine)
 
 
 @asynccontextmanager

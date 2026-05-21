@@ -4,11 +4,23 @@
 -- 1. Core Identity Tables
 CREATE TABLE "patients" (
   "id" uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-  "tax_id" text UNIQUE NOT NULL,
+  "tax_id" text UNIQUE,
   "full_name" text NOT NULL,
   "birth_date" date,
   "phone" text,
-  "email" text
+  "email" text,
+  "name" text,
+  "age" integer,
+  "condition" text,
+  "caregiver_username" text
+);
+
+CREATE TABLE "users" (
+  "id" uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  "username" text UNIQUE NOT NULL,
+  "hashed_password" text NOT NULL,
+  "full_name" text,
+  "email" text UNIQUE
 );
 
 CREATE TABLE "caregivers" (
@@ -30,9 +42,11 @@ CREATE TABLE "patient_caregiver" (
 CREATE TABLE "dispensers" (
   "id" uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   "hardware_id" text UNIQUE NOT NULL, -- MAC Address or Serial
-  "patient_id" uuid NOT NULL REFERENCES "patients" ("id"),
+  "patient_id" uuid REFERENCES "patients" ("id"),
   "is_online" boolean DEFAULT false,
-  "last_sync" timestamp
+  "last_sync" timestamp,
+  "battery_level" numeric DEFAULT 100.0,
+  "critical_stock" boolean DEFAULT false
 );
 
 CREATE TABLE "drawers" (
@@ -54,37 +68,49 @@ CREATE TABLE "slots" (
 CREATE TABLE "medications" (
   "id" serial PRIMARY KEY,
   "name" text NOT NULL,
-  "dosage_mg" decimal,
+  "dosage" text,
   "description" text
 );
 
 CREATE TABLE "schedules" (
   "id" uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-  "slot_id" integer NOT NULL REFERENCES "slots" ("id"),
-  "medication_id" integer NOT NULL REFERENCES "medications" ("id"),
-  "scheduled_time" time NOT NULL, -- Daily recurring time
+  "slot_id" integer REFERENCES "slots" ("id"),
+  "medication_id" integer REFERENCES "medications" ("id"),
+  "scheduled_time" time,
   "pills_per_dose" integer DEFAULT 1,
-  "is_active" boolean DEFAULT true
+  "is_active" boolean DEFAULT true,
+  "patient_id" uuid,
+  "dispenser_id" text,
+  "time_legacy" text
 );
 
 -- 4. Event Logging (History)
 CREATE TABLE "dispensation_logs" (
-  "id" bigserial PRIMARY KEY,
-  "slot_id" integer NOT NULL REFERENCES "slots" ("id"),
+  "id" serial PRIMARY KEY,
+  "slot_id" integer REFERENCES "slots" ("id"),
   "medication_name_snapshot" text,
   "pills_dispensed" integer,
-  "scheduled_time_reference" timestamp NOT NULL,
+  "scheduled_time_reference" timestamp,
   "actual_execution_time" timestamp,
-  "status" text, -- e.g., 'success', 'empty_slot', 'missed'
-  "caregiver_notified" boolean DEFAULT false
+  "status" text,
+  "caregiver_notified" boolean DEFAULT false,
+  "schedule_id_legacy" text,
+  "patient_id_legacy" text,
+  "dispenser_id_legacy" text,
+  "medication_id_legacy" text,
+  "success" boolean,
+  "error_message" text
 );
 
 CREATE TABLE "refill_history" (
   "id" serial PRIMARY KEY,
-  "slot_id" integer NOT NULL REFERENCES "slots" ("id"),
-  "caregiver_id" uuid NOT NULL REFERENCES "caregivers" ("id"),
+  "slot_id" integer REFERENCES "slots" ("id"),
+  "caregiver_id" uuid REFERENCES "caregivers" ("id"),
   "quantity_added" integer NOT NULL,
-  "created_at" timestamp DEFAULT now()
+  "created_at" timestamp DEFAULT now(),
+  "dispenser_id_legacy" text,
+  "medication_id_legacy" text,
+  "performed_by_legacy" text
 );
 
 -- 6. Performance & Search Indexes

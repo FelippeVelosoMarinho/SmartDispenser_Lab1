@@ -28,6 +28,7 @@
       transparent 50%
     );
   z-index: 0;
+  pointer-events: none;
 }
 
 .bg-grid {
@@ -39,6 +40,7 @@
     ), linear-gradient(90deg, rgba(148, 163, 184, 0.03) 1px, transparent 1px);
   background-size: 60px 60px;
   z-index: 0;
+  pointer-events: none;
 }
 
 .container {

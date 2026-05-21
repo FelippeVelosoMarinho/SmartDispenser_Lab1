@@ -1,8 +1,9 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate, useParams } from "@tanstack/react-router";
 import { Button } from "../components/ui/Button";
 import { Input } from "../components/ui/Input";
 import { Card, CardContent, CardFooter } from "../components/ui/Card";
+import { useAuth } from "../auth/AuthContext";
 
 type PatientStatus = "ativo" | "inativo";
 
@@ -19,38 +20,50 @@ interface FormErrors {
   medicacao?: string;
 }
 
-// Simula busca por ID enquanto não há backend
-const MOCK_PATIENTS: Record<string, FormState> = {
-  "1": { nome: "Ana Souza", idade: "34", medicacao: "Ritalina 10 mg", status: "ativo" },
-  "2": { nome: "Bruno Lima", idade: "52", medicacao: "Sertralina 50 mg", status: "ativo" },
-  "3": { nome: "Carla Mendes", idade: "28", medicacao: "Clonazepam 0,5 mg", status: "ativo" },
-  "4": { nome: "Diego Ferreira", idade: "41", medicacao: "Melatonina 3 mg", status: "inativo" },
-  "5": { nome: "Eduarda Costa", idade: "19", medicacao: "Venvanse 30 mg", status: "ativo" },
-  "6": { nome: "Fábio Rocha", idade: "63", medicacao: "Atenolol 25 mg", status: "ativo" },
-  "7": { nome: "Gabriela Nunes", idade: "45", medicacao: "Fluoxetina 20 mg", status: "inativo" },
-  "8": { nome: "Henrique Pinto", idade: "31", medicacao: "Quetiapina 25 mg", status: "ativo" },
-  "9": { nome: "Isabela Martins", idade: "57", medicacao: "Topiramato 50 mg", status: "ativo" },
-  "10": { nome: "João Alves", idade: "22", medicacao: "Guanfacina 1 mg", status: "ativo" },
-  "11": { nome: "Karina Tavares", idade: "38", medicacao: "Bupropiona 150 mg", status: "inativo" },
-  "12": { nome: "Lucas Carvalho", idade: "47", medicacao: "Risperidona 2 mg", status: "ativo" },
-};
-
 export function EditPatientPage() {
   const navigate = useNavigate();
   const { patientId } = useParams({ from: "/_authenticated/patients/$patientId/edit" });
+  const { token } = useAuth();
 
-  const initial: FormState = MOCK_PATIENTS[patientId] ?? {
+  const [form, setForm] = useState<FormState>({
     nome: "",
     idade: "",
     medicacao: "",
     status: "ativo",
-  };
-
-  const [form, setForm] = useState<FormState>(initial);
+  });
   const [errors, setErrors] = useState<FormErrors>({});
+  const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
+  const [notFound, setNotFound] = useState(false);
 
-  const notFound = !MOCK_PATIENTS[patientId];
+  useEffect(() => {
+    async function loadPatient() {
+      try {
+        const res = await fetch(`/api/patients/${patientId}`, {
+          headers: {
+            "Authorization": token ? `Bearer ${token}` : "",
+          },
+        });
+        if (res.ok) {
+          const p = await res.json();
+          setForm({
+            nome: p.name,
+            idade: String(p.age || ""),
+            medicacao: p.condition || "",
+            status: "ativo",
+          });
+        } else {
+          setNotFound(true);
+        }
+      } catch (err) {
+        console.error(err);
+        setNotFound(true);
+      } finally {
+        setLoading(false);
+      }
+    }
+    loadPatient();
+  }, [patientId, token]);
 
   function validate(): FormErrors {
     const next: FormErrors = {};
@@ -84,9 +97,27 @@ export function EditPatientPage() {
 
     setSubmitting(true);
     try {
-      // TODO: integrar com backend quando o endpoint estiver disponível
-      await new Promise((r) => setTimeout(r, 400));
+      const res = await fetch(`/api/patients/${patientId}`, {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": token ? `Bearer ${token}` : "",
+        },
+        body: JSON.stringify({
+          name: form.nome,
+          age: Number(form.idade),
+          condition: form.medicacao,
+        }),
+      });
+
+      if (!res.ok) {
+        const errorData = await res.json().catch(() => ({}));
+        throw new Error(errorData.detail ?? "Erro ao atualizar paciente.");
+      }
+
       navigate({ to: "/patients" });
+    } catch (err: any) {
+      alert(err.message || "Erro de conexão ao salvar alterações.");
     } finally {
       setSubmitting(false);
     }
@@ -96,6 +127,26 @@ export function EditPatientPage() {
     navigate({ to: "/patients" });
   }
 
+  if (loading) {
+    return (
+      <div
+        style={{
+          flex: 1,
+          padding: "var(--space-8) var(--space-7)",
+          maxWidth: "720px",
+          margin: "0 auto",
+          width: "100%",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          minHeight: "400px",
+        }}
+      >
+        <div className="btn-spinner" style={{ borderColor: "var(--border-subtle)", borderTopColor: "var(--primary)" }} />
+        <span style={{ marginLeft: "10px", color: "var(--ink-3)" }}>Carregando paciente...</span>
+      </div>
+    );
+  }
   if (notFound) {
     return (
       <div
@@ -202,7 +253,7 @@ export function EditPatientPage() {
             fontSize: "var(--text-sm)",
           }}
         >
-          Atualize os dados de <strong>{initial.nome}</strong> abaixo.
+          Atualize os dados de <strong>{form.nome}</strong> abaixo.
         </p>
       </div>
 
@@ -309,13 +360,7 @@ export function EditPatientPage() {
           </CardContent>
 
           <CardFooter align="right">
-            <div
-              style={{
-                display: "flex",
-                gap: "var(--space-3)",
-                flexWrap: "wrap",
-              }}
-            >
+            <div style={{ display: "flex", gap: "var(--space-3)", flexWrap: "wrap" }}>
               <Button
                 type="button"
                 variant="secondary"
@@ -335,6 +380,74 @@ export function EditPatientPage() {
           </CardFooter>
         </form>
       </Card>
+
+      <button
+        type="button"
+        onClick={() => navigate({ to: "/patients/$patientId/medications", params: { patientId } })}
+        style={{
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "space-between",
+          width: "100%",
+          marginTop: "var(--space-4)",
+          padding: "var(--space-4) var(--space-5)",
+          borderRadius: "var(--radius)",
+          border: "1.5px solid var(--primary)",
+          background: "var(--primary-soft)",
+          cursor: "pointer",
+          textAlign: "left",
+          transition: "background 0.15s ease-out",
+        }}
+        onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.background = "var(--primary-soft)"; }}
+      >
+        <div style={{ display: "flex", alignItems: "center", gap: "var(--space-3)" }}>
+          <span
+            style={{
+              display: "inline-flex",
+              alignItems: "center",
+              justifyContent: "center",
+              width: "36px",
+              height: "36px",
+              borderRadius: "var(--radius)",
+              background: "var(--primary)",
+              color: "#fff",
+              fontSize: "1.1rem",
+              flexShrink: 0,
+            }}
+          >
+            <i className="ph-duotone ph-pill" aria-hidden="true" />
+          </span>
+          <div>
+            <p
+              style={{
+                margin: 0,
+                fontFamily: "var(--font-sans)",
+                fontSize: "var(--text-sm)",
+                fontWeight: 700,
+                color: "var(--primary)",
+              }}
+            >
+              Medicamentos e posologia
+            </p>
+            <p
+              style={{
+                margin: 0,
+                fontFamily: "var(--font-sans)",
+                fontSize: "var(--text-xs)",
+                color: "var(--ink-3)",
+                marginTop: "2px",
+              }}
+            >
+              Gerenciar medicamentos, dosagens e horários de administração.
+            </p>
+          </div>
+        </div>
+        <i
+          className="ph-duotone ph-arrow-right"
+          aria-hidden="true"
+          style={{ color: "var(--primary)", fontSize: "1.1rem", flexShrink: 0 }}
+        />
+      </button>
     </div>
   );
 }
