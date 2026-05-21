@@ -33,7 +33,29 @@ static String extractField(const String& body, const String& key) {
 
 // ── Routes ────────────────────────────────────────────────────────────
 
+// Sends a JSON response with CORS headers so the browser dashboard can fetch directly.
+static void sendJson(AsyncWebServerRequest* request, int code, const String& json) {
+  AsyncWebServerResponse* resp = request->beginResponse(code, "application/json", json);
+  resp->addHeader("Access-Control-Allow-Origin", "*");
+  resp->addHeader("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
+  resp->addHeader("Access-Control-Allow-Headers", "Content-Type");
+  request->send(resp);
+}
+
 void setupApiServer(AsyncWebServer& server) {
+
+  // OPTIONS preflight for CORS
+  server.onNotFound([](AsyncWebServerRequest* request) {
+    if (request->method() == HTTP_OPTIONS) {
+      AsyncWebServerResponse* resp = request->beginResponse(204);
+      resp->addHeader("Access-Control-Allow-Origin", "*");
+      resp->addHeader("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
+      resp->addHeader("Access-Control-Allow-Headers", "Content-Type");
+      request->send(resp);
+    } else {
+      request->send(404, "application/json", "{\"error\":\"not found\"}");
+    }
+  });
 
   // GET /status
   // Retorna estado completo da roleta para o backend fazer polling.
@@ -46,7 +68,7 @@ void setupApiServer(AsyncWebServer& server) {
     json += "\"wifi_rssi\":"             + String(WiFi.RSSI())                  + ",";
     json += "\"uptime_s\":"              + String(millis() / 1000);
     json += "}";
-    request->send(200, "application/json", json);
+    sendJson(request, 200, json);
   });
 
   // POST /dispense
@@ -72,27 +94,36 @@ void setupApiServer(AsyncWebServer& server) {
       triggerDispenseAlert(silentMode, period);
 
       String resp = "{\"success\":true,\"current_slot\":" + String(getCurrentSlot()) + "}";
-      request->send(200, "application/json", resp);
+      sendJson(request, 200, resp);
     }
   );
 
   // POST /confirm
-  // Não precisa de body — usa handler simples para evitar 501 com body vazio.
-  server.on("/confirm", HTTP_POST, [](AsyncWebServerRequest* request) {
-    int confirmed = getLastConfirmedSlot();
-    resetLastConfirmedSlot();
-    clearAlerts();
-    String resp = "{\"success\":true,\"confirmed_slot\":" + String(confirmed) + "}";
-    request->send(200, "application/json", resp);
-  });
+  // Chamado pelo backend após verificar que o paciente confirmou (via botão).
+  // Limpa o slot confirmado do estado interno.
+  server.on("/confirm", HTTP_POST,
+    [](AsyncWebServerRequest* request) {},
+    NULL,
+    [](AsyncWebServerRequest* request, uint8_t* data, size_t len, size_t index, size_t total) {
+      int confirmed = getLastConfirmedSlot();
+      resetLastConfirmedSlot();
+      clearAlerts();
+      String resp = "{\"success\":true,\"confirmed_slot\":" + String(confirmed) + "}";
+      sendJson(request, 200, resp);
+    }
+  );
 
   // POST /calibrate
-  // Não precisa de body — usa handler simples para evitar 501 com body vazio.
-  server.on("/calibrate", HTTP_POST, [](AsyncWebServerRequest* request) {
-    calibrateCarousel();
-    clearAlerts();
-    request->send(200, "application/json", "{\"success\":true,\"current_slot\":0}");
-  });
+  // Reseta a roleta para o slot 0 após recarga completa.
+  server.on("/calibrate", HTTP_POST,
+    [](AsyncWebServerRequest* request) {},
+    NULL,
+    [](AsyncWebServerRequest* request, uint8_t* data, size_t len, size_t index, size_t total) {
+      calibrateCarousel();
+      clearAlerts();
+      sendJson(request, 200, "{\"success\":true,\"current_slot\":0}");
+    }
+  );
 
   // GET /
   // Página HTML de diagnóstico — útil para testar via navegador.
