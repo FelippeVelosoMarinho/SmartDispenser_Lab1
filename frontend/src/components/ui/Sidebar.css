@@ -202,11 +202,17 @@
 }
 
 /* Hide header content when collapsed (except toggle) */
+.pillar-sidebar:not(.pillar-sidebar--open) .pillar-sidebar__header {
+  justify-content: center;
+  padding: var(--space-5) 0;
+}
+
 .pillar-sidebar:not(.pillar-sidebar--open)
   .pillar-sidebar__header
   > *:not(.pillar-sidebar__toggle) {
   opacity: 0;
   pointer-events: none;
+  display: none;
 }
 
 /* ── Mobile Adjustments ──────────────────────────────────────────────── */

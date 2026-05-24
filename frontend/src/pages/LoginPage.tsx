@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate, useSearch } from "@tanstack/react-router";
 import { Button } from "../components/ui/Button";
 import { Input } from "../components/ui/Input";
@@ -6,7 +6,7 @@ import { useAuth } from "../auth/AuthContext";
 import "./LoginPage.css";
 
 export function LoginPage() {
-  const { login } = useAuth();
+  const { login, isAuthenticated } = useAuth();
   const navigate = useNavigate();
   const { redirect } = useSearch({ from: "/login" });
   const [email, setEmail] = useState("");
@@ -15,13 +15,18 @@ export function LoginPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  useEffect(() => {
+    if (isAuthenticated) {
+      navigate({ to: redirect ?? "/dashboard", replace: true });
+    }
+  }, [isAuthenticated, navigate, redirect]);
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
     setLoading(true);
     try {
       await login(email, password);
-      navigate({ to: redirect ?? "/dashboard" });
     } catch {
       setError("Não foi possível entrar. Verifique seu e-mail e senha.");
     } finally {
