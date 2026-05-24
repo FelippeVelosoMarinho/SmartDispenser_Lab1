@@ -1,0 +1,33 @@
+.med-page-container {
+  flex: 1;
+  padding: var(--space-8) var(--space-7);
+  max-width: 800px;
+  margin: 0 auto;
+  width: 100%;
+}
+
+.med-form-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--space-4);
+}
+
+.med-chip-group {
+  display: flex;
+  gap: var(--space-3);
+  flex-wrap: wrap;
+}
+
+@media (max-width: 480px) {
+  .med-page-container {
+    padding: var(--space-5) var(--space-4);
+  }
+
+  .med-form-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .med-chip-group {
+    gap: var(--space-2);
+  }
+}

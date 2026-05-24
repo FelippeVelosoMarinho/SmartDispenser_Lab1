@@ -1,9 +1,11 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate, useParams } from "@tanstack/react-router";
 import { Button } from "../components/ui/Button";
 import { Input } from "../components/ui/Input";
 import { Card, CardContent, CardFooter } from "../components/ui/Card";
 import { ConfirmModal } from "../components/ui/ConfirmModal";
+import { useAuth } from "../auth/AuthContext";
+import "./PatientMedicationsPage.css";
 
 type Frequency = "diaria" | "semanal" | "mensal";
 type TimeOfDay = "manha" | "tarde" | "noite" | "madrugada";
@@ -31,44 +33,6 @@ interface MedicationFormErrors {
   horarios?: string;
 }
 
-const MOCK_PATIENTS: Record<string, string> = {
-  "1": "Ana Souza",
-  "2": "Bruno Lima",
-  "3": "Carla Mendes",
-  "4": "Diego Ferreira",
-  "5": "Eduarda Costa",
-  "6": "Fábio Rocha",
-  "7": "Gabriela Nunes",
-  "8": "Henrique Pinto",
-  "9": "Isabela Martins",
-  "10": "João Alves",
-  "11": "Karina Tavares",
-  "12": "Lucas Carvalho",
-};
-
-const MOCK_MEDICATIONS: Record<string, Medication[]> = {
-  "1": [
-    {
-      id: "m1",
-      nome: "Ritalina",
-      dosagem: "10 mg",
-      frequencia: "diaria",
-      horarios: ["manha", "tarde"],
-      observacoes: "Tomar com água, antes das refeições.",
-    },
-  ],
-  "2": [
-    {
-      id: "m2",
-      nome: "Sertralina",
-      dosagem: "50 mg",
-      frequencia: "diaria",
-      horarios: ["manha"],
-      observacoes: "",
-    },
-  ],
-};
-
 const EMPTY_FORM: MedicationFormState = {
   nome: "",
   dosagem: "",
@@ -93,11 +57,45 @@ const TIME_OPTIONS: { value: TimeOfDay; label: string; icon: string }[] = [
 export function PatientMedicationsPage() {
   const navigate = useNavigate();
   const { patientId } = useParams({ from: "/_authenticated/patients/$patientId/medications" });
+  const { token } = useAuth();
 
-  const patientName = MOCK_PATIENTS[patientId];
-  const [medications, setMedications] = useState<Medication[]>(
-    MOCK_MEDICATIONS[patientId] ?? []
-  );
+  const [patientName, setPatientName] = useState<string | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState<"not_found" | "error" | null>(null);
+  const [retryCount, setRetryCount] = useState(0);
+  const [medications, setMedications] = useState<Medication[]>([]);
+
+  const authHeaders = { Authorization: token ? `Bearer ${token}` : "" };
+
+  useEffect(() => {
+    async function loadData() {
+      try {
+        const [patientRes, medsRes] = await Promise.all([
+          fetch(`/api/patients/${patientId}`, { headers: authHeaders }),
+          fetch(`/api/patients/${patientId}/medications`, { headers: authHeaders }),
+        ]);
+        if (patientRes.ok) {
+          const p = await patientRes.json();
+          setPatientName(p.name);
+        } else if (patientRes.status === 404) {
+          setLoadError("not_found");
+          return;
+        } else {
+          setLoadError("error");
+          return;
+        }
+        if (medsRes.ok) {
+          const meds = await medsRes.json();
+          setMedications(meds);
+        }
+      } catch {
+        setLoadError("error");
+      } finally {
+        setLoading(false);
+      }
+    }
+    loadData();
+  }, [patientId, token, retryCount]);
 
   const [showForm, setShowForm] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -107,17 +105,27 @@ export function PatientMedicationsPage() {
   const [deleteTarget, setDeleteTarget] = useState<Medication | null>(null);
   const [deleting, setDeleting] = useState(false);
 
-  if (!patientName) {
+  if (loading) {
     return (
       <div
+        className="med-page-container"
         style={{
-          flex: 1,
-          padding: "var(--space-8) var(--space-7)",
-          maxWidth: "720px",
-          margin: "0 auto",
-          width: "100%",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          minHeight: "400px",
         }}
       >
+        <div className="btn-spinner" style={{ borderColor: "var(--border-subtle)", borderTopColor: "var(--primary)" }} />
+        <span style={{ marginLeft: "10px", color: "var(--ink-3)" }}>Carregando paciente...</span>
+      </div>
+    );
+  }
+
+  if (loadError) {
+    const isNotFound = loadError === "not_found";
+    return (
+      <div className="med-page-container">
         <button
           type="button"
           onClick={() => navigate({ to: "/patients" })}
@@ -136,10 +144,27 @@ export function PatientMedicationsPage() {
             paddingTop: "var(--space-10)",
           }}
         >
-          <i className="ph-duotone ph-user-x" style={{ fontSize: "3rem" }} aria-hidden="true" />
-          <p style={{ fontFamily: "var(--font-sans)", fontSize: "var(--text-base)" }}>
-            Paciente não encontrado.
+          <i
+            className={`ph-duotone ${isNotFound ? "ph-user-x" : "ph-warning-circle"}`}
+            style={{ fontSize: "3rem" }}
+            aria-hidden="true"
+          />
+          <p style={{ fontFamily: "var(--font-sans)", fontSize: "var(--text-base)", margin: 0 }}>
+            {isNotFound ? "Paciente não encontrado." : "Erro ao carregar o paciente."}
           </p>
+          {!isNotFound && (
+            <Button
+              variant="secondary"
+              leftIcon="ph-duotone ph-arrow-clockwise"
+              onClick={() => {
+                setLoadError(null);
+                setLoading(true);
+                setRetryCount((n) => n + 1);
+              }}
+            >
+              Tentar novamente
+            </Button>
+          )}
         </div>
       </div>
     );
@@ -195,20 +220,24 @@ export function PatientMedicationsPage() {
 
     setSubmitting(true);
     try {
-      // TODO: integrar com backend quando o endpoint estiver disponível
-      await new Promise((r) => setTimeout(r, 400));
       if (editingId) {
-        setMedications((prev) =>
-          prev.map((m) =>
-            m.id === editingId ? { ...m, ...form } : m
-          )
-        );
+        const res = await fetch(`/api/patients/${patientId}/medications/${editingId}`, {
+          method: "PUT",
+          headers: { "Content-Type": "application/json", ...authHeaders },
+          body: JSON.stringify(form),
+        });
+        if (!res.ok) throw new Error("Erro ao atualizar medicamento");
+        const updated: Medication = await res.json();
+        setMedications((prev) => prev.map((m) => (m.id === editingId ? updated : m)));
       } else {
-        const newMed: Medication = {
-          id: `m${Date.now()}`,
-          ...form,
-        };
-        setMedications((prev) => [...prev, newMed]);
+        const res = await fetch(`/api/patients/${patientId}/medications`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json", ...authHeaders },
+          body: JSON.stringify(form),
+        });
+        if (!res.ok) throw new Error("Erro ao adicionar medicamento");
+        const created: Medication = await res.json();
+        setMedications((prev) => [...prev, created]);
       }
       setShowForm(false);
     } finally {
@@ -220,8 +249,11 @@ export function PatientMedicationsPage() {
     if (!deleteTarget) return;
     setDeleting(true);
     try {
-      // TODO: integrar com backend quando o endpoint estiver disponível
-      await new Promise((r) => setTimeout(r, 400));
+      const res = await fetch(`/api/patients/${patientId}/medications/${deleteTarget.id}`, {
+        method: "DELETE",
+        headers: authHeaders,
+      });
+      if (!res.ok) throw new Error("Erro ao remover medicamento");
       setMedications((prev) => prev.filter((m) => m.id !== deleteTarget.id));
       setDeleteTarget(null);
     } finally {
@@ -230,15 +262,7 @@ export function PatientMedicationsPage() {
   }
 
   return (
-    <div
-      style={{
-        flex: 1,
-        padding: "var(--space-8) var(--space-7)",
-        maxWidth: "800px",
-        margin: "0 auto",
-        width: "100%",
-      }}
-    >
+    <div className="med-page-container">
       <div style={{ marginBottom: "var(--space-6)" }}>
         <button
           type="button"
@@ -249,7 +273,7 @@ export function PatientMedicationsPage() {
           Voltar para edição do paciente
         </button>
         <p className="eyebrow" style={{ marginBottom: "var(--space-1)", color: "var(--ink-3)" }}>
-          Eco-Dispenser
+          Smart-Dispenser
         </p>
         <h1
           style={{
@@ -331,7 +355,7 @@ export function PatientMedicationsPage() {
             <form onSubmit={handleSubmit} noValidate>
               <CardContent>
                 <div style={{ display: "flex", flexDirection: "column", gap: "var(--space-5)" }}>
-                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "var(--space-4)" }}>
+                  <div className="med-form-grid">
                     <Input
                       label="Nome do medicamento"
                       placeholder="Ex.: Ritalina"
@@ -354,7 +378,7 @@ export function PatientMedicationsPage() {
 
                   <div className="pillar-input-wrapper">
                     <span className="pillar-input__label">Frequência</span>
-                    <div role="radiogroup" aria-label="Frequência da medicação" style={{ display: "flex", gap: "var(--space-3)", flexWrap: "wrap" }}>
+                    <div role="radiogroup" aria-label="Frequência da medicação" className="med-chip-group">
                       {(["diaria", "semanal", "mensal"] as Frequency[]).map((f) => {
                         const checked = form.frequencia === f;
                         return (
@@ -386,7 +410,7 @@ export function PatientMedicationsPage() {
                     <div
                       role="group"
                       aria-label="Horários de administração"
-                      style={{ display: "flex", gap: "var(--space-3)", flexWrap: "wrap" }}
+                      className="med-chip-group"
                     >
                       {TIME_OPTIONS.map(({ value, label, icon }) => {
                         const checked = form.horarios.includes(value);

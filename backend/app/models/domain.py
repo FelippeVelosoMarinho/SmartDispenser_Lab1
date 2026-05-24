@@ -119,6 +119,21 @@ class Schedule(Base):
     slot = relationship('Slot', back_populates='schedules', foreign_keys=[slot_id])
     medication = relationship('Medication', foreign_keys=[medication_id])
 
+class PatientMedication(Base):
+    __tablename__ = 'patient_medications'
+
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    patient_id = Column(UUID(as_uuid=True), ForeignKey('patients.id'), nullable=False)
+    nome = Column(String, nullable=False)
+    dosagem = Column(String, nullable=False)
+    frequencia = Column(String, nullable=False)
+    horarios = Column(String, nullable=False)  # JSON array stored as text
+    observacoes = Column(String, default="")
+    created_at = Column(DateTime, default=datetime.datetime.utcnow)
+
+    patient = relationship('Patient')
+
+
 class DispensationLog(Base):
     __tablename__ = 'dispensation_logs'
 

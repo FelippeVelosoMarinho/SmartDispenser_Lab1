@@ -158,7 +158,7 @@ export function PatientsPage() {
             className="eyebrow"
             style={{ marginBottom: "var(--space-1)", color: "var(--ink-3)" }}
           >
-            Eco-Dispenser
+            Smart-Dispenser
           </p>
           <h1
             style={{
@@ -252,7 +252,13 @@ export function PatientsPage() {
                 </TableRow>
               ) : (
                 pageItems.map((patient) => (
-                  <TableRow key={patient.id}>
+                  <TableRow
+                    key={patient.id}
+                    selectable
+                    onSelect={() =>
+                      navigate({ to: "/patients/$patientId/edit", params: { patientId: patient.id } })
+                    }
+                  >
                     <TableCell>
                       <span
                         style={{
@@ -280,16 +286,20 @@ export function PatientsPage() {
                           size="small"
                           leftIcon="ph-duotone ph-pencil-simple"
                           aria-label={`Editar ${patient.nome}`}
-                          onClick={() =>
-                            navigate({ to: "/patients/$patientId/edit", params: { patientId: patient.id } })
-                          }
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            navigate({ to: "/patients/$patientId/edit", params: { patientId: patient.id } });
+                          }}
                         />
                         <Button
                           variant="ghost"
                           size="small"
                           leftIcon="ph-duotone ph-trash"
                           aria-label={`Remover ${patient.nome}`}
-                          onClick={() => setPatientToDelete(patient)}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setPatientToDelete(patient);
+                          }}
                         />
                       </div>
                     </TableCell>

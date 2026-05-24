@@ -5,7 +5,9 @@ import type { NavItem } from "../components/ui/Sidebar";
 import { useAuth } from "../auth/AuthContext";
 
 export function AppLayout() {
-  const [sidebarOpen, setSidebarOpen] = useState(true);
+  const [sidebarOpen, setSidebarOpen] = useState(
+    () => window.innerWidth >= 768,
+  );
   const navigate = useNavigate();
   const pathname = useRouterState({ select: (s) => s.location.pathname });
   const { user, logout } = useAuth();
@@ -191,6 +193,7 @@ export function AppLayout() {
       />
 
       <main
+        className="pillar-app-main"
         style={{
           flex: 1,
           overflowY: "auto",

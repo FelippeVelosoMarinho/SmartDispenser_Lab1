@@ -46,7 +46,7 @@ export function LoginPage() {
               <i className="ph-duotone ph-pill" />
             </div>
             <div className="login-brand__text">
-              <span className="eyebrow">Eco-Dispenser</span>
+              <span className="eyebrow">Smart-Dispenser</span>
               <h1 className="login-brand__name">Pillar</h1>
             </div>
           </div>
@@ -133,7 +133,7 @@ export function LoginPage() {
         </div>
 
         <footer className="login-footer">
-          <p>Eco-Dispenser • ESP32-C3 • Open source</p>
+          <p>Smart-Dispenser • ESP32-C3 • Open source</p>
         </footer>
       </main>
     </div>

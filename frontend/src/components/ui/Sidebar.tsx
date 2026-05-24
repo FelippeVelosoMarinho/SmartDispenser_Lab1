@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useEffect } from "react";
 import { cn } from "../../lib/utils";
 import "./Sidebar.css";
 
@@ -32,90 +32,114 @@ export interface SidebarProps {
   className?: string;
 }
 
-/**
- * Sidebar component for navigation following Pillar Design System principles
- *
- * - Collapsible with smooth transitions
- * - Surface background with border-subtle
- * - Active state with primary-soft wash
- * - Phosphor duotone icons
- * - Accessible keyboard navigation
- *
- * @example
- * <Sidebar
- *   isOpen={isOpen}
- *   onToggle={() => setIsOpen(!isOpen)}
- *   navItems={[
- *     { id: "home", label: "Home", icon: "ph-duotone ph-house", active: true },
- *     { id: "schedule", label: "Schedule", icon: "ph-duotone ph-calendar" }
- *   ]}
- *   header={<div>Pillar</div>}
- * />
- */
 export const Sidebar = React.forwardRef<HTMLElement, SidebarProps>(
   ({ isOpen, onToggle, navItems, header, footer, className }, ref) => {
+    // Push a history entry when the sidebar opens on mobile so the back button closes it
+    useEffect(() => {
+      if (!onToggle) return;
+
+      const isMobile = window.matchMedia("(max-width: 768px)").matches;
+      if (!isMobile) return;
+
+      if (isOpen) {
+        history.pushState({ sidebarOpen: true }, "");
+      }
+
+      const handlePopState = (e: PopStateEvent) => {
+        if (!e.state?.sidebarOpen && isOpen) {
+          onToggle();
+        }
+      };
+
+      window.addEventListener("popstate", handlePopState);
+      return () => window.removeEventListener("popstate", handlePopState);
+    }, [isOpen, onToggle]);
+
     return (
-      <aside
-        ref={ref}
-        className={cn(
-          "pillar-sidebar",
-          isOpen && "pillar-sidebar--open",
-          className,
-        )}
-      >
-        {/* Header */}
-        {header && (
-          <div className="pillar-sidebar__header">
-            {header}
-            {onToggle && (
-              <button
-                className="pillar-sidebar__toggle"
-                onClick={onToggle}
-                aria-label={isOpen ? "Collapse sidebar" : "Expand sidebar"}
-                aria-expanded={isOpen}
-              >
-                <i
-                  className={cn(
-                    "ph-duotone",
-                    isOpen ? "ph-caret-left" : "ph-caret-right",
-                  )}
-                />
-              </button>
-            )}
-          </div>
+      <>
+        {/* Mobile hamburger — only visible when sidebar is closed on mobile */}
+        {onToggle && !isOpen && (
+          <button
+            className="pillar-sidebar__mobile-open"
+            onClick={onToggle}
+            aria-label="Abrir menu"
+            aria-expanded={false}
+          >
+            <i className="ph-duotone ph-list" />
+          </button>
         )}
 
-        {/* Navigation */}
-        <nav className="pillar-sidebar__nav" aria-label="Main navigation">
-          <ul className="pillar-sidebar__nav-list">
-            {navItems.map((item) => (
-              <li key={item.id}>
+        {/* Mobile backdrop */}
+        {isOpen && onToggle && (
+          <div
+            className="pillar-sidebar__backdrop"
+            onClick={onToggle}
+            aria-hidden="true"
+          />
+        )}
+
+        <aside
+          ref={ref}
+          className={cn(
+            "pillar-sidebar",
+            isOpen && "pillar-sidebar--open",
+            className,
+          )}
+        >
+          {/* Header */}
+          {header && (
+            <div className="pillar-sidebar__header">
+              {header}
+              {onToggle && (
                 <button
-                  className={cn(
-                    "pillar-sidebar__nav-item",
-                    item.active && "pillar-sidebar__nav-item--active",
-                  )}
-                  onClick={item.onClick}
-                  aria-current={item.active ? "page" : undefined}
+                  className="pillar-sidebar__toggle"
+                  onClick={onToggle}
+                  aria-label={isOpen ? "Fechar menu" : "Expandir menu"}
+                  aria-expanded={isOpen}
                 >
-                  <i className={cn("pillar-sidebar__nav-icon", item.icon)} />
-                  <span className="pillar-sidebar__nav-label">
-                    {item.label}
-                  </span>
-                  {item.badge !== undefined && (
-                    <span className="pillar-sidebar__nav-badge">
-                      {item.badge}
-                    </span>
-                  )}
+                  <i
+                    className={cn(
+                      "ph-duotone",
+                      isOpen ? "ph-caret-left" : "ph-caret-right",
+                    )}
+                  />
                 </button>
-              </li>
-            ))}
-          </ul>
-        </nav>
+              )}
+            </div>
+          )}
 
-        {/* Footer */}
-        {footer && <div className="pillar-sidebar__footer">{footer}</div>}
-      </aside>
+          {/* Navigation */}
+          <nav className="pillar-sidebar__nav" aria-label="Main navigation">
+            <ul className="pillar-sidebar__nav-list">
+              {navItems.map((item) => (
+                <li key={item.id}>
+                  <button
+                    className={cn(
+                      "pillar-sidebar__nav-item",
+                      item.active && "pillar-sidebar__nav-item--active",
+                    )}
+                    onClick={item.onClick}
+                    aria-current={item.active ? "page" : undefined}
+                  >
+                    <i className={cn("pillar-sidebar__nav-icon", item.icon)} />
+                    <span className="pillar-sidebar__nav-label">
+                      {item.label}
+                    </span>
+                    {item.badge !== undefined && (
+                      <span className="pillar-sidebar__nav-badge">
+                        {item.badge}
+                      </span>
+                    )}
+                  </button>
+                </li>
+              ))}
+            </ul>
+          </nav>
+
+          {/* Footer */}
+          {footer && <div className="pillar-sidebar__footer">{footer}</div>}
+        </aside>
+      </>
     );
   },
 );
