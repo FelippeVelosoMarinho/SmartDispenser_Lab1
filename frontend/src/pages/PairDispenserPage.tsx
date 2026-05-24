@@ -491,34 +491,85 @@ function BluetoothPairingWizard() {
   const [selectedPatient, setSelectedPatient] = useState<Patient | null>(null);
   const [pickerOpen, setPickerOpen] = useState(false);
 
-  // Mocking the BLE request
+  // Web Bluetooth Refs
+  const wifiCharRef = useRef<BluetoothRemoteGATTCharacteristic | null>(null);
+  const serverRef = useRef<BluetoothRemoteGATTServer | null>(null);
+
+  const BLE_SERVICE_UUID = "4fafc201-1fb5-459e-8fcc-c5c9c331914b";
+  const BLE_STATUS_CHAR_UUID = "8d268d37-2cd9-4c2f-b4de-c8f2d573d8df";
+  const BLE_WIFI_CHAR_UUID = "beb5483e-36e1-4688-b7f5-ea07361b26a8";
+
   async function handleBleScan() {
+    if (!navigator.bluetooth) {
+      alert("Seu navegador não suporta Web Bluetooth. Utilize o Chrome/Edge ou a conexão local legada.");
+      return;
+    }
+
     setBleScanning(true);
-    // Na prática, aqui chamaria navigator.bluetooth.requestDevice(...)
     try {
-      await new Promise(r => setTimeout(r, 1500));
-      // Sucesso simulado
-      setDeviceId("ESP-C3-BLE-TEST");
+      const device = await navigator.bluetooth.requestDevice({
+        filters: [{ services: [BLE_SERVICE_UUID] }],
+        optionalServices: [BLE_SERVICE_UUID] // Depending on the filter, this might be redundant but safe
+      });
+
+      const server = await device.gatt?.connect();
+      if (!server) throw new Error("Falha ao conectar ao GATT Server.");
+      serverRef.current = server;
+
+      const service = await server.getPrimaryService(BLE_SERVICE_UUID);
+      
+      // Get the write characteristic for later
+      const wifiCharacteristic = await service.getCharacteristic(BLE_WIFI_CHAR_UUID);
+      wifiCharRef.current = wifiCharacteristic;
+
+      // Try reading the hardware ID
+      try {
+        const statusChar = await service.getCharacteristic(BLE_STATUS_CHAR_UUID);
+        const value = await statusChar.readValue();
+        const decoder = new TextDecoder("utf-8");
+        const jsonStr = decoder.decode(value);
+        const data = JSON.parse(jsonStr);
+        if (data.hw_id) {
+          setDeviceId(data.hw_id);
+        } else {
+          setDeviceId(device.name || "Dispensador Desconhecido");
+        }
+      } catch (err) {
+        // Fallback se não conseguir ler
+        setDeviceId(device.name || "Dispensador Desconhecido");
+      }
+
       setStep("wifi");
     } catch (e) {
       console.error(e);
-      // Aqui trataria usuário cancelando pareamento ou erro de bluetooth
+      alert("Falha ao conectar via Bluetooth: " + (e as Error).message);
     } finally {
       setBleScanning(false);
     }
   }
 
   async function handleSubmitWifi() {
-    if (!ssid) return;
+    if (!ssid || !wifiCharRef.current) return;
     setSyncing(true);
     setStep("sync");
-    // Simulando o envio de dados via característica BLE e esperando ESP32 conectar
+    
     try {
-      await new Promise(r => setTimeout(r, 2500));
-      // Após sucesso do ESP32 (recebe status ok)
+      const payload = JSON.stringify({ ssid, pass: password });
+      const encoder = new TextEncoder();
+      const data = encoder.encode(payload);
+      
+      // Escreve as credenciais no ESP32
+      await wifiCharRef.current.writeValue(data);
+      
+      // Desconecta e aguarda sucesso (na prática a API receberia um webhook ou polling)
+      serverRef.current?.disconnect();
+
+      // Simulando tempo para o ESP32 conectar ao Wi-Fi e mandar requisição para API
+      await new Promise(r => setTimeout(r, 3000));
       setStep("done");
     } catch (e) {
       console.error(e);
+      alert("Falha ao enviar dados de Wi-Fi: " + (e as Error).message);
       setStep("wifi"); // fallback
     } finally {
       setSyncing(false);
