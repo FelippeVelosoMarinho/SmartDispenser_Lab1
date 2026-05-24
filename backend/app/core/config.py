@@ -24,3 +24,11 @@ CORS_ORIGINS = [
     "http://127.0.0.1:5173",
     "http://localhost:3000",
 ]
+
+# ─── SMTP / Notification Configuration ──────────────────────────────────
+SMTP_SERVER = os.getenv("SMTP_SERVER", "smtp.gmail.com")
+SMTP_PORT = int(os.getenv("SMTP_PORT", "587"))
+SMTP_USER = os.getenv("SMTP_USER", "smart.dispenser.ufmg@gmail.com")
+SMTP_PASSWORD = os.getenv("APP_PASSWORD_GOOGLE", "")
+EMAIL_FROM = os.getenv("EMAIL_FROM", "Smart Dispenser <smart.dispenser.ufmg@gmail.com>")
+

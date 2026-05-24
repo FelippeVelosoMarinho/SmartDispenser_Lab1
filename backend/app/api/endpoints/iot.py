@@ -2,7 +2,7 @@
 
 import time
 import httpx
-from fastapi import APIRouter, HTTPException, Request, Depends
+from fastapi import APIRouter, HTTPException, Request, Depends, BackgroundTasks
 from sqlalchemy.orm import Session
 from app.core.database import get_db
 
@@ -10,6 +10,14 @@ from app.core.config import ESP32_BASE_URL
 from app.crud import schedule as crud_schedule
 from app.crud import log as crud_log
 from app.crud import dispenser as crud_dispenser
+from app.models.domain import User, Patient, Dispenser, Medication
+from app.services.notifier import send_email_notification
+from app.services.templates import (
+    get_dispensation_success_template,
+    get_dispensation_failure_template,
+    get_critical_stock_template,
+    get_low_battery_template,
+)
 from app.schemas.iot import (
     HealthResponse,
     LedCommand,
@@ -167,6 +175,7 @@ async def sync_dispenser(hardware_id: str, db: Session = Depends(get_db)):
 @router.post("/event", response_model=IotEventResponse)
 async def process_iot_event(
     event: IotEventCreate,
+    background_tasks: BackgroundTasks,
     db: Session = Depends(get_db)
 ):
     """
@@ -184,6 +193,71 @@ async def process_iot_event(
     # Store the dispensation log using the crud operation
     created_log = crud_log.create_dispensation_log(db, log_data)
     
+    # Resolve Patient
+    patient = None
+    if event.patient_id and event.patient_id != "unknown":
+        try:
+            from uuid import UUID
+            patient_uuid = UUID(event.patient_id)
+            patient = db.query(Patient).filter(Patient.id == patient_uuid).first()
+        except ValueError:
+            pass
+            
+    if not patient:
+        # Fallback to looking up the patient by dispenser hardware_id
+        dispenser = db.query(Dispenser).filter(Dispenser.hardware_id == event.dispenser_id).first()
+        if dispenser and dispenser.patient_id:
+            patient = db.query(Patient).filter(Patient.id == dispenser.patient_id).first()
+            
+    # Resolve Caregiver User
+    caregiver_user = None
+    if patient and patient.caregiver_username:
+        caregiver_user = db.query(User).filter(User.username == patient.caregiver_username).first()
+        
+    # Resolve Medication Name
+    medication_name = "Medicamento"
+    if event.medication_id and event.medication_id != "unknown":
+        try:
+            med_id = int(event.medication_id)
+            medication = db.query(Medication).filter(Medication.id == med_id).first()
+            if medication:
+                medication_name = medication.name
+        except ValueError:
+            medication_name = event.medication_id
+            
+    # Trigger notifications if caregiver exists, has notifications enabled, and has an email
+    if caregiver_user and caregiver_user.notifications_enabled and caregiver_user.email:
+        patient_name = patient.full_name or patient.name or "Paciente"
+        if event.success:
+            html_body = get_dispensation_success_template(
+                patient_name=patient_name,
+                medication_name=medication_name,
+                time_str=created_log.actual_execution_time.strftime("%d/%m/%Y %H:%M:%S")
+            )
+            background_tasks.add_task(
+                send_email_notification,
+                to_email=caregiver_user.email,
+                subject=f"🟢 SmartDispenser: Ingestão de {patient_name} confirmada",
+                html_body=html_body
+            )
+        else:
+            html_body = get_dispensation_failure_template(
+                patient_name=patient_name,
+                medication_name=medication_name,
+                scheduled_time="Dose programada",
+                error_message=event.error_message or "Não confirmado pelo paciente"
+            )
+            background_tasks.add_task(
+                send_email_notification,
+                to_email=caregiver_user.email,
+                subject=f"⚠️ Alerta SmartDispenser: Medicação NÃO confirmada para {patient_name}",
+                html_body=html_body
+            )
+            
+        # Update log to mark caregiver as notified
+        created_log.caregiver_notified = True
+        db.commit()
+    
     return IotEventResponse(
         message=f"Event '{event.event_type}' processed successfully.",
         log_id=str(created_log.id)
@@ -193,11 +267,55 @@ async def process_iot_event(
 @router.post("/heartbeat", response_model=HeartbeatResponse)
 async def process_heartbeat(
     heartbeat: HeartbeatCreate,
+    background_tasks: BackgroundTasks,
     db: Session = Depends(get_db)
 ):
     """
     O hardware avisa que ainda está ligado e conectado ao Wi-Fi.
     """
+    # 1. Fetch previous dispenser details to check for changes and trigger email notifications
+    dispenser = db.query(Dispenser).filter(Dispenser.hardware_id == heartbeat.dispenser_id).first()
+    if dispenser:
+        prev_critical = dispenser.critical_stock or False
+        prev_battery = float(dispenser.battery_level) if dispenser.battery_level is not None else 100.0
+        
+        patient = None
+        if dispenser.patient_id:
+            patient = db.query(Patient).filter(Patient.id == dispenser.patient_id).first()
+            
+        if patient and patient.caregiver_username:
+            caregiver_user = db.query(User).filter(User.username == patient.caregiver_username).first()
+            if caregiver_user and caregiver_user.notifications_enabled and caregiver_user.email:
+                patient_name = patient.full_name or patient.name or "Paciente"
+                
+                # Check for critical stock transition (from False to True)
+                if not prev_critical and heartbeat.critical_stock:
+                    html_body = get_critical_stock_template(
+                        patient_name=patient_name,
+                        hardware_id=heartbeat.dispenser_id
+                    )
+                    background_tasks.add_task(
+                        send_email_notification,
+                        to_email=caregiver_user.email,
+                        subject=f"📦 Alerta SmartDispenser: Estoque crítico para {patient_name}",
+                        html_body=html_body
+                    )
+                    
+                # Check for battery level drop (transitioning below 20.0%)
+                if prev_battery >= 20.0 and heartbeat.battery_level < 20.0:
+                    html_body = get_low_battery_template(
+                        patient_name=patient_name,
+                        hardware_id=heartbeat.dispenser_id,
+                        battery_level=heartbeat.battery_level
+                    )
+                    background_tasks.add_task(
+                        send_email_notification,
+                        to_email=caregiver_user.email,
+                        subject=f"🔋 Alerta SmartDispenser: Bateria baixa ({heartbeat.battery_level:.1f}%) para {patient_name}",
+                        html_body=html_body
+                    )
+
+    # 2. Update dispenser status in DB
     status_data = {
         "dispenser_id": heartbeat.dispenser_id,
         "battery_level": heartbeat.battery_level,

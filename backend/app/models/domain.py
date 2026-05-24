@@ -21,6 +21,7 @@ class User(Base):
     hashed_password = Column(String, nullable=False)
     full_name = Column(String)
     email = Column(String, unique=True)
+    notifications_enabled = Column(Boolean, default=True)
 
 
 class Patient(Base):

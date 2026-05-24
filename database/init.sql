@@ -20,7 +20,8 @@ CREATE TABLE "users" (
   "username" text UNIQUE NOT NULL,
   "hashed_password" text NOT NULL,
   "full_name" text,
-  "email" text UNIQUE
+  "email" text UNIQUE,
+  "notifications_enabled" boolean DEFAULT true
 );
 
 CREATE TABLE "caregivers" (

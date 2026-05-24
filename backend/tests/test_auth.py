@@ -72,3 +72,44 @@ def test_login_and_get_profile():
     )
     assert profile_response.status_code == 200
     assert profile_response.json()["username"] == "pytest_user"
+    assert profile_response.json()["notifications_enabled"] is True
+
+
+def test_update_profile_notification_setting():
+    # Login
+    response = client.post(
+        "/api/auth/login",
+        json={
+            "username": "pytest_user",
+            "password": "strongpassword123"
+        }
+    )
+    assert response.status_code == 200
+    token = response.json()["access_token"]
+
+    # Toggle off notifications
+    patch_response = client.patch(
+        "/api/auth/profile",
+        json={"notifications_enabled": False},
+        headers={"Authorization": f"Bearer {token}"}
+    )
+    assert patch_response.status_code == 200
+    assert patch_response.json()["notifications_enabled"] is False
+
+    # Get profile to verify
+    profile_response = client.get(
+        "/api/auth/profile",
+        headers={"Authorization": f"Bearer {token}"}
+    )
+    assert profile_response.status_code == 200
+    assert profile_response.json()["notifications_enabled"] is False
+
+    # Toggle back on
+    patch_response_on = client.patch(
+        "/api/auth/profile",
+        json={"notifications_enabled": True},
+        headers={"Authorization": f"Bearer {token}"}
+    )
+    assert patch_response_on.status_code == 200
+    assert patch_response_on.json()["notifications_enabled"] is True
+
