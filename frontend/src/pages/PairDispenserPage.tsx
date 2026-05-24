@@ -165,6 +165,111 @@ function SignalBadge({ rssi }: { rssi: number }) {
 
 export function PairDispenserPage() {
   const navigate = useNavigate();
+  const [mode, setMode] = useState<"select" | "local" | "ble">("select");
+
+  return (
+    <div
+      style={{
+        flex: 1,
+        padding: "var(--space-8) var(--space-7)",
+        maxWidth: "960px",
+        margin: "0 auto",
+        width: "100%",
+      }}
+    >
+      {/* Header */}
+      <div style={{ marginBottom: "var(--space-6)" }}>
+        <button
+          type="button"
+          onClick={() => {
+            if (mode !== "select") setMode("select");
+            else navigate({ to: "/dispensers" });
+          }}
+          style={{
+            display: "inline-flex",
+            alignItems: "center",
+            gap: "var(--space-2)",
+            background: "transparent",
+            border: "none",
+            padding: "var(--space-1) 0",
+            color: "var(--ink-3)",
+            fontFamily: "var(--font-sans)",
+            fontSize: "var(--text-sm)",
+            cursor: "pointer",
+            marginBottom: "var(--space-3)",
+          }}
+        >
+          <i className="ph-duotone ph-arrow-left" aria-hidden="true" />
+          {mode !== "select" ? "Voltar para opções" : "Voltar para dispensadores"}
+        </button>
+        <p className="eyebrow" style={{ marginBottom: "var(--space-1)", color: "var(--ink-3)" }}>
+          Eco-Dispenser
+        </p>
+        <h1
+          style={{
+            fontFamily: "var(--font-sans)",
+            fontSize: "var(--text-2xl)",
+            fontWeight: 700,
+            color: "var(--ink)",
+            lineHeight: "var(--leading-heading)",
+            margin: 0,
+          }}
+        >
+          Parear novo dispensador
+        </h1>
+        {mode === "select" && (
+          <p style={{ marginTop: "var(--space-2)", color: "var(--ink-3)", fontSize: "var(--text-sm)" }}>
+            Escolha como deseja conectar o novo dispensador à plataforma.
+          </p>
+        )}
+      </div>
+
+      {mode === "select" && (
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))", gap: "var(--space-4)" }}>
+          <Card 
+            style={{ cursor: "pointer", transition: "transform 0.2s", border: "2px solid var(--primary)" }} 
+            onClick={() => setMode("ble")}
+          >
+            <CardContent style={{ padding: "var(--space-6)", textAlign: "center", display: "flex", flexDirection: "column", alignItems: "center", gap: "var(--space-4)" }}>
+              <div style={{ background: "var(--primary-soft)", color: "var(--primary)", width: 64, height: 64, borderRadius: 32, display: "flex", alignItems: "center", justifyContent: "center" }}>
+                <i className="ph-duotone ph-bluetooth" style={{ fontSize: "2rem" }} />
+              </div>
+              <div>
+                <h3 style={{ margin: "0 0 var(--space-2)", fontSize: "var(--text-lg)" }}>Conexão Bluetooth</h3>
+                <p style={{ margin: 0, color: "var(--ink-3)", fontSize: "var(--text-sm)" }}>Recomendado. Configure o Wi-Fi do dispensador diretamente pelo seu dispositivo (requer Bluetooth ativado).</p>
+              </div>
+              <Button style={{ width: "100%" }} leftIcon="ph-duotone ph-bluetooth">Usar Bluetooth</Button>
+            </CardContent>
+          </Card>
+
+          <Card 
+            style={{ cursor: "pointer", transition: "transform 0.2s" }} 
+            onClick={() => setMode("local")}
+          >
+            <CardContent style={{ padding: "var(--space-6)", textAlign: "center", display: "flex", flexDirection: "column", alignItems: "center", gap: "var(--space-4)" }}>
+              <div style={{ background: "var(--surface-dim)", color: "var(--ink-2)", width: 64, height: 64, borderRadius: 32, display: "flex", alignItems: "center", justifyContent: "center" }}>
+                <i className="ph-duotone ph-wifi-high" style={{ fontSize: "2rem" }} />
+              </div>
+              <div>
+                <h3 style={{ margin: "0 0 var(--space-2)", fontSize: "var(--text-lg)" }}>Conexão Wi-Fi Local</h3>
+                <p style={{ margin: 0, color: "var(--ink-3)", fontSize: "var(--text-sm)" }}>Legado. Escaneia a rede local atual em busca de dispensadores que já estão na mesma rede.</p>
+              </div>
+              <Button variant="secondary" style={{ width: "100%" }} leftIcon="ph-duotone ph-wifi-high">Usar Rede Local</Button>
+            </CardContent>
+          </Card>
+        </div>
+      )}
+
+      {mode === "local" && <LocalPairingView />}
+      {mode === "ble" && <BluetoothPairingWizard />}
+
+      <style>{`@keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }`}</style>
+    </div>
+  );
+}
+
+function LocalPairingView() {
+  const navigate = useNavigate();
   const [scanning, setScanning] = useState(false);
   const [subnet, setSubnet] = useState<string | null>(null);
   const [devices, setDevices] = useState<DiscoveredDispenser[]>([]);
@@ -249,79 +354,21 @@ export function PairDispenserPage() {
   }
 
   return (
-    <div
-      style={{
-        flex: 1,
-        padding: "var(--space-8) var(--space-7)",
-        maxWidth: "960px",
-        margin: "0 auto",
-        width: "100%",
-      }}
-    >
-      {/* Header */}
-      <div style={{ marginBottom: "var(--space-6)" }}>
-        <button
-          type="button"
-          onClick={() => navigate({ to: "/dispensers" })}
-          style={{
-            display: "inline-flex",
-            alignItems: "center",
-            gap: "var(--space-2)",
-            background: "transparent",
-            border: "none",
-            padding: "var(--space-1) 0",
-            color: "var(--ink-3)",
-            fontFamily: "var(--font-sans)",
-            fontSize: "var(--text-sm)",
-            cursor: "pointer",
-            marginBottom: "var(--space-3)",
-          }}
-        >
-          <i className="ph-duotone ph-arrow-left" aria-hidden="true" />
-          Voltar para dispensadores
-        </button>
-        <p className="eyebrow" style={{ marginBottom: "var(--space-1)", color: "var(--ink-3)" }}>
-          Eco-Dispenser
-        </p>
-        <h1
-          style={{
-            fontFamily: "var(--font-sans)",
-            fontSize: "var(--text-2xl)",
-            fontWeight: 700,
-            color: "var(--ink)",
-            lineHeight: "var(--leading-heading)",
-            margin: 0,
-          }}
-        >
-          Parear novo dispensador
-        </h1>
-        <p
-          style={{ marginTop: "var(--space-2)", color: "var(--ink-3)", fontSize: "var(--text-sm)" }}
-        >
-          Certifique-se de que o dispensador está ligado e conectado à mesma rede Wi-Fi que este
-          dispositivo.
-          {subnet && (
-            <span style={{ marginLeft: "var(--space-2)", color: "var(--ink-2)" }}>
-              Rede detectada:{" "}
-              <code style={{ fontFamily: "var(--font-mono)", fontSize: "0.8rem" }}>
-                {subnet}.0/24
-              </code>
-            </span>
-          )}
-        </p>
-      </div>
+    <>
+      <p style={{ marginBottom: "var(--space-4)", color: "var(--ink-3)", fontSize: "var(--text-sm)" }}>
+        Certifique-se de que o dispensador está ligado e conectado à mesma rede Wi-Fi que este dispositivo.
+        {subnet && (
+          <span style={{ marginLeft: "var(--space-2)", color: "var(--ink-2)" }}>
+            Rede detectada:{" "}
+            <code style={{ fontFamily: "var(--font-mono)", fontSize: "0.8rem" }}>
+              {subnet}.0/24
+            </code>
+          </span>
+        )}
+      </p>
 
       {/* Scan controls */}
-      <div
-        style={{
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "space-between",
-          gap: "var(--space-4)",
-          marginBottom: "var(--space-5)",
-          flexWrap: "wrap",
-        }}
-      >
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: "var(--space-4)", marginBottom: "var(--space-5)", flexWrap: "wrap" }}>
         <div style={{ flex: "1 1 280px", maxWidth: "360px" }}>
           <Input
             placeholder="Filtrar por serial, IP ou MAC"
@@ -333,30 +380,12 @@ export function PairDispenserPage() {
         </div>
         <div style={{ display: "flex", alignItems: "center", gap: "var(--space-3)" }}>
           {scanning && (
-            <span
-              style={{
-                display: "inline-flex",
-                alignItems: "center",
-                gap: "var(--space-2)",
-                color: "var(--primary)",
-                fontSize: "var(--text-sm)",
-                fontWeight: 600,
-              }}
-            >
-              <i
-                className="ph-duotone ph-circle-notch"
-                aria-hidden="true"
-                style={{ fontSize: "1.1rem", animation: "spin 1s linear infinite" }}
-              />
+            <span style={{ display: "inline-flex", alignItems: "center", gap: "var(--space-2)", color: "var(--primary)", fontSize: "var(--text-sm)", fontWeight: 600 }}>
+              <i className="ph-duotone ph-circle-notch" aria-hidden="true" style={{ fontSize: "1.1rem", animation: "spin 1s linear infinite" }} />
               Procurando dispositivos…
             </span>
           )}
-          <Button
-            variant="secondary"
-            leftIcon="ph-duotone ph-arrows-clockwise"
-            onClick={startScan}
-            disabled={scanning}
-          >
+          <Button variant="secondary" leftIcon="ph-duotone ph-arrows-clockwise" onClick={startScan} disabled={scanning}>
             {scanning ? "Procurando" : "Procurar novamente"}
           </Button>
         </div>
@@ -365,59 +394,26 @@ export function PairDispenserPage() {
       {/* Manual IP entry */}
       <Card style={{ marginBottom: "var(--space-5)" }}>
         <CardContent>
-          <p
-            style={{
-              margin: "0 0 var(--space-3)",
-              fontWeight: 600,
-              fontSize: "var(--text-sm)",
-              color: "var(--ink)",
-            }}
-          >
-            <i
-              className="ph-duotone ph-plugs"
-              aria-hidden="true"
-              style={{ marginRight: "var(--space-2)" }}
-            />
+          <p style={{ margin: "0 0 var(--space-3)", fontWeight: 600, fontSize: "var(--text-sm)", color: "var(--ink)" }}>
+            <i className="ph-duotone ph-plugs" aria-hidden="true" style={{ marginRight: "var(--space-2)" }} />
             Adicionar por IP manual
           </p>
-          <div
-            style={{
-              display: "flex",
-              gap: "var(--space-3)",
-              flexWrap: "wrap",
-              alignItems: "flex-start",
-            }}
-          >
+          <div style={{ display: "flex", gap: "var(--space-3)", flexWrap: "wrap", alignItems: "flex-start" }}>
             <div style={{ flex: "1 1 220px" }}>
               <Input
                 placeholder="ex: 192.168.1.45"
                 value={manualIp}
-                onChange={(e) => {
-                  setManualIp(e.target.value);
-                  setManualError(null);
-                }}
+                onChange={(e) => { setManualIp(e.target.value); setManualError(null); }}
                 onKeyDown={(e) => e.key === "Enter" && handleManualProbe()}
                 aria-label="Endereço IP do dispensador"
               />
               {manualError && (
-                <p
-                  style={{
-                    margin: "var(--space-2) 0 0",
-                    color: "var(--error)",
-                    fontSize: "var(--text-xs)",
-                  }}
-                >
+                <p style={{ margin: "var(--space-2) 0 0", color: "var(--error)", fontSize: "var(--text-xs)" }}>
                   {manualError}
                 </p>
               )}
             </div>
-            <Button
-              variant="secondary"
-              leftIcon="ph-duotone ph-magnifying-glass"
-              onClick={handleManualProbe}
-              loading={manualChecking}
-              disabled={!manualIp.trim() || manualChecking}
-            >
+            <Button variant="secondary" leftIcon="ph-duotone ph-magnifying-glass" onClick={handleManualProbe} loading={manualChecking} disabled={!manualIp.trim() || manualChecking}>
               Verificar
             </Button>
           </div>
@@ -428,29 +424,12 @@ export function PairDispenserPage() {
       {filtered.length === 0 && !scanning ? (
         <Card>
           <CardContent>
-            <div
-              style={{
-                display: "flex",
-                flexDirection: "column",
-                alignItems: "center",
-                gap: "var(--space-3)",
-                color: "var(--ink-3)",
-                padding: "var(--space-8) var(--space-4)",
-                textAlign: "center",
-              }}
-            >
-              <i
-                className="ph-duotone ph-radio"
-                style={{ fontSize: "2.5rem" }}
-                aria-hidden="true"
-              />
+            <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: "var(--space-3)", color: "var(--ink-3)", padding: "var(--space-8) var(--space-4)", textAlign: "center" }}>
+              <i className="ph-duotone ph-radio" style={{ fontSize: "2.5rem" }} aria-hidden="true" />
               <div>
-                <p style={{ margin: 0, fontWeight: 600, color: "var(--ink)" }}>
-                  Nenhum dispositivo encontrado
-                </p>
+                <p style={{ margin: 0, fontWeight: 600, color: "var(--ink)" }}>Nenhum dispositivo encontrado</p>
                 <p style={{ margin: "var(--space-1) 0 0", fontSize: "var(--text-sm)" }}>
-                  Verifique se o dispensador está ligado e conectado à mesma rede Wi-Fi. Use o campo
-                  acima para adicionar um IP manualmente.
+                  Verifique se o dispensador está ligado e conectado à mesma rede Wi-Fi. Use o campo acima para adicionar um IP manualmente.
                 </p>
               </div>
             </div>
@@ -461,71 +440,19 @@ export function PairDispenserPage() {
           {filtered.map((device) => (
             <Card key={device.id}>
               <CardContent>
-                <div
-                  style={{
-                    display: "flex",
-                    alignItems: "center",
-                    gap: "var(--space-4)",
-                    flexWrap: "wrap",
-                  }}
-                >
-                  <div
-                    style={{
-                      width: "44px",
-                      height: "44px",
-                      borderRadius: "var(--radius-sm)",
-                      background: "var(--primary-soft)",
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "center",
-                      flexShrink: 0,
-                    }}
-                  >
-                    <i
-                      className="ph-duotone ph-device-mobile-speaker"
-                      aria-hidden="true"
-                      style={{ fontSize: "1.5rem", color: "var(--primary)" }}
-                    />
+                <div style={{ display: "flex", alignItems: "center", gap: "var(--space-4)", flexWrap: "wrap" }}>
+                  <div style={{ width: "44px", height: "44px", borderRadius: "var(--radius-sm)", background: "var(--primary-soft)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                    <i className="ph-duotone ph-device-mobile-speaker" aria-hidden="true" style={{ fontSize: "1.5rem", color: "var(--primary)" }} />
                   </div>
                   <div style={{ flex: "1 1 220px", minWidth: 0 }}>
-                    <div
-                      style={{
-                        display: "flex",
-                        alignItems: "center",
-                        gap: "var(--space-2)",
-                        flexWrap: "wrap",
-                      }}
-                    >
-                      <span
-                        style={{
-                          fontWeight: 700,
-                          color: "var(--ink)",
-                          fontFamily: "var(--font-sans)",
-                          fontSize: "var(--text-base)",
-                        }}
-                      >
+                    <div style={{ display: "flex", alignItems: "center", gap: "var(--space-2)", flexWrap: "wrap" }}>
+                      <span style={{ fontWeight: 700, color: "var(--ink)", fontFamily: "var(--font-sans)", fontSize: "var(--text-base)" }}>
                         {device.serial}
                       </span>
                       <SignalBadge rssi={device.rssi} />
                     </div>
-                    <div
-                      style={{
-                        marginTop: "4px",
-                        color: "var(--ink-3)",
-                        fontSize: "var(--text-sm)",
-                        display: "flex",
-                        gap: "var(--space-3)",
-                        flexWrap: "wrap",
-                      }}
-                    >
-                      <span>
-                        <i
-                          className="ph-duotone ph-globe"
-                          aria-hidden="true"
-                          style={{ marginRight: "4px" }}
-                        />
-                        {device.ip}
-                      </span>
+                    <div style={{ marginTop: "4px", color: "var(--ink-3)", fontSize: "var(--text-sm)", display: "flex", gap: "var(--space-3)", flexWrap: "wrap" }}>
+                      <span><i className="ph-duotone ph-globe" aria-hidden="true" style={{ marginRight: "4px" }} />{device.ip}</span>
                       {device.mac !== "—" && <span>MAC {device.mac}</span>}
                       {device.firmware !== "—" && <span>Firmware {device.firmware}</span>}
                     </div>
@@ -540,7 +467,6 @@ export function PairDispenserPage() {
         </div>
       )}
 
-      {/* Modal de seleção de paciente */}
       <PatientPickerModal
         open={selected !== null}
         device={selected}
@@ -549,9 +475,175 @@ export function PairDispenserPage() {
         onCancel={() => setSelected(null)}
         onConfirm={handleConfirmPair}
       />
+    </>
+  );
+}
 
-      <style>{`@keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }`}</style>
-    </div>
+function BluetoothPairingWizard() {
+  const navigate = useNavigate();
+  const [step, setStep] = useState<"scan" | "wifi" | "sync" | "done">("scan");
+  const [bleScanning, setBleScanning] = useState(false);
+  const [deviceId, setDeviceId] = useState<string | null>(null);
+  
+  const [ssid, setSsid] = useState("");
+  const [password, setPassword] = useState("");
+  const [syncing, setSyncing] = useState(false);
+  const [selectedPatient, setSelectedPatient] = useState<Patient | null>(null);
+  const [pickerOpen, setPickerOpen] = useState(false);
+
+  // Mocking the BLE request
+  async function handleBleScan() {
+    setBleScanning(true);
+    // Na prática, aqui chamaria navigator.bluetooth.requestDevice(...)
+    try {
+      await new Promise(r => setTimeout(r, 1500));
+      // Sucesso simulado
+      setDeviceId("ESP-C3-BLE-TEST");
+      setStep("wifi");
+    } catch (e) {
+      console.error(e);
+      // Aqui trataria usuário cancelando pareamento ou erro de bluetooth
+    } finally {
+      setBleScanning(false);
+    }
+  }
+
+  async function handleSubmitWifi() {
+    if (!ssid) return;
+    setSyncing(true);
+    setStep("sync");
+    // Simulando o envio de dados via característica BLE e esperando ESP32 conectar
+    try {
+      await new Promise(r => setTimeout(r, 2500));
+      // Após sucesso do ESP32 (recebe status ok)
+      setStep("done");
+    } catch (e) {
+      console.error(e);
+      setStep("wifi"); // fallback
+    } finally {
+      setSyncing(false);
+    }
+  }
+
+  return (
+    <Card>
+      <CardContent style={{ padding: "var(--space-8)", maxWidth: "500px", margin: "0 auto" }}>
+        
+        {step === "scan" && (
+          <div style={{ textAlign: "center", display: "flex", flexDirection: "column", alignItems: "center", gap: "var(--space-4)" }}>
+            <div style={{ background: "var(--primary-soft)", color: "var(--primary)", width: 80, height: 80, borderRadius: 40, display: "flex", alignItems: "center", justifyContent: "center" }}>
+              <i className="ph-duotone ph-bluetooth" style={{ fontSize: "2.5rem" }} />
+            </div>
+            <div>
+              <h2 style={{ fontSize: "var(--text-xl)", margin: "0 0 var(--space-2)" }}>Encontrar dispensador</h2>
+              <p style={{ color: "var(--ink-3)", margin: 0, fontSize: "var(--text-sm)" }}>
+                Ligue o dispensador. Ele entrará em modo de pareamento automaticamente.
+              </p>
+            </div>
+            <Button onClick={handleBleScan} loading={bleScanning} leftIcon={bleScanning ? undefined : "ph-duotone ph-magnifying-glass"}>
+              Buscar via Bluetooth
+            </Button>
+          </div>
+        )}
+
+        {step === "wifi" && (
+          <div style={{ display: "flex", flexDirection: "column", gap: "var(--space-4)" }}>
+            <div style={{ display: "flex", alignItems: "center", gap: "var(--space-3)" }}>
+              <div style={{ background: "var(--success-soft)", color: "var(--success-ink)", width: 40, height: 40, borderRadius: 20, display: "flex", alignItems: "center", justifyContent: "center" }}>
+                <i className="ph-duotone ph-check" style={{ fontSize: "1.2rem" }} />
+              </div>
+              <div>
+                <h2 style={{ fontSize: "var(--text-base)", margin: 0 }}>Conectado ao dispensador</h2>
+                <p style={{ color: "var(--ink-3)", margin: 0, fontSize: "var(--text-xs)", fontFamily: "var(--font-mono)" }}>
+                  {deviceId}
+                </p>
+              </div>
+            </div>
+
+            <hr style={{ border: "none", borderTop: "1px solid var(--border)", margin: "var(--space-2) 0" }} />
+
+            <div>
+              <h3 style={{ fontSize: "var(--text-lg)", margin: "0 0 var(--space-2)" }}>Configurar Wi-Fi</h3>
+              <p style={{ color: "var(--ink-3)", margin: "0 0 var(--space-4)", fontSize: "var(--text-sm)" }}>
+                Informe a rede Wi-Fi que o dispensador utilizará para se comunicar com a plataforma.
+              </p>
+            </div>
+
+            <div style={{ display: "flex", flexDirection: "column", gap: "var(--space-3)" }}>
+              <div>
+                <label style={{ display: "block", marginBottom: "var(--space-1)", fontSize: "var(--text-sm)", fontWeight: 600 }}>Nome da Rede (SSID)</label>
+                <Input value={ssid} onChange={e => setSsid(e.target.value)} placeholder="Ex: Minha Casa" />
+              </div>
+              <div>
+                <label style={{ display: "block", marginBottom: "var(--space-1)", fontSize: "var(--text-sm)", fontWeight: 600 }}>Senha do Wi-Fi</label>
+                <Input type="password" value={password} onChange={e => setPassword(e.target.value)} placeholder="Senha da rede" />
+              </div>
+            </div>
+
+            <Button style={{ marginTop: "var(--space-2)" }} disabled={!ssid} onClick={handleSubmitWifi}>
+              Enviar para o Dispensador
+            </Button>
+          </div>
+        )}
+
+        {step === "sync" && (
+          <div style={{ textAlign: "center", display: "flex", flexDirection: "column", alignItems: "center", gap: "var(--space-4)", padding: "var(--space-6) 0" }}>
+            <i className="ph-duotone ph-circle-notch" style={{ fontSize: "3rem", color: "var(--primary)", animation: "spin 1s linear infinite" }} />
+            <div>
+              <h2 style={{ fontSize: "var(--text-xl)", margin: "0 0 var(--space-2)" }}>Sincronizando...</h2>
+              <p style={{ color: "var(--ink-3)", margin: 0, fontSize: "var(--text-sm)" }}>
+                O dispensador está tentando se conectar à rede <strong>{ssid}</strong>.
+              </p>
+            </div>
+          </div>
+        )}
+
+        {step === "done" && (
+          <div style={{ textAlign: "center", display: "flex", flexDirection: "column", alignItems: "center", gap: "var(--space-4)" }}>
+            <div style={{ background: "var(--success-soft)", color: "var(--success-ink)", width: 80, height: 80, borderRadius: 40, display: "flex", alignItems: "center", justifyContent: "center" }}>
+              <i className="ph-duotone ph-check-circle" style={{ fontSize: "3rem" }} />
+            </div>
+            <div>
+              <h2 style={{ fontSize: "var(--text-xl)", margin: "0 0 var(--space-2)" }}>Conectado à Internet!</h2>
+              <p style={{ color: "var(--ink-3)", margin: 0, fontSize: "var(--text-sm)" }}>
+                O dispensador foi configurado com sucesso e está online.
+              </p>
+            </div>
+            
+            <div style={{ marginTop: "var(--space-2)", width: "100%", padding: "var(--space-4)", background: "var(--surface-dim)", borderRadius: "var(--radius)", textAlign: "left" }}>
+              <p style={{ margin: "0 0 var(--space-2)", fontSize: "var(--text-sm)", fontWeight: 600 }}>Paciente vinculado:</p>
+              {selectedPatient ? (
+                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                  <span>{selectedPatient.nome}</span>
+                  <Button variant="ghost" size="small" onClick={() => setPickerOpen(true)}>Alterar</Button>
+                </div>
+              ) : (
+                <Button variant="secondary" style={{ width: "100%" }} onClick={() => setPickerOpen(true)}>
+                  Vincular Paciente (Opcional)
+                </Button>
+              )}
+            </div>
+
+            <Button style={{ width: "100%", marginTop: "var(--space-2)" }} onClick={() => navigate({ to: "/dispensers" })}>
+              Concluir
+            </Button>
+          </div>
+        )}
+
+      </CardContent>
+
+      <PatientPickerModal
+        open={pickerOpen}
+        device={deviceId ? { id: deviceId, ip: "BLE", serial: deviceId, mac: "", rssi: 0, firmware: "" } : null}
+        patients={MOCK_PATIENTS}
+        loading={false}
+        onCancel={() => setPickerOpen(false)}
+        onConfirm={(p) => {
+          setSelectedPatient(p);
+          setPickerOpen(false);
+        }}
+      />
+    </Card>
   );
 }
 
