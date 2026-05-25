@@ -366,6 +366,67 @@ function LocalPairingView() {
           </span>
         )}
       </p>
+    <div
+      style={{
+        flex: 1,
+        padding: "var(--space-8) var(--space-7)",
+        maxWidth: "960px",
+        margin: "0 auto",
+        width: "100%",
+      }}
+    >
+      {/* Header */}
+      <div style={{ marginBottom: "var(--space-6)" }}>
+        <button
+          type="button"
+          onClick={() => navigate({ to: "/dispensers" })}
+          style={{
+            display: "inline-flex",
+            alignItems: "center",
+            gap: "var(--space-2)",
+            background: "transparent",
+            border: "none",
+            padding: "var(--space-1) 0",
+            color: "var(--ink-3)",
+            fontFamily: "var(--font-sans)",
+            fontSize: "var(--text-sm)",
+            cursor: "pointer",
+            marginBottom: "var(--space-3)",
+          }}
+        >
+          <i className="ph-duotone ph-arrow-left" aria-hidden="true" />
+          Voltar para dispensadores
+        </button>
+        <p className="eyebrow" style={{ marginBottom: "var(--space-1)", color: "var(--ink-3)" }}>
+          Smart-Dispenser
+        </p>
+        <h1
+          style={{
+            fontFamily: "var(--font-sans)",
+            fontSize: "var(--text-2xl)",
+            fontWeight: 700,
+            color: "var(--ink)",
+            lineHeight: "var(--leading-heading)",
+            margin: 0,
+          }}
+        >
+          Parear novo dispensador
+        </h1>
+        <p
+          style={{ marginTop: "var(--space-2)", color: "var(--ink-3)", fontSize: "var(--text-sm)" }}
+        >
+          Certifique-se de que o dispensador está ligado e conectado à mesma rede Wi-Fi que este
+          dispositivo.
+          {subnet && (
+            <span style={{ marginLeft: "var(--space-2)", color: "var(--ink-2)" }}>
+              Rede detectada:{" "}
+              <code style={{ fontFamily: "var(--font-mono)", fontSize: "0.8rem" }}>
+                {subnet}.0/24
+              </code>
+            </span>
+          )}
+        </p>
+      </div>
 
       {/* Scan controls */}
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: "var(--space-4)", marginBottom: "var(--space-5)", flexWrap: "wrap" }}>
