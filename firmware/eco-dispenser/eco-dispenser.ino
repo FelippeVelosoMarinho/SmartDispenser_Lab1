@@ -4,16 +4,25 @@
  *
  * Arquitetura:
  *   config.h      — pinos e constantes
+ *   provisioning  — credenciais WiFi via NVS/BLE (NimBLE-Arduino)
  *   carousel      — controle da roleta (servo + NVS)
  *   alerts        — LEDs de período, buzzer, vibração
  *   buttons       — botões com debounce
  *   api_server    — endpoints HTTP (AsyncWebServer)
+ *
+ * Fluxo de boot:
+ *   1. Verifica NVS por credenciais WiFi salvas
+ *   2. Fallback: usa WIFI_SSID/WIFI_PASSWORD de secrets.h (se não vazio)
+ *   3. Sem credenciais → modo BLE: aguarda app enviar SSID+senha
+ *   4. Conecta ao WiFi → envia heartbeat → sobe servidor HTTP
  */
 
 #include <WiFi.h>
+#include <HTTPClient.h>
 #include <ESPAsyncWebServer.h>
 #include "secrets.h"
 #include "config.h"
+#include "provisioning.h"
 #include "carousel.h"
 #include "alerts.h"
 #include "buttons.h"
@@ -21,44 +30,102 @@
 
 AsyncWebServer server(SERVER_PORT);
 
+static void sendHeartbeat() {
+  if (WiFi.status() != WL_CONNECTED) return;
+  if (strlen(BACKEND_URL) == 0) {
+    Serial.println("[Heartbeat] BACKEND_URL não configurado — pulando.");
+    return;
+  }
+
+  HTTPClient http;
+  String url = String(BACKEND_URL) + "/iot/heartbeat";
+  http.begin(url);
+  http.addHeader("Content-Type", "application/json");
+  http.setTimeout(5000);
+
+  // dispenser_id usa o MAC address como identificador único do hardware
+  String mac  = WiFi.macAddress();
+  String body = "{\"dispenser_id\":\"" + mac + "\","
+                "\"battery_level\":100.0,"
+                "\"online\":true,"
+                "\"critical_stock\":false}";
+
+  int code = http.POST(body);
+  if (code > 0) {
+    Serial.println("[Heartbeat] " + String(code) + " ← " + url);
+  } else {
+    Serial.println("[Heartbeat] Falha ao contactar backend: " + http.errorToString(code));
+  }
+  http.end();
+}
+
 void setup() {
   Serial.begin(115200);
-
-  // Aguarda o Serial Monitor abrir (até 5s)
   unsigned long startWait = millis();
   while (!Serial && millis() - startWait < 5000);
 
   Serial.println("\n🌿 Eco-Dispenser iniciando...");
 
-  // LED onboard: pisca durante conexão Wi-Fi
   pinMode(LED_ONBOARD, OUTPUT);
-  digitalWrite(LED_ONBOARD, HIGH); // HIGH = apagado (lógica invertida)
+  digitalWrite(LED_ONBOARD, HIGH); // HIGH = apagado (lógica invertida no SuperMini)
 
-  // Inicializar módulos de hardware
   carouselSetup();
   alertsSetup();
   buttonsSetup();
 
-  // Conectar ao Wi-Fi
-  Serial.println("Conectando ao Wi-Fi...");
-  WiFi.begin(WIFI_SSID, WIFI_PASSWORD);
+  // ── Obter credenciais WiFi ────────────────────────────────────────────
+  String ssid, pass;
 
-  while (WiFi.status() != WL_CONNECTED) {
-    delay(500);
-    Serial.print(".");
-    // Pisca LED onboard enquanto conecta (LOW = ligado no SuperMini)
-    digitalWrite(LED_ONBOARD, !digitalRead(LED_ONBOARD));
+  if (hasStoredCredentials()) {
+    ssid = getStoredSsid();
+    pass = getStoredPassword();
+    Serial.println("📁 Credenciais carregadas da NVS. SSID: " + ssid);
+
+  } else if (strlen(WIFI_SSID) > 0) {
+    // Primeira vez com secrets.h preenchido: salva na NVS para boots futuros
+    ssid = String(WIFI_SSID);
+    pass = String(WIFI_PASSWORD);
+    saveCredentials(ssid, pass);
+    Serial.println("📄 Credenciais de secrets.h migradas para NVS. SSID: " + ssid);
+
+  } else {
+    // Sem credenciais em nenhuma fonte → provisionamento via BLE
+    Serial.println("⚠️  Sem credenciais WiFi. Iniciando modo BLE...");
+    runBleProvisioning();
+    ssid = getStoredSsid();
+    pass = getStoredPassword();
   }
 
-  digitalWrite(LED_ONBOARD, HIGH); // apaga após conectar
+  // ── Conectar ao WiFi ──────────────────────────────────────────────────
+  Serial.println("Conectando ao Wi-Fi: " + ssid);
+  WiFi.begin(ssid.c_str(), pass.c_str());
+
+  int retries = 0;
+  while (WiFi.status() != WL_CONNECTED && retries < 30) {
+    delay(500);
+    Serial.print(".");
+    digitalWrite(LED_ONBOARD, !digitalRead(LED_ONBOARD));
+    retries++;
+  }
+
+  if (WiFi.status() != WL_CONNECTED) {
+    // Credenciais provavelmente erradas — limpa e reinicia para tentar BLE
+    Serial.println("\n❌ Falha ao conectar. Limpando credenciais e reiniciando...");
+    clearStoredCredentials();
+    delay(1000);
+    ESP.restart();
+  }
+
+  digitalWrite(LED_ONBOARD, HIGH);
   Serial.println("\n✅ Wi-Fi conectado!");
   Serial.print("📍 IP: ");
   Serial.println(WiFi.localIP());
 
-  // Registrar rotas e iniciar servidor HTTP
+  sendHeartbeat();
+
   setupApiServer(server);
   server.begin();
-  Serial.println("🚀 Servidor iniciado!");
+  Serial.println("🚀 Servidor HTTP iniciado na porta " + String(SERVER_PORT));
 }
 
 void loop() {

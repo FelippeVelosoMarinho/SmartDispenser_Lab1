@@ -14,23 +14,29 @@ const int LED_AFTERNOON = 4;  // ⛅  Sol + nuvem — tarde
 const int LED_NIGHT     = 5;  // 🌙  Lua         — noite
 
 // ── Buzzer ────────────────────────────────────────────────────────────
-const int BUZZER_PIN  = 6;
+// GPIOs 6-11 são flash interna no WROOM — usar pinos seguros para testes
+const int BUZZER_PIN  = 21;
 const int BUZZER_FREQ = 1000; // Hz — frequência base do bipe
 
 // ── Motor de vibração (via transistor NPN BC547) ──────────────────────
-const int VIB_PIN = 7;
+const int VIB_PIN = 22;
 
 // ── Botões (INPUT_PULLUP — repouso HIGH, pressionado LOW) ─────────────
-const int BTN_VOL_UP   = 9;
-const int BTN_VOL_DOWN = 10;
+const int BTN_VOL_UP   = 12;
+const int BTN_VOL_DOWN = 13;
 const int BTN_CONFIRM  = 0;
 const int DEBOUNCE_MS  = 50;
 
 // ── LED onboard (diagnóstico) ─────────────────────────────────────────
-// Lógica invertida no SuperMini: LOW = ligado, HIGH = desligado
-const int LED_ONBOARD = 8;
+const int LED_ONBOARD = 2;
 
 // ── Servidor HTTP ─────────────────────────────────────────────────────
 const int SERVER_PORT = 80;
+
+// ── Backend ───────────────────────────────────────────────────────────
+// URL base da API (sem trailing slash). Definida em secrets.h.
+// Exemplo: "http://192.168.1.100:8000"
+// Deixar vazio ("") para desabilitar o heartbeat.
+extern const char* BACKEND_URL;
 
 #endif
