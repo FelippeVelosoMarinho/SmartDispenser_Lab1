@@ -1,0 +1,819 @@
+\documentclass[12pt,a4paper]{article}
+
+% --- Encoding & Language ---
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage[brazil]{babel}
+
+% --- Layout ---
+\usepackage[a4paper, top=3cm, bottom=2cm, left=3cm, right=2cm]{geometry}
+\usepackage{indentfirst}
+\usepackage{setspace}
+\onehalfspacing
+
+% --- Graphics & Floats ---
+\usepackage{graphicx}
+\usepackage{float}
+
+% --- Links ---
+\usepackage[hidelinks]{hyperref}
+
+% --- Tables ---
+\usepackage{booktabs}
+\usepackage{longtable}
+\usepackage{array}
+\usepackage{multirow}
+\usepackage{xcolor}
+\usepackage{colortbl}
+
+% --- Code ---
+\usepackage{listings}
+\definecolor{backcolour}{rgb}{0.95,0.95,0.92}
+\definecolor{codegreen}{rgb}{0,0.5,0}
+\lstdefinestyle{codestyle}{
+    backgroundcolor=\color{backcolour},
+    commentstyle=\color{codegreen}\itshape,
+    keywordstyle=\color{blue}\bfseries,
+    basicstyle=\ttfamily\footnotesize,
+    breaklines=true,
+    keepspaces=true,
+    numbers=left,
+    numberstyle=\tiny\color{gray},
+    numbersep=5pt,
+    tabsize=2,
+    frame=single,
+    rulecolor=\color{gray!40}
+}
+\lstset{style=codestyle}
+
+% --- Lists ---
+\usepackage{enumitem}
+
+% --- Status helpers ---
+\newcommand{\aprovado}{\textcolor{green!60!black}{\textbf{Aprovado}}}
+\newcommand{\parcial}{\textcolor{orange!80!black}{\textbf{Parcialmente Testado}}}
+\newcommand{\naorealizado}{\textcolor{gray}{\textbf{Não Realizado}}}
+\newcommand{\reprovado}{\textcolor{red}{\textbf{Reprovado}}}
+
+% =========================================================
+\begin{document}
+
+% =========================================================
+% CAPA
+% =========================================================
+\begin{titlepage}
+    \centering
+    \vspace*{1.5cm}
+
+    {\large\bfseries Universidade Federal de Minas Gerais}\\[0.3cm]
+    {\large Escola de Engenharia}\\[0.3cm]
+    {\large Laboratório de Sistemas I --- PLSI}\\[0.2cm]
+    {\large Prof. Diogo Batista de Oliveira}\\
+
+    \vspace{3cm}
+
+    {\Huge\bfseries Eco-Dispenser Inteligente}\\[0.5cm]
+    {\Large Sistema Automatizado de Dispensação de Medicamentos}
+
+    \vspace{2cm}
+
+    {\large Relatório Final}
+
+    \vspace{2.5cm}
+
+    \begin{tabular}{l}
+        Felippe Veloso Marinho    \\[0.2cm]
+        Igor Braga de Lima        \\[0.2cm]
+        Josoé Santos Queiroz      \\[0.2cm]
+        Luiz Daniel de Lima Pião  \\[0.2cm]
+        Raissa Gonçalves Diniz    \\
+    \end{tabular}
+
+    \vfill
+
+    {\large Belo Horizonte, maio de 2026}
+\end{titlepage}
+
+% =========================================================
+% SUMÁRIO
+% =========================================================
+\tableofcontents
+\newpage
+
+% =========================================================
+% RESUMO
+% =========================================================
+\section*{Resumo}
+\addcontentsline{toc}{section}{Resumo}
+
+O Eco-Dispenser Inteligente é um sistema embarcado de dispensação automática de medicamentos desenvolvido para promover a autonomia e a segurança de pacientes atendidos por um centro de reabilitação. O sistema é composto por um dispositivo físico baseado no microcontrolador ESP32-C3, um servidor de backend em FastAPI (Python) com banco de dados PostgreSQL, e um painel de controle web em React. O dispenser realiza a liberação de comprimidos em horários programados, emite alertas multimodais (sonoro, visual e vibratório) e registra a confirmação do paciente. Este relatório descreve a arquitetura do sistema, as decisões de implementação, a validação dos requisitos por meio de casos de teste e uma análise crítica do processo de desenvolvimento segundo o modelo cascata.
+
+\newpage
+
+% =========================================================
+% 1. INTRODUÇÃO
+% =========================================================
+\section{Introdução}
+
+\subsection{Contexto}
+
+O Centro de Reabilitação objeto deste projeto atende pacientes encaminhados por unidades básicas de saúde para serviços de fisioterapia, terapia ocupacional e fonoaudiologia. O perfil dos pacientes é heterogêneo: incluem pessoas com Transtorno do Espectro Autista (TEA), Transtorno do Déficit de Atenção e Hiperatividade (TDAH), deficiências físicas e sensoriais (visuais e auditivas), membros amputados, e sequelas neurológicas como acidente vascular cerebral (AVC) e paralisia cerebral, abrangendo todas as faixas etárias, de bebês a idosos.
+
+O centro não administra medicamentos em suas instalações. Os pacientes e seus cuidadores são responsáveis pelo regime medicamentoso em casa, o que cria desafios significativos: esquecimento de doses, erros de horário, dificuldade de manipulação de embalagens convencionais e ausência de feedback ao cuidador em caso de não adesão.
+
+\subsection{Problema}
+
+O principal problema identificado é a \textbf{falta de adesão ao regime medicamentoso domiciliar} por parte de pacientes com comprometimentos cognitivos, motores ou sensoriais. Para pacientes com TEA e TDAH, a rigidez de rotina e a dificuldade de lidar com alertas invasivos tornam o problema ainda mais crítico. A não adesão à medicação é uma das principais causas de internação evitável e piora de quadros clínicos crônicos.
+
+\subsection{Objetivos}
+
+\textbf{Objetivo geral:} Desenvolver um sistema integrado de dispensação automática de medicamentos que promova a autonomia, a segurança e a qualidade de vida de pacientes com necessidades especiais.
+
+\textbf{Objetivos específicos:}
+\begin{itemize}
+    \item Implementar um mecanismo físico de dispensação controlada por software;
+    \item Criar um sistema de alertas multimodal acessível (sonoro, visual e vibratório) com modo silencioso;
+    \item Desenvolver uma interface web de configuração de horários e monitoramento;
+    \item Garantir notificação ao cuidador em caso de não confirmação pelo paciente;
+    \item Registrar histórico de adesão para acompanhamento clínico.
+\end{itemize}
+
+\newpage
+
+% =========================================================
+% 2. DESCRIÇÃO DO SISTEMA
+% =========================================================
+\section{Descrição do Sistema}
+
+\subsection{Visão Geral}
+
+O Eco-Dispenser Inteligente é um dispositivo de mesa composto por uma roleta com 21 compartimentos individuais, cada um destinado a armazenar a medicação de uma dispensação específica (três dispensações diárias por sete dias). O dispositivo é abastecido semanalmente pelo cuidador e opera de forma autônoma, liberando o compartimento correto nos horários pré-configurados e emitindo alertas até que o paciente confirme a retirada.
+
+O sistema é dividido em quatro camadas funcionais:
+
+\begin{enumerate}
+    \item \textbf{Hardware/Firmware:} o dispositivo físico com o microcontrolador, motor, sensores e atuadores;
+    \item \textbf{Backend:} servidor de API responsável pela lógica de negócio, agendamentos e proxy para o hardware;
+    \item \textbf{Frontend:} painel web para configuração, monitoramento e histórico;
+    \item \textbf{Banco de dados:} persistência de pacientes, medicamentos, agendas e registros de dispensação.
+\end{enumerate}
+
+\subsection{Público-Alvo e Contexto de Uso}
+
+O sistema é destinado a uso \textbf{exclusivamente residencial}. O paciente interage com o dispositivo físico para confirmar a retirada do medicamento. O cuidador (familiar, enfermeiro domiciliar ou terapeuta) configura o sistema pelo painel web e recebe notificações caso o paciente não responda dentro do prazo definido.
+
+A diversidade do público-alvo impôs requisitos de acessibilidade rígidos: alertas não agressivos para pacientes com TEA, controle de volume do buzzer, LEDs de alta luminosidade com simbologia de período do dia (sol para manhã, sol com nuvem para tarde, lua para noite), botões físicos grandes e de fácil acionamento, e interface visual com baixa carga cognitiva.
+
+\subsection{Funcionalidades Principais}
+
+\begin{itemize}
+    \item \textbf{Dispensação automática:} liberação do slot correto no horário programado, sem manipulação manual pelo paciente;
+    \item \textbf{Rastreamento de confirmação:} o dispositivo expõe o flag \texttt{awaiting\_confirm} no \texttt{GET /status}, sinalizando ao backend quando uma dispensação está pendente de confirmação. O backend pode — e deve — verificar esse estado antes de acionar uma nova dispensação para evitar doses duplicadas;
+    \item \textbf{Alertas multimodais simultâneos:}
+        \begin{itemize}
+            \item Sonoro: buzzer com volume ajustável (modo normal);
+            \item Visual: LED 1 para manhã (GPIO 3), LED 2 para tarde (GPIO 4), LED 3 para noite (GPIO 5);
+            \item Vibratório: micro motor de vibração em modo silencioso;
+        \end{itemize}
+    \item \textbf{Persistência dos alertas} até confirmação do paciente;
+    \item \textbf{Confirmação pelo paciente:} botão físico (GPIO 0) ou confirmação remota via API;
+    \item \textbf{Notificação ao cuidador:} caso o paciente não confirme em tempo determinado;
+    \item \textbf{Registro de histórico:} cada dispensação e confirmação é registrada para acompanhamento de adesão;
+    \item \textbf{Modo reabastecimento:} permite ao cuidador acessar os compartimentos sem acionar a lógica de dispensação.
+\end{itemize}
+
+\subsection{Componentes de Hardware}
+
+\begin{table}[H]
+    \centering
+    \caption{Componentes de hardware do Eco-Dispenser}
+    \label{tab:hardware}
+    \begin{tabular}{lll}
+        \toprule
+        \textbf{Componente}   & \textbf{Especificação}                & \textbf{Peça} \\
+        \midrule
+        Microcontrolador      & WiFi, 3--5V, programável              & ESP32-C3 SuperMini \\
+        Motor de passo        & Girar 1 slot por vez, 5V              & Micro Servomotor SG90 \\
+        Alerta sonoro         & Mínimo 60 dB, 5V                      & Buzzer Ativo 5V \\
+        Alerta vibratório     & Silencioso, estrutura segura          & Micro Motor 3V \\
+        Alerta visual         & Alta luminosidade, 3 períodos         & 3$\times$ LED 5mm \\
+        Botão confirmação     & Tátil, grande, GPIO 0                 & Push Button 12$\times$12mm \\
+        Botões de volume      & GPIOs 9 e 10                          & Push Button 12$\times$12mm \\
+        Alimentação           & 127V, até 1A                          & Carregador USB padrão \\
+        \bottomrule
+    \end{tabular}
+\end{table}
+
+\subsection{Casos de Uso}
+
+Os casos de uso do sistema, levantados durante a fase de modelagem, são:
+
+\begin{enumerate}
+    \item Configurar horários de dispensação via painel web;
+    \item Receber alerta de dispensação (sonoro, visual ou vibratório);
+    \item Confirmar tomada de medicamento (botão físico ou API);
+    \item Reabastecer o dispenser (modo reabastecimento);
+    \item Receber notificação de não adesão (cuidador);
+    \item Registrar dose no histórico;
+    \item Visualizar histórico de adesão.
+\end{enumerate}
+
+% =========================================================
+% 3. ARQUITETURA DO SISTEMA
+% =========================================================
+\section{Arquitetura do Sistema}
+
+\subsection{Visão em Camadas}
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.85\textwidth]{arquitetura.png}
+\caption{Arquitetura em camadas do Eco-Dispenser}
+\label{fig:arquitetura}
+\end{figure}
+
+\subsection{Descrição dos Módulos}
+
+\textbf{Firmware (ESP32-C3):} servidor HTTP assíncrono rodando diretamente no microcontrolador. Expõe uma API REST que o backend consome para acionar o hardware e consultar o estado do dispositivo. Opera em rede WiFi local.
+
+\textbf{Backend (FastAPI):} servidor Python que atua como intermediário entre o frontend e o hardware. Gerencia autenticação JWT, persiste dados de pacientes, medicamentos, agendamentos e logs, e faz proxy de requisições IoT para o firmware via cliente HTTP assíncrono (\texttt{httpx}).
+
+\textbf{Frontend (React):} painel web responsivo para configuração de horários, monitoramento em tempo real do estado do dispenser e visualização do histórico de adesão. Comunica-se exclusivamente com o backend via prefixo \texttt{/api}.
+
+\textbf{Banco de Dados (PostgreSQL):} armazenamento relacional com schema inicializado via \texttt{database/init.sql}. Os modelos são gerenciados pelo SQLAlchemy no backend.
+
+\subsection{Fluxo de Comunicação Típico}
+
+\begin{enumerate}
+    \item O cuidador acessa o painel web e configura um agendamento de dispensação.
+    \item No horário configurado, o backend envia \texttt{POST /dispense} ao firmware com o período e modo de alerta.
+    \item O firmware avança a roleta (servo SG90), acende o LED do período e dispara o alerta (buzzer ou vibração).
+    \item O paciente retira o medicamento e pressiona o botão de confirmação (ou o cuidador confirma remotamente).
+    \item O firmware registra a confirmação; o backend persiste o log no banco de dados.
+    \item Se não houver confirmação dentro do prazo, o backend notifica o cuidador.
+\end{enumerate}
+
+\newpage
+
+% =========================================================
+% 4. IMPLEMENTAÇÃO
+% =========================================================
+\section{Implementação}
+
+\subsection{Firmware (ESP32-C3)}
+
+O firmware foi desenvolvido em C++ utilizando o Arduino IDE com o core ESP32 versão \textbf{2.0.17} (versões 3.x são incompatíveis com as bibliotecas assíncronas utilizadas). As bibliotecas principais são \texttt{ESPAsyncWebServer} e \texttt{AsyncTCP}.
+
+A API HTTP exposta pelo firmware possui os seguintes endpoints:
+
+\begin{table}[H]
+    \centering
+    \caption{Endpoints da API do firmware}
+    \label{tab:endpoints}
+    \begin{tabular}{lll}
+        \toprule
+        \textbf{Método} & \textbf{Rota}        & \textbf{Descrição} \\
+        \midrule
+        GET             & \texttt{/status}     & Retorna estado completo do dispositivo \\
+        POST            & \texttt{/dispense}   & Avança roleta e dispara alertas \\
+        POST            & \texttt{/confirm}    & Confirma retirada e limpa alertas \\
+        POST            & \texttt{/calibrate}  & Reseta roleta para o slot 0 \\
+        GET             & \texttt{/}           & Página HTML de diagnóstico \\
+        \bottomrule
+    \end{tabular}
+\end{table}
+
+O endpoint \texttt{GET /status} retorna um JSON com os campos: \texttt{current\_slot}, \texttt{total\_slots} (fixo em 21), \texttt{awaiting\_confirm}, \texttt{last\_confirmed\_slot}, \texttt{wifi\_rssi} e \texttt{uptime\_s}.
+
+O \texttt{POST /dispense} aceita \texttt{\{"period": "morning"|"afternoon"|"night", "silent\_mode": bool\}} e controla qual alerta é disparado. O parsing do JSON é feito manualmente, sem a biblioteca ArduinoJson, por incompatibilidades de versão encontradas durante o desenvolvimento.
+
+A credencial WiFi é armazenada em \texttt{firmware/eco-dispenser/secrets.h}. O backend localiza o dispositivo pelo endereço IP configurado na variável de ambiente \texttt{ESP32\_IP}. A descoberta automática do IP via mDNS está planejada como trabalho futuro.
+
+\subsection{Backend (FastAPI)}
+
+O backend é uma aplicação Python com o framework \textbf{FastAPI} e servidor ASGI \textbf{Uvicorn}. O gerenciamento de pacotes usa \textbf{uv}. As rotas são organizadas por domínio:
+
+\begin{itemize}
+    \item \texttt{/api/auth} — autenticação (registro, login, perfil) com JWT;
+    \item \texttt{/api/iot} — proxy para o hardware (status, LED, eventos, heartbeat);
+    \item \texttt{/api/patients} — CRUD de pacientes;
+    \item \texttt{/api/medications} — CRUD de medicamentos;
+    \item \texttt{/api/schedules} — gerenciamento de agendamentos;
+    \item \texttt{/api/logs} — histórico de dispensações;
+    \item \texttt{/api/dispensers} — gerenciamento de dispositivos;
+    \item \texttt{/api/health} — verificação de saúde e alcançabilidade do ESP32.
+\end{itemize}
+
+A comunicação com o firmware é feita via \texttt{httpx.AsyncClient} com \texttt{base\_url = http://\{ESP32\_IP\}}. Uma decisão técnica importante foi utilizar \texttt{127.0.0.1} em vez de \texttt{localhost} para evitar problemas de resolução IPv6 no ambiente de desenvolvimento.
+
+\subsection{Frontend (React)}
+
+O frontend é uma \emph{Single Page Application} (SPA) em \textbf{React 19} com \textbf{Vite} como ferramenta de build e \textbf{TypeScript}. O gerenciador de pacotes é exclusivamente o \textbf{Bun} (versão $\geq$ 1.3.13), que substitui npm/yarn por oferecer melhor desempenho e suporte nativo a TypeScript.
+
+As principais páginas são: autenticação (login), painel de controle, gestão de pacientes e gestão de dispensers. O design segue o \textbf{Pillar Design System} com estilo glassmorfismo, priorizando acessibilidade visual.
+
+Em desenvolvimento, as requisições ao prefixo \texttt{/api} são redirecionadas ao backend via proxy configurado no \texttt{vite.config.ts}. Em produção, o Nginx realiza o mesmo roteamento. O linting e a formatação utilizam \textbf{Biome} (substituto unificado de ESLint e Prettier).
+
+\subsection{Banco de Dados}
+
+O banco de dados é o \textbf{PostgreSQL 16}. O schema inicial é provisionado via \texttt{database/init.sql} na primeira inicialização do volume Docker. Os modelos de domínio são definidos em SQLAlchemy e incluem entidades para usuários, pacientes, medicamentos, agendamentos, dispensers e logs de dispensação.
+
+\subsection{Orquestração com Docker Compose}
+
+\begin{table}[H]
+    \centering
+    \caption{Serviços Docker Compose e perfis}
+    \label{tab:docker}
+    \begin{tabular}{llll}
+        \toprule
+        \textbf{Serviço}              & \textbf{Tecnologia}  & \textbf{Porta (host)} & \textbf{Perfil} \\
+        \midrule
+        \texttt{db}                   & PostgreSQL 16        & 5433                  & sempre ativo \\
+        \texttt{backend}              & FastAPI/Uvicorn      & 8000                  & sempre ativo \\
+        \texttt{frontend}             & Nginx + build Bun    & 8080                  & \texttt{prod} \\
+        \texttt{frontend-dev}         & Vite + Bun           & 80                    & \texttt{dev} \\
+        \bottomrule
+    \end{tabular}
+\end{table}
+
+\newpage
+
+% =========================================================
+% 5. VALIDAÇÃO DE REQUISITOS
+% =========================================================
+\section{Validação de Requisitos}
+
+\subsection{Metodologia}
+
+A validação dos requisitos foi conduzida por meio de \textbf{casos de teste} derivados dos requisitos funcionais e físicos levantados nas práticas anteriores e modelados no Visual Paradigm. Cada caso de teste especifica pré-condições, passos de execução, resultado esperado e resultado obtido.
+
+Os possíveis status de cada caso de teste são:
+
+\begin{itemize}
+    \item \aprovado\ — comportamento observado corresponde ao resultado esperado;
+    \item \parcial\ — componente de software verificado; comportamento físico não validado;
+    \item \naorealizado\ — teste não executado por ausência de hardware ou funcionalidade não implementada.
+\end{itemize}
+
+\subsection{Resumo dos Resultados}
+
+\begin{longtable}{clc}
+    \toprule
+    \textbf{ID} & \textbf{Caso de Teste} & \textbf{Status} \\
+    \midrule
+    \endfirsthead
+    \midrule
+    \textbf{ID} & \textbf{Caso de Teste} & \textbf{Status} \\
+    \midrule
+    \endhead
+    TC01 & Modo de operação normal (alertas sonoros e visuais)      & \aprovado \\
+    TC02 & Modo de operação normal (alertas não-sonoros/silencioso) & \parcial \\
+    TC03 & Modo de reabastecimento                                  & \naorealizado \\
+    TC04 & Dispensação de comprimido único                          & \naorealizado \\
+    TC05 & Dispensação no horário agendado                          & \parcial \\
+    TC06 & Confirmação de retirada                                  & \aprovado \\
+    TC07 & Integridade estrutural do slot de retirada               & \naorealizado \\
+    TC08 & Alerta de código ativado em horário configurado          & \parcial \\
+    TC09 & Notificação ao cuidador/médico associado                 & \naorealizado \\
+    TC10 & Conectividade: controlador alcança servidor              & \aprovado \\
+    TC11 & Ajuste de volume do alerta sonoro                        & \naorealizado \\
+    TC12 & Capacidade mínima de 21 slots                            & \aprovado \\
+    TC13 & Resistência a quedas                                     & \naorealizado \\
+    TC14 & Peso do dispositivo inferior a 1~kg                      & \naorealizado \\
+    TC15 & Esforço de abertura da gaveta $\leq$ 0,2~kgf            & \naorealizado \\
+    \bottomrule
+    \caption{Resumo dos casos de teste}
+    \label{tab:tc_resumo}
+\end{longtable}
+
+\subsection{Detalhamento dos Casos de Teste}
+
+\subsubsection{TC01 — Modo de Operação Normal (Alertas Sonoros e Visuais)}
+
+\begin{description}[leftmargin=4cm, style=nextline]
+    \item[Pré-condição] Dispositivo ligado, conectado ao WiFi, slot em posição inicial após calibração.
+    \item[Passos]
+        \begin{enumerate}
+            \item Enviar \texttt{POST /dispense} com \texttt{silent\_mode: false} e \texttt{period: "morning"}.
+            \item Verificar que o servo avança um slot.
+            \item Verificar que o LED de manhã (GPIO 3) acende.
+            \item Verificar que o buzzer emite bipes audíveis.
+        \end{enumerate}
+    \item[Resultado esperado] Os remédios são dispensados; alertas sonoros e visuais são ativados simultaneamente.
+    \item[Resultado obtido] Endpoint retornou HTTP 200 com \texttt{success: true}. Validação física realizada em 23/05/2026: LED de manhã (GPIO~3) acendeu corretamente, buzzer emitiu 3 bipes audíveis no modo normal. Avanço do servo verificado via \texttt{current\_slot}.
+    \item[Status] \aprovado
+\end{description}
+
+\subsubsection{TC02 — Modo de Operação Normal (Alertas Não-Sonoros / Silencioso)}
+
+\begin{description}[leftmargin=4cm, style=nextline]
+    \item[Pré-condição] Dispositivo ligado e conectado ao WiFi.
+    \item[Passos]
+        \begin{enumerate}
+            \item Enviar \texttt{POST /dispense} com \texttt{silent\_mode: true} e \texttt{period: "night"}.
+            \item Verificar que o servo avança um slot.
+            \item Verificar que o motor de vibração pulsa por aproximadamente 600~ms.
+            \item Verificar que o buzzer permanece silencioso.
+        \end{enumerate}
+    \item[Resultado esperado] Os remédios são dispensados; alerta vibratório é ativado sem emissão de som.
+    \item[Resultado obtido] Endpoint retornou HTTP 200 com \texttt{success: true}. Comportamento físico do motor não verificado por ausência de hardware.
+    \item[Status] \parcial
+\end{description}
+
+\subsubsection{TC03 — Modo de Reabastecimento}
+
+\begin{description}[leftmargin=4cm, style=nextline]
+    \item[Pré-condição] Dispositivo em modo de operação normal.
+    \item[Passos]
+        \begin{enumerate}
+            \item Ativar o modo de reabastecimento via interface.
+            \item Tentar abrir os compartimentos manualmente.
+            \item Verificar que os slots não se movem durante a manipulação.
+            \item Sair do modo de reabastecimento e configurar modo desejado.
+        \end{enumerate}
+    \item[Resultado esperado] Compartimentos acessíveis sem acionamento de dispensação; ao sair do modo, sistema opera normalmente.
+    \item[Resultado obtido] Não realizado. A interface de alternância para o modo de reabastecimento não foi implementada na versão atual.
+    \item[Status] \naorealizado
+\end{description}
+
+\subsubsection{TC04 — Dispensação de Comprimido Único}
+
+\begin{description}[leftmargin=4cm, style=nextline]
+    \item[Pré-condição] Todos os slots abastecidos com pelo menos um comprimido.
+    \item[Passos]
+        \begin{enumerate}
+            \item Enviar \texttt{POST /dispense} para acionar uma dispensação.
+            \item Verificar fisicamente que apenas um comprimido é dispensado.
+            \item Verificar que os comprimidos corretos chegam ao slot de retirada.
+        \end{enumerate}
+    \item[Resultado esperado] Apenas um comprimido dispensado por interação; compartimento correto aberto.
+    \item[Resultado obtido] Não realizado. O firmware controla o servo corretamente por software, mas a verificação do comprimido físico exige o dispositivo montado.
+    \item[Status] \naorealizado
+\end{description}
+
+\subsubsection{TC05 — Dispensação no Horário Agendado}
+
+\begin{description}[leftmargin=4cm, style=nextline]
+    \item[Pré-condição] Backend em execução; agendamento configurado para horário X.
+    \item[Passos]
+        \begin{enumerate}
+            \item Configurar um agendamento de dispensação para horário X via frontend.
+            \item Aguardar o horário X.
+            \item Verificar que o backend envia \texttt{POST /dispense} ao firmware.
+            \item Verificar que o alerta é ativado com as configurações corretas.
+        \end{enumerate}
+    \item[Resultado esperado] A medicação do slot esperado é dispensada no horário X com os alertas configurados.
+    \item[Resultado obtido] O endpoint \texttt{/dispense} funciona corretamente quando acionado manualmente. O disparo automático pelo backend em horário agendado não foi validado em ambiente integrado completo.
+    \item[Status] \parcial
+\end{description}
+
+\subsubsection{TC06 — Confirmação de Retirada}
+
+\begin{description}[leftmargin=4cm, style=nextline]
+    \item[Pré-condição] Uma dispensação foi executada; \texttt{awaiting\_confirm} é \texttt{true}.
+    \item[Passos]
+        \begin{enumerate}
+            \item Enviar \texttt{POST /confirm} ao firmware.
+            \item Verificar que \texttt{awaiting\_confirm} passa a \texttt{false} em \texttt{GET /status}.
+            \item Verificar que \texttt{confirmed\_slot} corresponde ao slot dispensado.
+        \end{enumerate}
+    \item[Resultado esperado] Confirmação registrada, alertas limpos, estado atualizado.
+    \item[Resultado obtido] Teste executado com sucesso via suíte pytest. \texttt{POST /confirm} retornou HTTP 200; \texttt{GET /status} confirmou \texttt{awaiting\_confirm: false} e \texttt{confirmed\_slot} correto.
+    \item[Status] \aprovado
+\end{description}
+
+\subsubsection{TC07 — Integridade Estrutural do Slot de Retirada}
+
+\begin{description}[leftmargin=4cm, style=nextline]
+    \item[Pré-condição] Dispositivo fisicamente montado.
+    \item[Passos]
+        \begin{enumerate}
+            \item Abrir manualmente o slot de retirada; verificar que o compartimento se abre e mantém integridade.
+            \item Durante uma dispensação, verificar que os demais slots permanecem fechados.
+            \item Simular turbulência; verificar que os slots não abrem inadvertidamente.
+        \end{enumerate}
+    \item[Resultado esperado] Apenas o slot ativo abre; demais permanecem fechados sob turbulência.
+    \item[Resultado obtido] Não realizado. Exige o dispositivo físico montado com a estrutura da roleta.
+    \item[Status] \naorealizado
+\end{description}
+
+\subsubsection{TC08 — Alerta de Código Ativado em Horário Configurado}
+
+\begin{description}[leftmargin=4cm, style=nextline]
+    \item[Pré-condição] Firmware em execução; agendamento configurado para horário X.
+    \item[Passos]
+        \begin{enumerate}
+            \item Agendar alerta para horário X com configurações de sinal específicas.
+            \item Verificar que o alerta é ativado em X com as configurações corretas.
+        \end{enumerate}
+    \item[Resultado esperado] O alerta é ativado exatamente no horário X com o período e modo corretos.
+    \item[Resultado obtido] A lógica de alerta do firmware foi testada via API: \texttt{POST /dispense} ativa o alerta corretamente com as configurações enviadas. O disparo automático por agendamento do backend não foi validado em integração completa.
+    \item[Status] \parcial
+\end{description}
+
+\subsubsection{TC09 — Notificação ao Cuidador/Médico Associado}
+
+\begin{description}[leftmargin=4cm, style=nextline]
+    \item[Pré-condição] Paciente associado a cuidador e médico no sistema; dispensação sem confirmação.
+    \item[Passos]
+        \begin{enumerate}
+            \item Verificar que a notificação chega ao cuidador e médico \emph{associados} ao paciente.
+            \item Verificar que a notificação \emph{não} chega a usuários não associados.
+        \end{enumerate}
+    \item[Resultado esperado] Somente os responsáveis vinculados ao paciente recebem a notificação.
+    \item[Resultado obtido] Não realizado. A integração com o serviço de notificações push (Firebase Cloud Messaging) não foi implementada na versão atual.
+    \item[Status] \naorealizado
+\end{description}
+
+\subsubsection{TC10 — Conectividade: Controlador Alcança Servidor}
+
+\begin{description}[leftmargin=4cm, style=nextline]
+    \item[Pré-condição] ESP32 conectado ao WiFi; computador de teste na mesma rede.
+    \item[Passos]
+        \begin{enumerate}
+            \item Executar \texttt{GET /status} no endereço IP do ESP32; verificar resposta HTTP 200.
+            \item Executar dois \texttt{GET /status} com intervalo de 2~s; verificar que \texttt{uptime\_s} aumentou.
+            \item Verificar que \texttt{wifi\_rssi} está entre $-$100~dBm e 0~dBm.
+        \end{enumerate}
+    \item[Resultado esperado] Servidor HTTP do firmware responde corretamente; uptime cresce; RSSI válido.
+    \item[Resultado obtido] Todos os testes de conectividade da suíte pytest passaram: \texttt{test\_esp32\_responde}, \texttt{test\_uptime\_aumenta\_com\_tempo} e \texttt{test\_rssi\_dentro\_do\_esperado}.
+    \item[Status] \aprovado
+\end{description}
+
+\subsubsection{TC11 — Ajuste de Volume do Alerta Sonoro}
+
+\begin{description}[leftmargin=4cm, style=nextline]
+    \item[Pré-condição] Dispositivo físico montado; buzzer em operação.
+    \item[Passos]
+        \begin{enumerate}
+            \item Com volume em 0\%, pressionar BTN\_VOL\_UP (GPIO 9).
+            \item Verificar que o volume do alerta passa a ser audível (equivalente a 20\%).
+        \end{enumerate}
+    \item[Resultado esperado] O alerta passa a emitir som após o ajuste.
+    \item[Resultado obtido] Não realizado. O ajuste de volume é exclusivamente por botão físico; não há endpoint HTTP para esse controle. O dispositivo físico não estava disponível.
+    \item[Status] \naorealizado
+\end{description}
+
+\subsubsection{TC12 — Capacidade Mínima de 21 Slots}
+
+\begin{description}[leftmargin=4cm, style=nextline]
+    \item[Pré-condição] Firmware em execução.
+    \item[Passos]
+        \begin{enumerate}
+            \item Executar \texttt{GET /status}.
+            \item Verificar que o campo \texttt{total\_slots} é maior ou igual a 21.
+        \end{enumerate}
+    \item[Resultado esperado] O dispenser possui ao menos 21 reservatórios (3 dispensações/dia $\times$ 7 dias).
+    \item[Resultado obtido] \texttt{GET /status} retornou \texttt{total\_slots: 21}. Confirmado pelo teste automatizado \texttt{test\_total\_slots\_e\_sempre\_21}.
+    \item[Status] \aprovado
+\end{description}
+
+\subsubsection{TC13 — Resistência a Quedas}
+
+\begin{description}[leftmargin=4cm, style=nextline]
+    \item[Pré-condição] Dispositivo fisicamente montado e abastecido.
+    \item[Passos]
+        \begin{enumerate}
+            \item Simular queda do dispositivo de altura equivalente ao uso doméstico (bancada).
+            \item Verificar integridade estrutural e funcional após o impacto.
+        \end{enumerate}
+    \item[Resultado esperado] O dispenser não quebra e mantém funcionalidade após queda leve.
+    \item[Resultado obtido] Não realizado. Exige o dispositivo físico completo.
+    \item[Status] \naorealizado
+\end{description}
+
+\subsubsection{TC14 — Peso do Dispositivo Inferior a 1~kg}
+
+\begin{description}[leftmargin=4cm, style=nextline]
+    \item[Pré-condição] Dispositivo fisicamente montado e abastecido com comprimidos.
+    \item[Passos]
+        \begin{enumerate}
+            \item Pesar o dispositivo em balança.
+            \item Verificar que o resultado é inferior a 1~kg.
+        \end{enumerate}
+    \item[Resultado esperado] Peso $<$ 1~kg para garantir portabilidade, especialmente para idosos.
+    \item[Resultado obtido] Não realizado. O dispositivo físico completo não estava disponível.
+    \item[Status] \naorealizado
+\end{description}
+
+\subsubsection{TC15 — Esforço de Abertura da Gaveta}
+
+\begin{description}[leftmargin=4cm, style=nextline]
+    \item[Pré-condição] Dispositivo fisicamente montado com mecanismo de gaveta.
+    \item[Passos]
+        \begin{enumerate}
+            \item Medir a força de abertura da gaveta com dinamômetro.
+            \item Verificar que não excede 0,2~kgf.
+            \item Repetir para o fechamento.
+        \end{enumerate}
+    \item[Resultado esperado] Força de abertura e fechamento $\leq$ 0,2~kgf, garantindo acessibilidade a pacientes com força reduzida.
+    \item[Resultado obtido] Não realizado. Exige o dispositivo físico e um dinamômetro.
+    \item[Status] \naorealizado
+\end{description}
+
+\newpage
+
+% =========================================================
+% 6. ANÁLISE ÉTICA
+% =========================================================
+\section{Análise Ética}
+
+\subsection{Impactos Positivos}
+
+O Eco-Dispenser endereça diretamente a autonomia de pacientes com limitações cognitivas e motoras. Os principais benefícios identificados são:
+
+\begin{itemize}
+    \item \textbf{Autonomia e dignidade:} o paciente gerencia sua própria medicação sem auxílio constante;
+    \item \textbf{Segurança:} o flag de confirmação pendente e os alertas persistentes reduzem o risco de dose esquecida; o backend pode usar esse estado para evitar dispensações duplicadas;
+    \item \textbf{Redução de carga sobre cuidadores:} notificados apenas quando necessário, sem supervisão contínua;
+    \item \textbf{Registro clínico objetivo:} o histórico de adesão fornece dados para o acompanhamento terapêutico;
+    \item \textbf{Acessibilidade como requisito central:} o design multimodal foi definido com base no perfil heterogêneo dos usuários, não como funcionalidade adicional.
+\end{itemize}
+
+\subsection{Riscos e Mitigações}
+
+\begin{itemize}
+    \item \textbf{Falha de dispensação:} uma falha de hardware pode resultar em dose não administrada. \emph{Mitigação:} alertas redundantes (sonoro + visual + vibratório), registro de falhas em log e calibração física pelo cuidador;
+    \item \textbf{Privacidade de dados de saúde:} o sistema armazena dados sensíveis de pacientes vulneráveis. \emph{Mitigação:} autenticação JWT, dados trafegados em rede local, acesso restrito por perfil de usuário;
+    \item \textbf{Dependência tecnológica:} falha de energia ou rede interrompe o sistema. \emph{Mitigação prevista:} modo de operação offline com alertas físicos mesmo sem conectividade ao backend (trabalho futuro);
+    \item \textbf{Erro de configuração pelo cuidador:} configurações erradas podem comprometer o tratamento. \emph{Mitigação:} interface simplificada com confirmação de agendamentos e validação de dados no backend.
+\end{itemize}
+
+\newpage
+
+% =========================================================
+% 7. HISTÓRICO DO CICLO DE VIDA
+% =========================================================
+\section{Histórico do Ciclo de Vida}
+
+O projeto foi desenvolvido segundo o modelo cascata. A Tabela~\ref{tab:historico} apresenta as entregas realizadas ao longo do semestre.
+
+\begin{table}[H]
+    \centering
+    \caption{Histórico de entregas — modelo cascata}
+    \label{tab:historico}
+    \begin{tabular}{p{2.8cm}p{6cm}p{1.5cm}p{2cm}}
+        \toprule
+        \textbf{Fase}     & \textbf{Entrega}                                              & \textbf{Período} & \textbf{Status} \\
+        \midrule
+        Requisitos        & Entrevista com stakeholders e levantamento (Lab 1)            & 2026/1 & Concluído \\
+        Requisitos        & Especificação estruturada de requisitos (Prática 2)           & 2026/1 & Concluído \\
+        Projeto           & Seleção de componentes e modelagem no Visual Paradigm (Prática 6) & 2026/1 & Concluído \\
+        Implementação     & Firmware: servidor HTTP, servo, alertas                       & 2026/1 & Concluído \\
+        Implementação     & Backend: FastAPI, proxy IoT, CRUD, JWT                        & 2026/1 & Concluído \\
+        Implementação     & Frontend: dashboard React                                     & 2026/1 & Concluído \\
+        Implementação     & Banco de dados: schema PostgreSQL                             & 2026/1 & Concluído \\
+        Implementação     & Orquestração Docker Compose                                   & 2026/1 & Concluído \\
+        Implementação     & Notificações push (Firebase)                                  & 2026/1 & Não realizado \\
+        Implementação     & Descoberta automática do ESP (mDNS)                           & 2026/1 & Em andamento \\
+        Testes            & Testes HTTP automatizados do firmware (pytest)                & 2026/1 & Parcial \\
+        Testes            & Testes físicos de hardware                                    & 2026/1 & Não realizado \\
+        Entrega Final     & Relatório + vídeo + apresentação                              & 2026/1 & Em andamento \\
+        \bottomrule
+    \end{tabular}
+\end{table}
+
+\newpage
+
+% =========================================================
+% 8. AVALIAÇÃO DO MODELO CASCATA
+% =========================================================
+\section{Avaliação do Modelo Cascata}
+
+\subsection{O que Funcionou}
+
+O modelo cascata trouxe benefícios concretos na fase inicial. A obrigatoriedade de documentar requisitos antes de qualquer implementação levou a entrevistas estruturadas com o centro de reabilitação e a uma especificação detalhada do público-alvo. Isso evitou decisões de design inconsistentes — o requisito de modo silencioso, por exemplo, surgiu das entrevistas e não seria evidente sem esse processo.
+
+A separação em fases com entregas definidas também facilitou a divisão de responsabilidades na equipe: firmware, backend, frontend e banco de dados foram desenvolvidos com contratos de interface claros.
+
+\subsection{Dificuldades}
+
+\begin{itemize}
+    \item \textbf{Requisitos evolutivos:} o problema de descoberta dinâmica do ESP na rede surgiu apenas durante a integração, quando firmware e backend já estavam implementados com IP fixo;
+    \item \textbf{Integração tardia:} como cada módulo foi desenvolvido isoladamente, problemas de integração (proxy, formato JSON, CORS) apareceram somente ao final, aumentando o custo de correção;
+    \item \textbf{Testes físicos dependentes de hardware:} a fase de testes foi limitada pela indisponibilidade do dispositivo físico completo, algo que o modelo cascata não prevê mecanismos para tratar;
+    \item \textbf{Dificuldade de retorno:} quando uma decisão técnica se mostrou inadequada (core ESP32 3.x incompatível com as bibliotecas assíncronas), o modelo cascata dificultou a revisão estruturada.
+\end{itemize}
+
+\subsection{Adequação do Modelo}
+
+Para um projeto de sistema embarcado com componentes de hardware e software tão interdependentes, um modelo iterativo com ciclos curtos de integração seria provavelmente mais eficaz. O modelo cascata funcionou melhor na fase de requisitos do que nas fases de implementação e testes.
+
+\newpage
+
+% =========================================================
+% 9. ENTREGAS REALIZADAS E NÃO REALIZADAS
+% =========================================================
+\section{Entregas Realizadas e Não Realizadas}
+
+\begin{longtable}{p{6cm}cp{4cm}}
+    \toprule
+    \textbf{Requisito / Funcionalidade} & \textbf{Implementado?} & \textbf{Observação} \\
+    \midrule
+    \endfirsthead
+    \midrule
+    \textbf{Requisito / Funcionalidade} & \textbf{Implementado?} & \textbf{Observação} \\
+    \midrule
+    \endhead
+    Servidor HTTP no firmware           & Sim  & Endpoints /status, /dispense, /confirm, /calibrate \\
+    Controle do servo (roleta 21 slots) & Sim  & Wrap-around após slot 21 \\
+    Alerta sonoro (buzzer)              & Sim  & Verificado por código; físico não testado \\
+    Alerta visual (3 LEDs por período)  & Sim  & Verificado por código; físico não testado \\
+    Alerta vibratório (motor)           & Sim  & Verificado por código; físico não testado \\
+    Botão de confirmação física         & Sim  & GPIO 0; lógica implementada \\
+    Botões de volume (VOL\_UP/DOWN)     & Sim  & GPIOs 9 e 10; sem endpoint HTTP \\
+    Flag de confirmação pendente (\texttt{awaiting\_confirm}) & Sim  & Exposto via \texttt{/status}; bloqueio de dupla dose deve ser implementado no backend \\
+    Backend FastAPI com proxy IoT       & Sim  & Endpoints IoT funcionais \\
+    Autenticação JWT                    & Sim  & Login e proteção de rotas \\
+    CRUD pacientes e medicamentos       & Sim  & Modelos e endpoints implementados \\
+    Agendamentos de dispensação         & Sim  & Disparo automático não validado em integração \\
+    Histórico de adesão (logs)          & Sim  & Endpoint de logs implementado \\
+    Frontend React (dashboard)          & Sim  & Páginas de login, pacientes, dispensers \\
+    Docker Compose (dev/prod)           & Sim  & Perfis configurados e funcionais \\
+    Notificações push ao cuidador       & Não  & Firebase não integrado \\
+    Descoberta automática do ESP (mDNS) & Não  & Em andamento (equipe back/front) \\
+    Modo reabastecimento (UI)           & Não  & Lógica de hardware prevista; UI não implementada \\
+    Testes físicos do hardware          & Não  & Dispositivo físico completo não disponível \\
+    Operação offline (sem backend)      & Não  & Previsto como trabalho futuro \\
+    \bottomrule
+    \caption{Balanço de entregas realizadas e não realizadas}
+    \label{tab:entregas}
+\end{longtable}
+
+\newpage
+
+% =========================================================
+% 10. CONCLUSÃO E TRABALHOS FUTUROS
+% =========================================================
+\section{Conclusão e Trabalhos Futuros}
+
+\subsection{Conclusão}
+
+O Eco-Dispenser Inteligente atingiu seus objetivos centrais de MVP: foi desenvolvido um sistema integrado capaz de dispensar medicamentos automaticamente, emitir alertas multimodais e registrar confirmações do paciente. O firmware do ESP32-C3 expõe uma API HTTP funcional e testada; o backend FastAPI realiza o proxy para o hardware com autenticação e persistência; o frontend React oferece uma interface de configuração e monitoramento.
+
+As principais limitações da versão atual são a ausência de notificações push ao cuidador e a necessidade de configuração manual do endereço IP do dispositivo. Ambos os problemas têm soluções identificadas e em andamento.
+
+\subsection{Trabalhos Futuros}
+
+\begin{itemize}
+    \item \textbf{Descoberta automática do ESP (mDNS):} o firmware anunciaria o dispositivo como \texttt{eco-dispenser.local} na rede local, eliminando a configuração manual de IP;
+    \item \textbf{Notificações push:} integração com Firebase Cloud Messaging para alertar cuidadores em caso de não adesão;
+    \item \textbf{Testes físicos completos:} execução dos casos de teste de hardware (TC04, TC07, TC11, TC13, TC14, TC15) com o dispositivo montado;
+    \item \textbf{Operação offline:} firmware com alertas físicos mesmo sem conectividade ao backend;
+    \item \textbf{Modo reabastecimento:} implementação da interface e do fluxo completo de reabastecimento semanal;
+    \item \textbf{Deploy em produção:} configuração de HTTPS e infraestrutura para uso fora da rede local.
+\end{itemize}
+
+\newpage
+
+% =========================================================
+% REFERÊNCIAS
+% =========================================================
+\begin{thebibliography}{9}
+
+\bibitem{esp32c3}
+Espressif Systems.
+\textit{ESP32-C3 Series Datasheet}.
+Disponível em: \url{https://www.espressif.com/sites/default/files/documentation/esp32-c3_datasheet_en.pdf}.
+Acesso em: maio 2026.
+
+\bibitem{espasynwebserver}
+me-no-dev.
+\textit{ESPAsyncWebServer}.
+Disponível em: \url{https://github.com/me-no-dev/ESPAsyncWebServer}.
+Acesso em: maio 2026.
+
+\bibitem{randomnerd}
+Santos, R.
+\textit{Getting Started with ESP32-C3 Super Mini}.
+Random Nerd Tutorials.
+Disponível em: \url{https://randomnerdtutorials.com/getting-started-esp32-c3-super-mini/}.
+Acesso em: maio 2026.
+
+\bibitem{fastapi}
+Ramírez, S.
+\textit{FastAPI Documentation}.
+Disponível em: \url{https://fastapi.tiangolo.com}.
+Acesso em: maio 2026.
+
+\bibitem{react}
+Meta Platforms.
+\textit{React — The library for web and native user interfaces}.
+Disponível em: \url{https://react.dev}.
+Acesso em: maio 2026.
+
+\bibitem{bun}
+Oven.
+\textit{Bun — A fast all-in-one JavaScript runtime}.
+Disponível em: \url{https://bun.sh}.
+Acesso em: maio 2026.
+
+\bibitem{postgres}
+The PostgreSQL Global Development Group.
+\textit{PostgreSQL 16 Documentation}.
+Disponível em: \url{https://www.postgresql.org/docs/16/}.
+Acesso em: maio 2026.
+
+\end{thebibliography}
+
+\end{document}
