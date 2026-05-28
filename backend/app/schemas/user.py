@@ -37,6 +37,15 @@ class UserPublic(BaseModel):
     username: str
     full_name: Optional[str] = None
     email: Optional[str] = None
+    notifications_enabled: bool = True
+
+
+class UserUpdate(BaseModel):
+    """Schema for updating user profile."""
+
+    full_name: Optional[str] = None
+    email: Optional[str] = None
+    notifications_enabled: Optional[bool] = None
 
 
 class LoginRequest(BaseModel):

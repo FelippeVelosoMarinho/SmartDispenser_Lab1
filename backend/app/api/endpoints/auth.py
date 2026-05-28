@@ -1,8 +1,12 @@
 """Authentication endpoints."""
 
 from datetime import timedelta
+<<<<<<< HEAD
 import logging
 from fastapi import APIRouter, HTTPException, Depends
+=======
+from fastapi import APIRouter, HTTPException, Depends, BackgroundTasks
+>>>>>>> origin/main
 
 from app.core.security import (
     create_access_token,
@@ -12,16 +16,27 @@ from app.core.security import (
 )
 from app.core.config import ACCESS_TOKEN_EXPIRE_MINUTES
 from app.core.database import get_db
+<<<<<<< HEAD
 from app.crud.user import create_user, get_user, get_user_by_login_identifier, user_exists
 from app.schemas.user import LoginRequest, TokenResponse, UserCreate, UserPublic
+=======
+from app.crud.user import create_user, get_user, user_exists
+from app.schemas.user import LoginRequest, TokenResponse, UserCreate, UserPublic, UserUpdate
+>>>>>>> origin/main
 from sqlalchemy.orm import Session
+from app.services.notifier import send_email_notification
+from app.services.templates import get_welcome_email_template
 
 router = APIRouter(prefix="/api/auth", tags=["auth"])
 logger = logging.getLogger(__name__)
 
 
 @router.post("/register", response_model=UserPublic, status_code=201)
-async def register(user: UserCreate, db: Session = Depends(get_db)):
+async def register(
+    user: UserCreate, 
+    background_tasks: BackgroundTasks,
+    db: Session = Depends(get_db)
+):
     """Register a new caregiver (cuidador)."""
     if user_exists(db, user.username):
         raise HTTPException(
@@ -30,7 +45,7 @@ async def register(user: UserCreate, db: Session = Depends(get_db)):
         )
 
     hashed = get_password_hash(user.password)
-    create_user(
+    db_user = create_user(
         db=db,
         username=user.username,
         hashed_password=hashed,
@@ -39,10 +54,24 @@ async def register(user: UserCreate, db: Session = Depends(get_db)):
         email=user.email,
     )
 
+    # Send welcome email if email is provided
+    if user.email:
+        html_body = get_welcome_email_template(
+            full_name=user.full_name or "",
+            username=user.username
+        )
+        background_tasks.add_task(
+            send_email_notification,
+            user.email,
+            "Bem-vindo ao Smart Dispenser! 🎉",
+            html_body
+        )
+
     return UserPublic(
-        username=user.username,
-        full_name=user.full_name,
-        email=user.email,
+        username=db_user.username,
+        full_name=db_user.full_name,
+        email=db_user.email,
+        notifications_enabled=db_user.notifications_enabled,
     )
 
 
@@ -81,4 +110,28 @@ async def get_profile(current_user = Depends(get_current_user)):
         username=current_user.username,
         full_name=current_user.full_name,
         email=current_user.email,
+        notifications_enabled=current_user.notifications_enabled,
+    )
+
+
+@router.patch("/profile", response_model=UserPublic)
+async def update_profile(
+    profile_data: UserUpdate,
+    current_user = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """Update profile of logged-in caregiver (including notification settings)."""
+    if profile_data.full_name is not None:
+        current_user.full_name = profile_data.full_name
+    if profile_data.email is not None:
+        current_user.email = profile_data.email
+    if profile_data.notifications_enabled is not None:
+        current_user.notifications_enabled = profile_data.notifications_enabled
+    db.commit()
+    db.refresh(current_user)
+    return UserPublic(
+        username=current_user.username,
+        full_name=current_user.full_name,
+        email=current_user.email,
+        notifications_enabled=current_user.notifications_enabled,
     )

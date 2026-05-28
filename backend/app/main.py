@@ -9,14 +9,15 @@ from fastapi.middleware.cors import CORSMiddleware
 from app.api.api import api_router
 from app.core.config import CORS_ORIGINS, ESP32_BASE_URL, REQUEST_TIMEOUT
 from app.core.database import engine
+from app.core.migrations import run_migrations
 from app.models.domain import Base
-
-Base.metadata.create_all(bind=engine)
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """Manage shared httpx client lifecycle."""
+    Base.metadata.create_all(bind=engine)
+    run_migrations(engine)
     app.state.http_client = httpx.AsyncClient(
         base_url=ESP32_BASE_URL,
         timeout=REQUEST_TIMEOUT,

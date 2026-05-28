@@ -3,11 +3,10 @@
 #include "carousel.h"
 #include "alerts.h"
 #include "buttons.h"
+#include "provisioning.h"
 #include <WiFi.h>
 
 // ── JSON helper ───────────────────────────────────────────────────────
-// Extrai o valor de uma chave em um JSON simples (sem biblioteca externa).
-// Funciona para strings, booleanos e números.
 static String extractField(const String& body, const String& key) {
   int keyPos = body.indexOf("\"" + key + "\"");
   if (keyPos == -1) return "";
@@ -24,34 +23,55 @@ static String extractField(const String& body, const String& key) {
   String val = "";
   for (int i = valStart; i < (int)body.length(); i++) {
     char c = body[i];
-    if (inString  && c == '"')                        break;
+    if (inString  && c == '"')                           break;
     if (!inString && (c == ',' || c == '}' || c == ' ')) break;
     val += c;
   }
   return val;
 }
 
+// ── CORS helper ───────────────────────────────────────────────────────
+// Encapsula request->send com os headers necessários para o browser chamar o ESP diretamente.
+static void sendJson(AsyncWebServerRequest* request, int code, const String& json) {
+  AsyncWebServerResponse* resp = request->beginResponse(code, "application/json", json);
+  resp->addHeader("Access-Control-Allow-Origin", "*");
+  resp->addHeader("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
+  resp->addHeader("Access-Control-Allow-Headers", "Content-Type");
+  request->send(resp);
+}
+
 // ── Routes ────────────────────────────────────────────────────────────
 
 void setupApiServer(AsyncWebServer& server) {
 
+  // OPTIONS preflight — necessário para requisições cross-origin do browser
+  server.onNotFound([](AsyncWebServerRequest* request) {
+    if (request->method() == HTTP_OPTIONS) {
+      AsyncWebServerResponse* resp = request->beginResponse(204);
+      resp->addHeader("Access-Control-Allow-Origin", "*");
+      resp->addHeader("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
+      resp->addHeader("Access-Control-Allow-Headers", "Content-Type");
+      request->send(resp);
+    } else {
+      request->send(404, "application/json", "{\"error\":\"not found\"}");
+    }
+  });
+
   // GET /status
-  // Retorna estado completo da roleta para o backend fazer polling.
   server.on("/status", HTTP_GET, [](AsyncWebServerRequest* request) {
     String json = "{";
-    json += "\"current_slot\":"         + String(getCurrentSlot())             + ",";
-    json += "\"total_slots\":"           + String(TOTAL_SLOTS)                  + ",";
-    json += "\"awaiting_confirm\":"      + String(isAwaitingConfirmation() ? "true" : "false") + ",";
-    json += "\"last_confirmed_slot\":"   + String(getLastConfirmedSlot())        + ",";
-    json += "\"wifi_rssi\":"             + String(WiFi.RSSI())                  + ",";
-    json += "\"uptime_s\":"              + String(millis() / 1000);
+    json += "\"current_slot\":"        + String(getCurrentSlot())                          + ",";
+    json += "\"total_slots\":"         + String(TOTAL_SLOTS)                               + ",";
+    json += "\"awaiting_confirm\":"    + String(isAwaitingConfirmation() ? "true" : "false") + ",";
+    json += "\"last_confirmed_slot\":" + String(getLastConfirmedSlot())                    + ",";
+    json += "\"wifi_rssi\":"           + String(WiFi.RSSI())                               + ",";
+    json += "\"uptime_s\":"            + String(millis() / 1000);
     json += "}";
-    request->send(200, "application/json", json);
+    sendJson(request, 200, json);
   });
 
   // POST /dispense
-  // Body esperado: {"slot": 4, "period": "morning", "silent_mode": false}
-  // Avança a roleta 1 posição e dispara o alerta correto.
+  // Body: {"period": "morning"|"afternoon"|"night", "silent_mode": true|false}
   server.on("/dispense", HTTP_POST,
     [](AsyncWebServerRequest* request) {},
     NULL,
@@ -65,37 +85,73 @@ void setupApiServer(AsyncWebServer& server) {
       bool silentMode  = (silentStr == "true");
 
       if (period != "morning" && period != "afternoon" && period != "night") {
-        period = "morning"; // fallback seguro
+        period = "morning";
       }
 
       advanceCarousel();
       triggerDispenseAlert(silentMode, period);
 
       String resp = "{\"success\":true,\"current_slot\":" + String(getCurrentSlot()) + "}";
-      request->send(200, "application/json", resp);
+      sendJson(request, 200, resp);
     }
   );
 
   // POST /confirm
-  // Não precisa de body — usa handler simples para evitar 501 com body vazio.
-  server.on("/confirm", HTTP_POST, [](AsyncWebServerRequest* request) {
-    int confirmed = getLastConfirmedSlot();
-    resetLastConfirmedSlot();
-    clearAlerts();
-    String resp = "{\"success\":true,\"confirmed_slot\":" + String(confirmed) + "}";
-    request->send(200, "application/json", resp);
-  });
+  server.on("/confirm", HTTP_POST,
+    [](AsyncWebServerRequest* request) {
+      int confirmed = getLastConfirmedSlot();
+      resetLastConfirmedSlot();
+      clearAlerts();
+      String resp = "{\"success\":true,\"confirmed_slot\":" + String(confirmed) + "}";
+      sendJson(request, 200, resp);
+    },
+    NULL,
+    [](AsyncWebServerRequest* request, uint8_t* data, size_t len, size_t index, size_t total) {
+      if (index + len >= total) {
+        int confirmed = getLastConfirmedSlot();
+        resetLastConfirmedSlot();
+        clearAlerts();
+        String resp = "{\"success\":true,\"confirmed_slot\":" + String(confirmed) + "}";
+        sendJson(request, 200, resp);
+      }
+    }
+  );
 
   // POST /calibrate
-  // Não precisa de body — usa handler simples para evitar 501 com body vazio.
-  server.on("/calibrate", HTTP_POST, [](AsyncWebServerRequest* request) {
-    calibrateCarousel();
-    clearAlerts();
-    request->send(200, "application/json", "{\"success\":true,\"current_slot\":0}");
-  });
+  server.on("/calibrate", HTTP_POST,
+    [](AsyncWebServerRequest* request) {
+      calibrateCarousel();
+      clearAlerts();
+      sendJson(request, 200, "{\"success\":true,\"current_slot\":0}");
+    },
+    NULL,
+    [](AsyncWebServerRequest* request, uint8_t* data, size_t len, size_t index, size_t total) {
+      if (index + len >= total) {
+        calibrateCarousel();
+        clearAlerts();
+        sendJson(request, 200, "{\"success\":true,\"current_slot\":0}");
+      }
+    }
+  );
+
+  // POST /reset-wifi
+  // Apaga credenciais da NVS e reinicia o ESP em modo BLE para re-provisionamento.
+  server.on("/reset-wifi", HTTP_POST,
+    [](AsyncWebServerRequest* request) {
+      sendJson(request, 200, "{\"success\":true,\"message\":\"Reiniciando em modo BLE...\"}");
+    },
+    NULL,
+    [](AsyncWebServerRequest* request, uint8_t* data, size_t len, size_t index, size_t total) {
+      if (index + len >= total) {
+        sendJson(request, 200, "{\"success\":true,\"message\":\"Reiniciando em modo BLE...\"}");
+        clearStoredCredentials();
+        delay(500);
+        ESP.restart();
+      }
+    }
+  );
 
   // GET /
-  // Página HTML de diagnóstico — útil para testar via navegador.
   server.on("/", HTTP_GET, [](AsyncWebServerRequest* request) {
     String html  = "<h1>🌿 Eco-Dispenser</h1>";
     html += "<p>Slot atual: <b>" + String(getCurrentSlot()) + "</b> / " + String(TOTAL_SLOTS) + "</p>";

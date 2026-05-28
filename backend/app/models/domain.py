@@ -24,9 +24,12 @@ class User(Base):
     full_name = Column(String, nullable=False)
     email = Column(String, unique=True)
     notifications_enabled = Column(Boolean, default=True)
+<<<<<<< HEAD
 
     # Relationships
     patients = relationship('Patient', secondary='patient_caregiver', back_populates='caregivers')
+=======
+>>>>>>> origin/main
 
 
 class Patient(Base):
@@ -118,6 +121,21 @@ class Schedule(Base):
     time_legacy = Column(String, nullable=True)
 
     slot = relationship('Slot', back_populates='schedules', foreign_keys=[slot_id])
+
+class PatientMedication(Base):
+    __tablename__ = 'patient_medications'
+
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    patient_id = Column(UUID(as_uuid=True), ForeignKey('patients.id'), nullable=False)
+    nome = Column(String, nullable=False)
+    dosagem = Column(String, nullable=False)
+    frequencia = Column(String, nullable=False)
+    horarios = Column(String, nullable=False)  # JSON array stored as text
+    observacoes = Column(String, default="")
+    created_at = Column(DateTime, default=datetime.datetime.utcnow)
+
+    patient = relationship('Patient')
+
 
 class DispensationLog(Base):
     __tablename__ = 'dispensation_logs'

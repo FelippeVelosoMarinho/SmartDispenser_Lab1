@@ -19,11 +19,7 @@ from app.models.domain import User
 from app.crud.user import get_user, create_user
 
 USERS_TO_SEED = [
-    {"email": "luis@pillar.br", "username": "luis@pillar.br", "full_name": "Luis Pião"},
-    {"email": "josue@pillar.br", "username": "josue@pillar.br", "full_name": "Josué"},
-    {"email": "igor@pillar.br", "username": "igor@pillar.br", "full_name": "Igor"},
-    {"email": "raissa@pillar.br", "username": "raissa@pillar.br", "full_name": "Rarazinha <3"},
-    {"email": "felippe@pillar.br", "username": "felippe@pillar.br", "full_name": "Felippe: O Gostoso"},
+    {"email": "diogo@professor.br", "username": "diogo@professor.iff.edu.br", "full_name": "Prof Diogo <3"},
 ]
 DEFAULT_PASSWORD = "123Seguro&"
 

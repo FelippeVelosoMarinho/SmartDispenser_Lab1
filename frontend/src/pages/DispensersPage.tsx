@@ -236,7 +236,7 @@ export function DispensersPage() {
             className="eyebrow"
             style={{ marginBottom: "var(--space-1)", color: "var(--ink-3)" }}
           >
-            Eco-Dispenser
+            Smart-Dispenser
           </p>
           <h1
             style={{

@@ -202,14 +202,59 @@
 }
 
 /* Hide header content when collapsed (except toggle) */
+.pillar-sidebar:not(.pillar-sidebar--open) .pillar-sidebar__header {
+  justify-content: center;
+  padding: var(--space-4) var(--space-2);
+}
+
 .pillar-sidebar:not(.pillar-sidebar--open)
   .pillar-sidebar__header
   > *:not(.pillar-sidebar__toggle) {
   opacity: 0;
   pointer-events: none;
+  max-width: 0;
+  overflow: hidden;
+  margin: 0;
+  padding: 0;
+}
+
+/* ── Mobile Backdrop ─────────────────────────────────────────────────── */
+
+.pillar-sidebar__backdrop {
+  display: none;
+}
+
+@media (max-width: 768px) {
+  .pillar-sidebar__backdrop {
+    display: block;
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.4);
+    z-index: 99;
+    animation: pillar-backdrop-in var(--dur-slow) var(--ease-out) forwards;
+  }
+}
+
+@keyframes pillar-backdrop-in {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+/* ── Mobile Open Button ─────────────────────────────────────────────── */
+
+/* Hidden on desktop, shown on mobile */
+.pillar-sidebar__mobile-open {
+  display: none;
 }
 
 /* ── Mobile Adjustments ──────────────────────────────────────────────── */
+
+/* Reserve space at the top of the main content area for the mobile menu button */
+@media (max-width: 768px) {
+  .pillar-app-main {
+    padding-top: calc(var(--space-4) + 40px + var(--space-3));
+  }
+}
 
 @media (max-width: 768px) {
   .pillar-sidebar {
@@ -217,15 +262,44 @@
     left: 0;
     top: 0;
     z-index: 100;
+    width: 280px;
     box-shadow: var(--shadow-3);
-  }
-
-  .pillar-sidebar:not(.pillar-sidebar--open) {
     transform: translateX(-100%);
+    transition: transform var(--dur-slow) var(--ease-out);
   }
 
   .pillar-sidebar--open {
     transform: translateX(0);
+  }
+
+  /* Mobile open button: fixed top-left, always visible when sidebar is closed */
+  .pillar-sidebar__mobile-open {
+    display: flex;
+    position: fixed;
+    top: var(--space-4);
+    left: var(--space-4);
+    z-index: 101;
+    width: 40px;
+    height: 40px;
+    align-items: center;
+    justify-content: center;
+    background: var(--surface);
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--radius-sm);
+    color: var(--ink-2);
+    cursor: pointer;
+    box-shadow: var(--shadow-1);
+    transition: background-color var(--dur) var(--ease-out),
+      color var(--dur) var(--ease-out);
+  }
+
+  .pillar-sidebar__mobile-open i {
+    font-size: 1.25rem;
+  }
+
+  .pillar-sidebar__mobile-open:hover {
+    background: var(--surface-dim);
+    color: var(--ink);
   }
 }
 
@@ -237,5 +311,9 @@
   .pillar-sidebar__nav-badge,
   .pillar-sidebar__toggle i {
     transition: none;
+  }
+
+  .pillar-sidebar__backdrop {
+    animation: none;
   }
 }
