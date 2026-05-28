@@ -25,6 +25,8 @@ class User(Base):
     email = Column(String, unique=True)
     notifications_enabled = Column(Boolean, default=True)
 
+    patients = relationship('Patient', secondary=patient_caregiver, back_populates='caregivers')
+
 
 class Patient(Base):
     __tablename__ = 'patients'

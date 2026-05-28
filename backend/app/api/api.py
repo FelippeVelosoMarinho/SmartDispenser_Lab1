@@ -2,7 +2,7 @@
 
 from fastapi import APIRouter
 
-from app.api.endpoints import auth, iot, patients, medications, schedules, logs, dispensers, patient_medications
+from app.api.endpoints import auth, iot, patients, medications, schedules, logs, dispensers, patient_medications, slots
 
 api_router = APIRouter()
 api_router.include_router(auth.router)

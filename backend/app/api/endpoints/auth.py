@@ -1,5 +1,6 @@
 """Authentication endpoints."""
 
+import logging
 from datetime import timedelta
 from fastapi import APIRouter, HTTPException, Depends, BackgroundTasks
 

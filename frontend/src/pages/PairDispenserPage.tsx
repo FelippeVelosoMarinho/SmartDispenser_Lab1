@@ -354,18 +354,6 @@ function LocalPairingView() {
   }
 
   return (
-    <>
-      <p style={{ marginBottom: "var(--space-4)", color: "var(--ink-3)", fontSize: "var(--text-sm)" }}>
-        Certifique-se de que o dispensador está ligado e conectado à mesma rede Wi-Fi que este dispositivo.
-        {subnet && (
-          <span style={{ marginLeft: "var(--space-2)", color: "var(--ink-2)" }}>
-            Rede detectada:{" "}
-            <code style={{ fontFamily: "var(--font-mono)", fontSize: "0.8rem" }}>
-              {subnet}.0/24
-            </code>
-          </span>
-        )}
-      </p>
     <div
       style={{
         flex: 1,
@@ -537,7 +525,7 @@ function LocalPairingView() {
         onCancel={() => setSelected(null)}
         onConfirm={handleConfirmPair}
       />
-    </>
+    </div>
   );
 }
 
