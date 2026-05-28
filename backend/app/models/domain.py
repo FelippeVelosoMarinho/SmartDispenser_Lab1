@@ -79,14 +79,22 @@ class Slot(Base):
 
     id = Column(Integer, primary_key=True, autoincrement=True)
     drawer_id = Column(Integer, ForeignKey('drawers.id'), nullable=False)
-    medication_id = Column(Integer, ForeignKey('medications.id'))
     position_number = Column(Integer, nullable=False)
     max_pill_capacity = Column(Integer, nullable=False)
-    current_pill_count = Column(Integer, default=0)
 
     drawer = relationship('Drawer', back_populates='slots')
-    medication = relationship('Medication')
+    slot_medications = relationship('SlotMedication', cascade="all, delete-orphan", back_populates='slot')
     schedules = relationship('Schedule', back_populates='slot')
+
+class SlotMedication(Base):
+    __tablename__ = 'slot_medications'
+
+    slot_id = Column(Integer, ForeignKey('slots.id', ondelete='CASCADE'), primary_key=True)
+    medication_id = Column(Integer, ForeignKey('medications.id'), primary_key=True)
+    quantity = Column(Integer, default=0)
+
+    slot = relationship('Slot', back_populates='slot_medications')
+    medication = relationship('Medication')
 
 class Medication(Base):
     __tablename__ = 'medications'
@@ -101,9 +109,7 @@ class Schedule(Base):
 
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     slot_id = Column(Integer, ForeignKey('slots.id'), nullable=True) 
-    medication_id = Column(Integer, ForeignKey('medications.id'), nullable=True) 
     scheduled_time = Column(Time, nullable=True)
-    pills_per_dose = Column(Integer, default=1)
     is_active = Column(Boolean, default=True)
 
     # Legacy fields
@@ -112,7 +118,6 @@ class Schedule(Base):
     time_legacy = Column(String, nullable=True)
 
     slot = relationship('Slot', back_populates='schedules', foreign_keys=[slot_id])
-    medication = relationship('Medication', foreign_keys=[medication_id])
 
 class DispensationLog(Base):
     __tablename__ = 'dispensation_logs'

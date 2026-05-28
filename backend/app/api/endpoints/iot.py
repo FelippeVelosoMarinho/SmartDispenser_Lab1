@@ -153,8 +153,6 @@ async def sync_dispenser(hardware_id: str, db: Session = Depends(get_db)):
     for sched in schedules:
         slot_configs.append(SlotConfig(
             slot_id=sched.slot_id or 0,
-            medication_id=str(sched.medication_id) if sched.medication_id else "",
-            quantity=sched.pills_per_dose or 1,
             time=sched.time_legacy or "",
         ))
         
@@ -176,7 +174,6 @@ async def process_iot_event(
         "schedule_id": event.schedule_id or "unknown",
         "patient_id": event.patient_id or "unknown",
         "dispenser_id": event.dispenser_id,
-        "medication_id": event.medication_id or "unknown",
         "success": event.success,
         "error_message": event.error_message,
     }

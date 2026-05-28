@@ -9,7 +9,7 @@ from app.core.database import get_db
 from sqlalchemy.orm import Session, joinedload
 from app.crud.dispenser import get_dispenser_status, update_dispenser_status
 from app.crud.patient import get_patient, get_patients_by_caregiver
-from app.models.domain import Dispenser, Drawer, Slot
+from app.models.domain import Dispenser, Drawer, Slot, SlotMedication
 from app.schemas.dispenser import (
     DiscoveredDispenser,
     DispenserPairRequest,
@@ -78,13 +78,19 @@ def _format_medication(medication) -> dict | None:
 
 
 def _format_slot(slot: Slot) -> dict:
+    medications_list = []
+    if slot.slot_medications:
+        for sm in slot.slot_medications:
+            medications_list.append({
+                "medication": _format_medication(sm.medication),
+                "quantity": sm.quantity
+            })
+            
     return {
         "id": str(slot.id),
         "drawer_id": str(slot.drawer_id),
         "slot_number": slot.position_number,
-        "medication_id": str(slot.medication_id) if slot.medication_id else None,
-        "medication": _format_medication(slot.medication),
-        "current_pill_count": int(slot.current_pill_count or 0),
+        "medications": medications_list,
         "max_pill_capacity": int(slot.max_pill_capacity or 0),
     }
 
@@ -137,7 +143,8 @@ async def get_dispenser_details(
             joinedload(Dispenser.patient),
             joinedload(Dispenser.drawers)
             .joinedload(Drawer.slots)
-            .joinedload(Slot.medication),
+            .joinedload(Slot.slot_medications)
+            .joinedload(SlotMedication.medication),
         )
         .filter(Dispenser.id == dispenser_id)
         .first()
@@ -150,19 +157,18 @@ async def get_dispenser_details(
     if not patient or patient.caregiver_username != current_user.username:
         raise HTTPException(status_code=403, detail="Not authorized to access this dispenser")
 
-    # Auto-heal: cria a gaveta e os 21 slots se o dispenser estiver vazio (pareado antes da alteração)
+    # Auto-heal: cria a gaveta e os 31 slots se o dispenser estiver vazio (pareado antes da alteração)
     if not dispenser.drawers:
         drawer = Drawer(dispenser_id=dispenser.id, label="Principal")
         db.add(drawer)
         db.commit()
         db.refresh(drawer)
         
-        for i in range(1, 22):
+        for i in range(1, 32):
             slot = Slot(
                 drawer_id=drawer.id,
                 position_number=i,
-                max_pill_capacity=30,
-                current_pill_count=0
+                max_pill_capacity=30
             )
             db.add(slot)
         db.commit()
@@ -219,12 +225,11 @@ async def pair_dispenser(
         db.commit()
         db.refresh(drawer)
         
-        for i in range(1, 22):
+        for i in range(1, 32):
             slot = Slot(
                 drawer_id=drawer.id,
                 position_number=i,
-                max_pill_capacity=30,
-                current_pill_count=0
+                max_pill_capacity=30
             )
             db.add(slot)
         db.commit()

@@ -2,16 +2,12 @@ import React, { useEffect, useState } from "react";
 import {
   DispenserDetails,
   Medication,
-  Schedule,
   Slot,
   createMedication,
-  createSchedule,
-  deleteSchedule,
-  getScheduleQuantity,
-  getScheduleTime,
   listMedications,
-  listSchedules,
-  updateSlot,
+  addSlotMedication,
+  removeSlotMedication,
+  updateSlotMedicationQuantity,
 } from "../../lib/api";
 
 interface CompartmentsSectionProps {
@@ -21,9 +17,8 @@ interface CompartmentsSectionProps {
 }
 
 function AnnularSlice({
-  cx, cy, innerRadius, outerRadius, startAngle, endAngle, fill, onClick, isActive, onMouseEnter, onMouseLeave
+  cx, cy, innerRadius, outerRadius, startAngle, endAngle, fill, onClick, isActive, onMouseEnter, onMouseLeave, isUnprogrammable
 }: any) {
-  // convert angle to radians
   const startRad = (startAngle - 90) * (Math.PI / 180);
   const endRad = (endAngle - 90) * (Math.PI / 180);
 
@@ -58,25 +53,24 @@ function AnnularSlice({
       onMouseEnter={onMouseEnter}
       onMouseLeave={onMouseLeave}
       style={{
-        cursor: "pointer",
+        cursor: isUnprogrammable ? "not-allowed" : "pointer",
         transition: "all 0.2s cubic-bezier(0.4, 0, 0.2, 1)",
         transformOrigin: `${cx}px ${cy}px`,
         transform: isActive ? "scale(1.05)" : "scale(1)",
         filter: isActive ? "drop-shadow(0 10px 15px rgba(16, 185, 129, 0.2))" : "none",
+        opacity: isUnprogrammable ? 0.3 : 1,
       }}
     />
   );
 }
 
 export function CompartmentsSection({ dispenser, onSchedulesChange, onDispenserChange }: CompartmentsSectionProps) {
-  const [editingSlot, setEditingSlot] = useState<Slot | null>(null);
+  const [editingSlotId, setEditingSlotId] = useState<string | null>(null);
   const [hoveredSlotId, setHoveredSlotId] = useState<string | null>(null);
 
-  // Obter todos os slots reais do banco
   const dbSlots = dispenser.drawers.flatMap(d => d.slots);
 
-  // Garantir exatamente 21 posições (slots) na visão circular
-  const allSlots = Array.from({ length: 21 }, (_, i) => {
+  const allSlots = Array.from({ length: 31 }, (_, i) => {
     const slotNumber = i + 1;
     const existingSlot = dbSlots.find(s => s.slot_number === slotNumber);
     if (existingSlot) {
@@ -87,15 +81,15 @@ export function CompartmentsSection({ dispenser, onSchedulesChange, onDispenserC
       slot_number: slotNumber,
       display_number: slotNumber,
       drawer_id: "",
-      medication_id: null,
-      medication: null,
-      current_pill_count: 0,
+      medications: [],
       max_pill_capacity: 0,
       is_virtual: true,
-    };
+    } as any;
   });
 
-  const totalSlices = 21;
+  const editingSlot = allSlots.find(s => s.id === editingSlotId) || null;
+
+  const totalSlices = 31;
   const anglePerSlice = 360 / totalSlices;
 
   const cx = 220;
@@ -103,21 +97,28 @@ export function CompartmentsSection({ dispenser, onSchedulesChange, onDispenserC
   const outerRadius = 198;
   const innerRadius = 112;
 
-  const displaySlot = allSlots.find(s => s.id === hoveredSlotId) || allSlots.find(s => s.id === editingSlot?.id) || allSlots[0];
+  const displaySlot = allSlots.find(s => s.id === hoveredSlotId) || editingSlot || allSlots[0];
 
   const renderSlice = (slot: any, index: number) => {
-    const startAngle = index * anglePerSlice;
-    const endAngle = (index + 1) * anglePerSlice;
-    const fillPercentage = slot.max_pill_capacity > 0 ? (slot.current_pill_count / slot.max_pill_capacity) * 100 : 0;
+    const isUnprogrammable = slot.display_number === 31;
+    // Para que o Slot 1 fique na antiga posição 14 (visualIndex 13)
+    // E os próximos cresçam no sentido ANTI-HORÁRIO, diminuímos o visualIndex.
+    const visualIndex = (13 - index + totalSlices) % totalSlices;
+    const startAngle = visualIndex * anglePerSlice;
+    const endAngle = (visualIndex + 1) * anglePerSlice;
+    const totalPills = slot.medications?.reduce((sum: number, item: any) => sum + item.quantity, 0) || 0;
+    const fillPercentage = slot.max_pill_capacity > 0 ? (totalPills / slot.max_pill_capacity) * 100 : 0;
     
-    let fill = "var(--surface-dim)"; // Empty / No medication
-    if (slot.medication_id || slot.current_pill_count > 0) {
-      if (fillPercentage > 20) fill = "var(--primary)";
-      else if (fillPercentage > 0) fill = "var(--warning)"; // Medium/Low
-      else fill = "var(--danger)"; // Empty but configured
+    let fill = "var(--surface-dim)";
+    if (isUnprogrammable) {
+       fill = "var(--surface-dim)";
+    } else if (slot.max_pill_capacity > 0) {
+      if (fillPercentage >= 80) fill = "var(--danger)";
+      else if (fillPercentage >= 40) fill = "var(--warning)";
+      else fill = "var(--success, #10b981)";
     }
 
-    const isActive = hoveredSlotId === slot.id || editingSlot?.id === slot.id;
+    const isActive = hoveredSlotId === slot.id || editingSlotId === slot.id;
 
     return (
       <AnnularSlice
@@ -128,13 +129,16 @@ export function CompartmentsSection({ dispenser, onSchedulesChange, onDispenserC
         startAngle={startAngle}
         endAngle={endAngle}
         fill={fill}
-        isActive={isActive}
-        onClick={() => setEditingSlot(slot)}
-        onMouseEnter={() => setHoveredSlotId(slot.id)}
-        onMouseLeave={() => setHoveredSlotId(null)}
+        isActive={!isUnprogrammable && isActive}
+        isUnprogrammable={isUnprogrammable}
+        onClick={() => { if (!isUnprogrammable) setEditingSlotId(slot.id); }}
+        onMouseEnter={() => { if (!isUnprogrammable) setHoveredSlotId(slot.id); }}
+        onMouseLeave={() => { if (!isUnprogrammable) setHoveredSlotId(null); }}
       />
     );
   };
+
+  const displayTotalPills = displaySlot.medications?.reduce((sum: number, item: any) => sum + item.quantity, 0) || 0;
 
   return (
     <div style={{ marginBottom: "var(--space-8)" }}>
@@ -159,21 +163,18 @@ export function CompartmentsSection({ dispenser, onSchedulesChange, onDispenserC
       }}>
         <div style={{ position: "relative", width: 440, height: 440 }}>
           <svg width={440} height={440} viewBox="0 0 440 440" style={{ overflow: "visible" }}>
-            {/* Draw non-active slices first */}
             {allSlots.map((slot, index) => {
-              const isActive = hoveredSlotId === slot.id || editingSlot?.id === slot.id;
+              const isActive = hoveredSlotId === slot.id || editingSlotId === slot.id;
               if (isActive) return null;
               return renderSlice(slot, index);
             })}
-            {/* Draw active slices on top */}
             {allSlots.map((slot, index) => {
-              const isActive = hoveredSlotId === slot.id || editingSlot?.id === slot.id;
+              const isActive = hoveredSlotId === slot.id || editingSlotId === slot.id;
               if (!isActive) return null;
               return renderSlice(slot, index);
             })}
           </svg>
 
-          {/* Center Info Overlay */}
           <div style={{
             position: "absolute",
             top: "50%", left: "50%",
@@ -192,14 +193,16 @@ export function CompartmentsSection({ dispenser, onSchedulesChange, onDispenserC
                   Posição {displaySlot.display_number}
                 </div>
                 <div style={{ fontSize: "var(--text-lg)", color: "var(--ink)", fontWeight: 700, marginBottom: "4px", lineHeight: 1.2 }}>
-                  {displaySlot.medication ? displaySlot.medication.name : "Vazio"}
+                  {displaySlot.medications?.length > 0 
+                     ? (displaySlot.medications.length === 1 ? displaySlot.medications[0].medication.name : `${displaySlot.medications.length} Medicamentos`) 
+                     : "Vazio"}
                 </div>
                 <div style={{ fontSize: "var(--text-sm)", color: "var(--ink-2)", fontWeight: 500 }}>
-                  {displaySlot.current_pill_count} / {displaySlot.max_pill_capacity} unid.
+                  {displayTotalPills} / {displaySlot.max_pill_capacity} unid.
                 </div>
-                {displaySlot.current_pill_count > 0 && displaySlot.max_pill_capacity > 0 && (
+                {displayTotalPills > 0 && displaySlot.max_pill_capacity > 0 && (
                    <div style={{ fontSize: "var(--text-xs)", color: "var(--ink-3)", marginTop: "4px" }}>
-                     {Math.round((displaySlot.current_pill_count / displaySlot.max_pill_capacity) * 100)}% Cheio
+                     {Math.round((displayTotalPills / displaySlot.max_pill_capacity) * 100)}% Cheio
                    </div>
                 )}
               </>
@@ -209,7 +212,6 @@ export function CompartmentsSection({ dispenser, onSchedulesChange, onDispenserC
           </div>
         </div>
         
-        {/* Legend */}
         <div style={{
           display: "flex",
           gap: "var(--space-4)",
@@ -218,16 +220,16 @@ export function CompartmentsSection({ dispenser, onSchedulesChange, onDispenserC
           justifyContent: "center",
         }}>
           <div style={{ display: "flex", alignItems: "center", gap: "8px", fontSize: "var(--text-sm)", color: "var(--ink-2)" }}>
-            <div style={{ width: 12, height: 12, borderRadius: "50%", background: "var(--primary)" }} />
-            Estoque Bom
+            <div style={{ width: 12, height: 12, borderRadius: "50%", background: "var(--success, #10b981)" }} />
+            Vazio / Disponível
           </div>
           <div style={{ display: "flex", alignItems: "center", gap: "8px", fontSize: "var(--text-sm)", color: "var(--ink-2)" }}>
             <div style={{ width: 12, height: 12, borderRadius: "50%", background: "var(--warning, #f59e0b)" }} />
-            Estoque Baixo
+            Enchendo
           </div>
           <div style={{ display: "flex", alignItems: "center", gap: "8px", fontSize: "var(--text-sm)", color: "var(--ink-2)" }}>
             <div style={{ width: 12, height: 12, borderRadius: "50%", background: "var(--danger)" }} />
-            Esvaziado
+            Cheio / Atenção
           </div>
           <div style={{ display: "flex", alignItems: "center", gap: "8px", fontSize: "var(--text-sm)", color: "var(--ink-2)" }}>
             <div style={{ width: 12, height: 12, borderRadius: "50%", background: "var(--surface-dim)" }} />
@@ -244,7 +246,7 @@ export function CompartmentsSection({ dispenser, onSchedulesChange, onDispenserC
         <SlotMedicationsModal
           dispenser={dispenser}
           slot={editingSlot}
-          onClose={() => setEditingSlot(null)}
+          onClose={() => setEditingSlotId(null)}
           onSchedulesChange={onSchedulesChange}
           onDispenserChange={onDispenserChange}
         />
@@ -253,43 +255,37 @@ export function CompartmentsSection({ dispenser, onSchedulesChange, onDispenserC
   );
 }
 
-type SlotSchedule = Schedule & {
-  time?: string;
-  quantity?: number;
-};
-
-function SlotMedicationsModal({ slot, dispenser, onClose, onSchedulesChange, onDispenserChange }: any) {
-  const [schedules, setSchedules] = useState<SlotSchedule[]>([]);
-  const [medications, setMedications] = useState<Medication[]>([]);
+function SlotMedicationsModal({ slot, dispenser, onClose, onDispenserChange }: any) {
+  const [medicationsCatalog, setMedicationsCatalog] = useState<Medication[]>([]);
   const [selectedMedicationId, setSelectedMedicationId] = useState("");
+  const [newQuantity, setNewQuantity] = useState("1");
+  
+  // State for creating a new medication on the fly
   const [newMedicationName, setNewMedicationName] = useState("");
   const [newMedicationDosage, setNewMedicationDosage] = useState("");
   const [newMedicationDescription, setNewMedicationDescription] = useState("");
-  const [slotStockCount, setSlotStockCount] = useState("0");
-  const [time, setTime] = useState("08:00");
-  const [quantity, setQuantity] = useState("1");
+  
+  // State for inline editing quantity
+  const [editingQtyMedId, setEditingQtyMedId] = useState<string | null>(null);
+  const [editingQtyValue, setEditingQtyValue] = useState<string>("");
+
   const [isLoading, setIsLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const isVirtualSlot = String(slot.id).startsWith("virtual-");
+  const slotMedications = slot.medications || [];
 
   const loadData = async () => {
     setIsLoading(true);
     try {
-      const [scheduleData, medicationData] = await Promise.all([
-        listSchedules(dispenser.id),
-        listMedications(),
-      ]);
-
-      const slotSchedules = scheduleData.filter((schedule) => String(schedule.slot_id) === String(slot.id));
-      setSchedules(slotSchedules as SlotSchedule[]);
-      setMedications(medicationData);
-      setSelectedMedicationId((current) => current || slot.medication_id || medicationData[0]?.id || "");
-      setSlotStockCount(String(slot.current_pill_count ?? 0));
+      const medicationData = await listMedications();
+      setMedicationsCatalog(medicationData);
+      if (medicationData.length > 0) {
+        setSelectedMedicationId(medicationData[0].id);
+      }
     } catch (err) {
       console.error(err);
-      setSchedules([]);
-      alert("Não foi possível carregar os remédios desse slot.");
+      alert("Não foi possível carregar o catálogo de remédios.");
     } finally {
       setIsLoading(false);
     }
@@ -299,15 +295,10 @@ function SlotMedicationsModal({ slot, dispenser, onClose, onSchedulesChange, onD
     void loadData();
   }, [dispenser.id, slot.id]);
 
-  const medicationById = new Map(medications.map((medication) => [medication.id, medication]));
-  const totalQuantity = schedules.reduce((sum, schedule) => sum + getScheduleQuantity(schedule), 0);
-  const activeMedicationId = selectedMedicationId.trim() || (slot.medication_id ?? "");
+  const activeMedicationId = selectedMedicationId.trim();
 
   const ensureMedication = async () => {
-    const trimmedMedicationId = selectedMedicationId.trim();
-    if (trimmedMedicationId) {
-      return trimmedMedicationId;
-    }
+    if (activeMedicationId) return activeMedicationId;
 
     const name = newMedicationName.trim();
     if (!name) {
@@ -320,94 +311,66 @@ function SlotMedicationsModal({ slot, dispenser, onClose, onSchedulesChange, onD
       description: newMedicationDescription.trim() || undefined,
     });
 
-    setMedications((current) => [createdMedication, ...current]);
+    setMedicationsCatalog((current) => [createdMedication, ...current]);
     setSelectedMedicationId(createdMedication.id);
     return createdMedication.id;
   };
 
-  const handleSaveSlot = async (e: React.FormEvent) => {
+  const handleAddMedication = async (e: React.FormEvent) => {
     e.preventDefault();
     if (isVirtualSlot) {
       alert("Essa posição ainda não existe no banco.");
       return;
     }
-    if (!dispenser.patient_id) {
-      alert("Esse dispenser não está vinculado a um paciente.");
-      return;
-    }
 
-    const stockValue = Number(slotStockCount);
-    if (!Number.isInteger(stockValue) || stockValue < 0) {
-      alert("Informe uma quantidade válida para o estoque do slot.");
+    const qty = parseInt(newQuantity, 10);
+    if (!Number.isInteger(qty) || qty <= 0) {
+      alert("Informe uma quantidade válida.");
       return;
     }
 
     setIsSubmitting(true);
     try {
-      const medicationId = await ensureMedication();
-      await updateSlot(String(slot.id), {
-        medication_id: medicationId,
-        current_pill_count: stockValue,
-      });
-      await loadData();
-      onDispenserChange();
+      const medId = await ensureMedication();
+      await addSlotMedication(slot.id, medId, qty);
+      await onDispenserChange();
+      setNewQuantity("1");
     } catch (err) {
       console.error(err);
-      alert(err instanceof Error ? err.message : "Erro ao salvar o slot.");
+      alert(err instanceof Error ? err.message : "Erro ao adicionar medicamento.");
     } finally {
       setIsSubmitting(false);
     }
   };
 
-  const handleAddSchedule = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (isVirtualSlot) {
-      alert("Essa posição ainda não existe no banco.");
+  const saveInlineQuantity = async (medicationId: string) => {
+    const qty = parseInt(editingQtyValue, 10);
+    if (isNaN(qty) || qty < 0) {
+      alert("Quantidade inválida.");
       return;
     }
-    if (!dispenser.patient_id) {
-      alert("Esse dispenser não está vinculado a um paciente.");
-      return;
-    }
-
-    const medicationId = activeMedicationId;
-    if (!medicationId) {
-      alert("Salve ou selecione um medicamento antes de criar um agendamento.");
-      return;
-    }
-
+    
     setIsSubmitting(true);
     try {
-      await createSchedule({
-        slot_id: String(slot.id),
-        medication_id: medicationId,
-        time: `${time}:00`,
-        quantity: parseInt(quantity, 10) || 1,
-        is_active: true,
-        patient_id: dispenser.patient_id,
-        dispenser_id: dispenser.id,
-      });
-      await loadData();
-      onSchedulesChange();
+      await updateSlotMedicationQuantity(slot.id, medicationId, qty);
+      setEditingQtyMedId(null);
+      await onDispenserChange();
     } catch (err) {
       console.error(err);
-      alert("Erro ao adicionar remédio ao slot");
+      alert("Erro ao atualizar quantidade.");
     } finally {
       setIsSubmitting(false);
     }
   };
 
-  const handleRemoveSchedule = async (scheduleId: string) => {
-    if (!confirm("Tem certeza que deseja remover este remédio do slot?")) return;
-
+  const handleRemoveMedication = async (medicationId: string) => {
     setIsSubmitting(true);
     try {
-      await deleteSchedule(scheduleId);
-      await loadData();
-      onSchedulesChange();
+      await removeSlotMedication(slot.id, medicationId);
+      await onDispenserChange();
     } catch (err) {
       console.error(err);
-      alert("Erro ao remover remédio do slot");
+      alert("Erro ao remover medicamento.");
     } finally {
       setIsSubmitting(false);
     }
@@ -426,7 +389,7 @@ function SlotMedicationsModal({ slot, dispenser, onClose, onSchedulesChange, onD
         borderRadius: "var(--radius-lg)",
         padding: "var(--space-6)",
         width: "100%",
-        maxWidth: "920px",
+        maxWidth: "600px",
         boxShadow: "0 10px 25px rgba(0,0,0,0.1)",
         maxHeight: "90vh",
         overflowY: "auto",
@@ -437,7 +400,7 @@ function SlotMedicationsModal({ slot, dispenser, onClose, onSchedulesChange, onD
               Posição {slot.display_number}
             </h3>
             <p style={{ margin: 0, color: "var(--ink-2)", fontSize: "var(--text-sm)", lineHeight: 1.5 }}>
-              Clique em um medicamento do catálogo ou cadastre um novo item para salvar este slot diretamente no banco.
+              Gerencie os medicamentos e as quantidades físicas armazenadas neste slot.
             </p>
           </div>
           <button
@@ -455,235 +418,167 @@ function SlotMedicationsModal({ slot, dispenser, onClose, onSchedulesChange, onD
           </button>
         </div>
 
-        <div style={{
-          display: "grid",
-          gridTemplateColumns: "minmax(0, 1fr) minmax(320px, 0.95fr)",
-          gap: "var(--space-6)",
-          marginTop: "var(--space-6)",
-        }}>
-          <section style={{
-            border: "1px solid var(--border)",
-            borderRadius: "var(--radius-lg)",
-            padding: "var(--space-5)",
-            background: "var(--surface-subtle, rgba(255,255,255,0.35))",
-          }}>
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", gap: "var(--space-4)", marginBottom: "var(--space-4)" }}>
-              <div>
-                <h4 style={{ margin: 0, fontSize: "var(--text-base)", color: "var(--ink)" }}>Salvar medicamento no slot</h4>
-                <p style={{ margin: "4px 0 0", fontSize: "var(--text-sm)", color: "var(--ink-2)" }}>
-                  O slot atualiza o vínculo com o medicamento e o estoque inicial.
-                </p>
-              </div>
-              <span style={{ fontSize: "var(--text-sm)", color: "var(--ink-2)" }}>
-                {medications.length} medicamento(s) no catálogo
-              </span>
+        {/* Current Medications List */}
+        <div style={{ marginTop: "var(--space-6)" }}>
+          <h4 style={{ margin: "0 0 var(--space-3)", fontSize: "var(--text-base)", color: "var(--ink)" }}>
+            Medicamentos no Slot
+          </h4>
+          
+          {slotMedications.length === 0 ? (
+            <div style={{
+              border: "1px dashed var(--border)",
+              borderRadius: "var(--radius-md)",
+              padding: "var(--space-5)",
+              color: "var(--ink-2)",
+              textAlign: "center",
+              marginBottom: "var(--space-4)",
+            }}>
+              Nenhum medicamento configurado neste slot.
             </div>
+          ) : (
+            <div style={{ display: "flex", flexDirection: "column", gap: "var(--space-3)", marginBottom: "var(--space-5)" }}>
+              {slotMedications.map((item: any) => (
+                <div
+                  key={item.medication.id}
+                  style={{
+                    border: "1px solid var(--border)",
+                    borderRadius: "var(--radius-md)",
+                    padding: "var(--space-4)",
+                    display: "flex",
+                    justifyContent: "space-between",
+                    alignItems: "center",
+                    flexWrap: "wrap",
+                    gap: "var(--space-3)",
+                  }}
+                >
+                  <div style={{ flex: 1 }}>
+                    <div style={{ fontWeight: 700, color: "var(--ink)", marginBottom: "4px" }}>
+                      {item.medication.name}
+                    </div>
+                    {editingQtyMedId === item.medication.id ? (
+                      <div style={{ display: "flex", gap: "8px", alignItems: "center", marginTop: "8px" }}>
+                        <input
+                          type="number"
+                          value={editingQtyValue}
+                          onChange={(e) => setEditingQtyValue(e.target.value)}
+                          min="0"
+                          style={{
+                            width: "80px",
+                            padding: "6px 8px",
+                            borderRadius: "var(--radius-md)",
+                            border: "1px solid var(--border)",
+                            fontSize: "var(--text-sm)"
+                          }}
+                        />
+                        <button
+                          type="button"
+                          onClick={() => saveInlineQuantity(item.medication.id)}
+                          disabled={isSubmitting}
+                          style={{
+                            padding: "6px 12px",
+                            borderRadius: "var(--radius-md)",
+                            background: "var(--primary)",
+                            color: "var(--primary-on)",
+                            border: "none",
+                            cursor: "pointer",
+                            fontSize: "var(--text-sm)",
+                            fontWeight: 600
+                          }}
+                        >
+                          Salvar
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setEditingQtyMedId(null)}
+                          disabled={isSubmitting}
+                          style={{
+                            padding: "6px 12px",
+                            borderRadius: "var(--radius-md)",
+                            background: "transparent",
+                            color: "var(--ink-2)",
+                            border: "1px solid var(--border)",
+                            cursor: "pointer",
+                            fontSize: "var(--text-sm)"
+                          }}
+                        >
+                          Cancelar
+                        </button>
+                      </div>
+                    ) : (
+                      <div style={{ fontSize: "var(--text-sm)", color: "var(--ink-2)" }}>
+                        Quantidade: {item.quantity} unidades
+                      </div>
+                    )}
+                  </div>
 
-            {isLoading ? (
-              <div style={{ padding: "var(--space-6) 0", textAlign: "center", color: "var(--ink-3)" }}>
-                Carregando remédios...
-              </div>
-            ) : (
-              <form onSubmit={handleSaveSlot} style={{ display: "flex", flexDirection: "column", gap: "var(--space-4)" }}>
-                <div>
-                  <label style={{ display: "block", marginBottom: "4px", fontSize: "var(--text-sm)", fontWeight: 600 }}>
-                    Medicamento do catálogo
-                  </label>
-                  <div style={{ display: "flex", flexWrap: "wrap", gap: "8px" }}>
-                    {medications.map((medication) => (
+                  {editingQtyMedId !== item.medication.id && (
+                    <div style={{ display: "flex", gap: "var(--space-2)" }}>
                       <button
-                        key={medication.id}
                         type="button"
                         onClick={() => {
-                          setSelectedMedicationId(medication.id);
-                          setNewMedicationName("");
-                          setNewMedicationDosage("");
-                          setNewMedicationDescription("");
+                          setEditingQtyMedId(item.medication.id);
+                          setEditingQtyValue(String(item.quantity));
                         }}
-                        style={{
-                          border: medication.id === activeMedicationId ? "1px solid var(--primary)" : "1px solid var(--border)",
-                          background: medication.id === activeMedicationId ? "rgba(16, 185, 129, 0.08)" : "var(--surface)",
-                          color: "var(--ink)",
-                          borderRadius: "999px",
-                          padding: "6px 10px",
-                          cursor: "pointer",
-                          fontSize: "var(--text-sm)",
-                        }}
-                      >
-                        {medication.name}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-
-                <div style={{ display: "grid", gridTemplateColumns: "repeat(2, minmax(0, 1fr))", gap: "var(--space-3)" }}>
-                  <div>
-                    <label style={{ display: "block", marginBottom: "4px", fontSize: "var(--text-sm)", fontWeight: 600 }}>Novo medicamento</label>
-                    <input
-                      type="text"
-                      value={newMedicationName}
-                      onChange={(event) => {
-                        setNewMedicationName(event.target.value);
-                        if (selectedMedicationId) setSelectedMedicationId("");
-                      }}
-                      placeholder="Ex.: Ritalina"
-                      style={inputStyle}
-                    />
-                  </div>
-                  <div>
-                    <label style={{ display: "block", marginBottom: "4px", fontSize: "var(--text-sm)", fontWeight: 600 }}>Dosagem</label>
-                    <input
-                      type="text"
-                      value={newMedicationDosage}
-                      onChange={(event) => setNewMedicationDosage(event.target.value)}
-                      placeholder="Ex.: 10 mg"
-                      style={inputStyle}
-                    />
-                  </div>
-                </div>
-
-                <div>
-                  <label style={{ display: "block", marginBottom: "4px", fontSize: "var(--text-sm)", fontWeight: 600 }}>Descrição</label>
-                  <textarea
-                    value={newMedicationDescription}
-                    onChange={(event) => setNewMedicationDescription(event.target.value)}
-                    placeholder="Observações opcionais sobre o medicamento"
-                    rows={3}
-                    style={{ ...inputStyle, resize: "vertical", minHeight: "84px" }}
-                  />
-                </div>
-
-                <div style={{ display: "grid", gridTemplateColumns: "repeat(2, minmax(0, 1fr))", gap: "var(--space-3)" }}>
-                  <div>
-                    <label style={{ display: "block", marginBottom: "4px", fontSize: "var(--text-sm)", fontWeight: 600 }}>Estoque inicial no slot</label>
-                    <input
-                      type="number"
-                      value={slotStockCount}
-                      onChange={(event) => setSlotStockCount(event.target.value)}
-                      min="0"
-                      style={inputStyle}
-                    />
-                  </div>
-                  <div style={{ display: "flex", alignItems: "end" }}>
-                    <button
-                      type="submit"
-                      disabled={isSubmitting}
-                      style={{
-                        width: "100%",
-                        padding: "10px 16px",
-                        borderRadius: "var(--radius-md)",
-                        border: "none",
-                        background: "var(--primary)",
-                        color: "var(--primary-on)",
-                        fontWeight: 600,
-                        cursor: "pointer",
-                        opacity: isSubmitting ? 0.7 : 1,
-                      }}
-                    >
-                      {isSubmitting ? "Salvando..." : "Salvar no slot"}
-                    </button>
-                  </div>
-                </div>
-              </form>
-            )}
-          </section>
-
-          <section style={{
-            border: "1px solid var(--border)",
-            borderRadius: "var(--radius-lg)",
-            padding: "var(--space-5)",
-          }}>
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", gap: "var(--space-4)", marginBottom: "var(--space-4)" }}>
-              <div>
-                <h4 style={{ marginTop: 0, marginBottom: "var(--space-1)", fontSize: "var(--text-base)", color: "var(--ink)" }}>Agendamentos do slot</h4>
-                <p style={{ margin: 0, fontSize: "var(--text-sm)", color: "var(--ink-2)" }}>
-                  Esses horários também vêm do banco e podem ser removidos aqui.
-                </p>
-              </div>
-              <span style={{ fontSize: "var(--text-sm)", color: "var(--ink-2)" }}>
-                {schedules.length} registro(s) · total {totalQuantity} unid.
-              </span>
-            </div>
-
-            {isLoading ? (
-              <div style={{ padding: "var(--space-6) 0", textAlign: "center", color: "var(--ink-3)" }}>
-                Carregando remédios...
-              </div>
-            ) : schedules.length === 0 ? (
-              <div style={{
-                border: "1px dashed var(--border)",
-                borderRadius: "var(--radius-md)",
-                padding: "var(--space-5)",
-                color: "var(--ink-2)",
-                textAlign: "center",
-                marginBottom: "var(--space-4)",
-              }}>
-                Nenhum agendamento cadastrado nesse slot ainda.
-              </div>
-            ) : (
-              <div style={{ display: "flex", flexDirection: "column", gap: "var(--space-3)", marginBottom: "var(--space-5)" }}>
-                {schedules.map((schedule) => {
-                  const medication = schedule.medication ?? medicationById.get(schedule.medication_id) ?? null;
-                  const scheduleTime = getScheduleTime(schedule).substring(0, 5) || "--:--";
-                  const scheduleQuantity = getScheduleQuantity(schedule);
-
-                  return (
-                    <div
-                      key={schedule.id}
-                      style={{
-                        border: "1px solid var(--border)",
-                        borderRadius: "var(--radius-md)",
-                        padding: "var(--space-4)",
-                        display: "flex",
-                        justifyContent: "space-between",
-                        gap: "var(--space-4)",
-                        alignItems: "center",
-                      }}
-                    >
-                      <div>
-                        <div style={{ fontWeight: 700, color: "var(--ink)", marginBottom: "4px" }}>
-                          {medication?.name ?? `Medicamento ${schedule.medication_id}`}
-                        </div>
-                        <div style={{ fontSize: "var(--text-sm)", color: "var(--ink-2)", display: "flex", gap: "var(--space-3)", flexWrap: "wrap" }}>
-                          <span>ID {schedule.medication_id}</span>
-                          <span>Quantidade {scheduleQuantity}</span>
-                          <span>Horário {scheduleTime}</span>
-                        </div>
-                      </div>
-
-                      <button
-                        type="button"
-                        onClick={() => handleRemoveSchedule(schedule.id)}
                         disabled={isSubmitting}
                         style={{
-                          padding: "8px 12px",
+                          padding: "6px 10px",
+                          borderRadius: "var(--radius-md)",
+                          border: "1px solid var(--border)",
+                          background: "var(--surface)",
+                          cursor: "pointer",
+                        }}
+                      >
+                        Editar Qtd
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => handleRemoveMedication(item.medication.id)}
+                        disabled={isSubmitting}
+                        style={{
+                          padding: "6px 10px",
                           borderRadius: "var(--radius-md)",
                           border: "1px solid rgba(239, 68, 68, 0.25)",
                           background: "rgba(239, 68, 68, 0.08)",
                           color: "var(--danger, #ef4444)",
                           cursor: "pointer",
-                          whiteSpace: "nowrap",
                         }}
                       >
                         Remover
                       </button>
                     </div>
-                  );
-                })}
-              </div>
-            )}
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
 
-            <form onSubmit={handleAddSchedule} style={{ display: "flex", flexDirection: "column", gap: "var(--space-4)" }}>
+        <hr style={{ border: "none", borderTop: "1px solid var(--border)", margin: "var(--space-6) 0" }} />
+
+        {/* Add Medication Form */}
+        <div>
+          <h4 style={{ margin: "0 0 var(--space-4)", fontSize: "var(--text-base)", color: "var(--ink)" }}>
+            Adicionar ao Slot
+          </h4>
+          
+          {isLoading ? (
+            <div style={{ textAlign: "center", color: "var(--ink-3)" }}>Carregando catálogo...</div>
+          ) : (
+            <form onSubmit={handleAddMedication} style={{ display: "flex", flexDirection: "column", gap: "var(--space-4)" }}>
               <div>
                 <label style={{ display: "block", marginBottom: "4px", fontSize: "var(--text-sm)", fontWeight: 600 }}>
-                  Medicamento do agendamento
+                  Selecione do Catálogo
                 </label>
                 <div style={{ display: "flex", flexWrap: "wrap", gap: "8px" }}>
-                  {medications.map((medication) => (
+                  {medicationsCatalog.map((medication) => (
                     <button
                       key={medication.id}
                       type="button"
-                      onClick={() => setSelectedMedicationId(medication.id)}
+                      onClick={() => {
+                        setSelectedMedicationId(medication.id);
+                        setNewMedicationName("");
+                        setNewMedicationDosage("");
+                      }}
                       style={{
                         border: medication.id === activeMedicationId ? "1px solid var(--primary)" : "1px solid var(--border)",
                         background: medication.id === activeMedicationId ? "rgba(16, 185, 129, 0.08)" : "var(--surface)",
@@ -702,12 +597,15 @@ function SlotMedicationsModal({ slot, dispenser, onClose, onSchedulesChange, onD
 
               <div style={{ display: "grid", gridTemplateColumns: "repeat(2, minmax(0, 1fr))", gap: "var(--space-3)" }}>
                 <div>
-                  <label style={{ display: "block", marginBottom: "4px", fontSize: "var(--text-sm)", fontWeight: 600 }}>Horário</label>
+                  <label style={{ display: "block", marginBottom: "4px", fontSize: "var(--text-sm)", fontWeight: 600 }}>Novo (Nome)</label>
                   <input
-                    type="time"
-                    value={time}
-                    onChange={(event) => setTime(event.target.value)}
-                    required
+                    type="text"
+                    value={newMedicationName}
+                    onChange={(e) => {
+                      setNewMedicationName(e.target.value);
+                      if (selectedMedicationId) setSelectedMedicationId("");
+                    }}
+                    placeholder="Ex.: Ritalina"
                     style={inputStyle}
                   />
                 </div>
@@ -715,8 +613,8 @@ function SlotMedicationsModal({ slot, dispenser, onClose, onSchedulesChange, onD
                   <label style={{ display: "block", marginBottom: "4px", fontSize: "var(--text-sm)", fontWeight: 600 }}>Quantidade</label>
                   <input
                     type="number"
-                    value={quantity}
-                    onChange={(event) => setQuantity(event.target.value)}
+                    value={newQuantity}
+                    onChange={(e) => setNewQuantity(e.target.value)}
                     min="1"
                     required
                     style={inputStyle}
@@ -726,7 +624,7 @@ function SlotMedicationsModal({ slot, dispenser, onClose, onSchedulesChange, onD
 
               <button
                 type="submit"
-                disabled={isSubmitting || !activeMedicationId}
+                disabled={isSubmitting || (!activeMedicationId && !newMedicationName.trim())}
                 style={{
                   padding: "10px 16px",
                   borderRadius: "var(--radius-md)",
@@ -735,13 +633,14 @@ function SlotMedicationsModal({ slot, dispenser, onClose, onSchedulesChange, onD
                   color: "var(--primary-on)",
                   fontWeight: 600,
                   cursor: "pointer",
-                  opacity: isSubmitting || !activeMedicationId ? 0.7 : 1,
+                  marginTop: "var(--space-2)",
+                  opacity: isSubmitting ? 0.7 : 1,
                 }}
               >
-                {isSubmitting ? "Salvando..." : "Adicionar agendamento"}
+                {isSubmitting ? "Adicionando..." : "Adicionar Remédio ao Slot"}
               </button>
             </form>
-          </section>
+          )}
         </div>
       </div>
     </div>

@@ -53,10 +53,8 @@ CREATE TABLE "drawers" (
 CREATE TABLE "slots" (
   "id" serial PRIMARY KEY,
   "drawer_id" integer NOT NULL REFERENCES "drawers" ("id"),
-  "medication_id" integer,
   "position_number" integer NOT NULL,
-  "max_pill_capacity" integer NOT NULL,
-  "current_pill_count" integer DEFAULT 0
+  "max_pill_capacity" integer NOT NULL
 );
 
 -- 3. Clinical Data & Rules
@@ -67,12 +65,17 @@ CREATE TABLE "medications" (
   "description" text
 );
 
+CREATE TABLE "slot_medications" (
+  "slot_id" integer REFERENCES "slots" ("id") ON DELETE CASCADE,
+  "medication_id" integer REFERENCES "medications" ("id"),
+  "quantity" integer DEFAULT 0,
+  PRIMARY KEY ("slot_id", "medication_id")
+);
+
 CREATE TABLE "schedules" (
   "id" uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   "slot_id" integer REFERENCES "slots" ("id"),
-  "medication_id" integer REFERENCES "medications" ("id"),
   "scheduled_time" time,
-  "pills_per_dose" integer DEFAULT 1,
   "is_active" boolean DEFAULT true,
   "patient_id" uuid,
   "dispenser_id" text,

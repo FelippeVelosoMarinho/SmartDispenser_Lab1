@@ -44,18 +44,18 @@ export function TelemetryGrid({ dispenser }: TelemetryGridProps) {
         </div>
       </div>
 
-      {/* Bateria */}
+      {/* IP */}
       <div style={cardStyle}>
         <div style={{ display: "flex", alignItems: "center", gap: "var(--space-2)", marginBottom: "var(--space-2)" }}>
-          <i className={`ph-duotone ${battery > 20 ? "ph-battery-full" : "ph-battery-warning"}`}
+          <i className="ph-duotone ph-plugs"
              style={{
                fontSize: "1.5rem",
-               color: battery > 50 ? "var(--success, #10b981)" : battery > 20 ? "var(--warning, #f59e0b)" : "var(--danger, #ef4444)"
+               color: "var(--primary)"
              }} />
-          <span style={titleStyle}>Bateria</span>
+          <span style={titleStyle}>Endereço IP</span>
         </div>
-        <div style={{ fontSize: "var(--text-2xl)", fontWeight: 700, color: "var(--ink)" }}>
-          {battery}%
+        <div style={{ fontSize: "var(--text-lg)", fontWeight: 700, color: "var(--ink)" }}>
+          {isOnline ? "192.168.1.142" : "Desconhecido"}
         </div>
       </div>
 

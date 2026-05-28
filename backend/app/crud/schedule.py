@@ -17,10 +17,8 @@ def create_schedule(db: Session, data: dict) -> Schedule:
     db_schedule = Schedule(
         patient_id=pid,
         dispenser_id=data["dispenser_id"],
-        medication_id=int(data["medication_id"]) if str(data["medication_id"]).isdigit() else None,
         slot_id=data["slot_id"],
         time_legacy=data["time"],
-        pills_per_dose=data["quantity"],
     )
     db.add(db_schedule)
     db.commit()

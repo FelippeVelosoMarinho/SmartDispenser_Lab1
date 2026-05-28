@@ -7,7 +7,6 @@ import {
   deleteSchedule,
   createSchedule,
   ScheduleInput,
-  getScheduleQuantity,
   getScheduleTime,
 } from "../../lib/api";
 
@@ -40,12 +39,11 @@ export function SchedulesPanel({ dispenser, refreshToken }: SchedulesPanelProps)
 
   const toggleActive = async (schedule: Schedule) => {
     try {
-      // optimistic update
       setSchedules(prev => prev.map(s => s.id === schedule.id ? { ...s, is_active: !s.is_active } : s));
       await updateSchedule(schedule.id, { is_active: !schedule.is_active });
     } catch (err) {
       console.error(err);
-      fetchSchedules(); // revert on error
+      fetchSchedules(); 
     }
   };
 
@@ -107,88 +105,103 @@ export function SchedulesPanel({ dispenser, refreshToken }: SchedulesPanelProps)
         </div>
       ) : (
         <div style={{ display: "flex", flexDirection: "column", gap: "var(--space-3)" }}>
-          {schedules.map(schedule => (
-            <div key={schedule.id} style={{
-              background: "var(--surface)",
-              border: "1px solid var(--border)",
-              borderRadius: "var(--radius-lg)",
-              padding: "var(--space-4)",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "space-between",
-              opacity: schedule.is_active ? 1 : 0.6,
-              transition: "opacity 0.2s",
-            }}>
-              <div style={{ display: "flex", alignItems: "center", gap: "var(--space-4)" }}>
-                <div style={{
-                  fontSize: "var(--text-2xl)",
-                  fontWeight: 700,
-                  color: schedule.is_active ? "var(--primary)" : "var(--ink-3)",
-                  fontVariantNumeric: "tabular-nums",
-                }}>
-                  {getScheduleTime(schedule).substring(0, 5)}
-                </div>
-                <div>
-                  <div style={{ fontWeight: 600, color: "var(--ink)", fontSize: "var(--text-base)" }}>
-                    {schedule.medication ? schedule.medication.name : "Medicamento"}
-                  </div>
-                  <div style={{ fontSize: "var(--text-sm)", color: "var(--ink-2)" }}>
-                    {getScheduleQuantity(schedule)} pílula(s)
-                  </div>
-                </div>
-              </div>
+          {schedules.map(schedule => {
+            // Find slot number for display
+            let displaySlotNum = "?";
+            for (const d of dispenser.drawers) {
+              const f = d.slots.find(sl => String(sl.id) === String(schedule.slot_id));
+              if (f) displaySlotNum = String(f.slot_number);
+            }
 
-              <div style={{ display: "flex", alignItems: "center", gap: "var(--space-3)" }}>
-                {/* Toggle switch */}
-                <label style={{ display: "flex", alignItems: "center", cursor: "pointer" }}>
-                  <input
-                    type="checkbox"
-                    checked={schedule.is_active}
-                    onChange={() => toggleActive(schedule)}
-                    style={{ display: "none" }}
-                  />
+            return (
+              <div key={schedule.id} style={{
+                background: "var(--surface)",
+                border: "1px solid var(--border)",
+                borderRadius: "var(--radius-lg)",
+                padding: "var(--space-4)",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "space-between",
+                opacity: schedule.is_active ? 1 : 0.6,
+                transition: "opacity 0.2s",
+              }}>
+                <div style={{ display: "flex", alignItems: "center", gap: "var(--space-4)" }}>
                   <div style={{
-                    width: "40px",
-                    height: "24px",
-                    background: schedule.is_active ? "var(--primary)" : "var(--border)",
-                    borderRadius: "12px",
-                    position: "relative",
-                    transition: "background 0.2s",
+                    fontSize: "var(--text-lg)",
+                    fontWeight: 700,
+                    color: schedule.is_active ? "var(--primary)" : "var(--ink-3)",
+                    fontVariantNumeric: "tabular-nums",
                   }}>
-                    <div style={{
-                      width: "18px",
-                      height: "18px",
-                      background: "white",
-                      borderRadius: "50%",
-                      position: "absolute",
-                      top: "3px",
-                      left: schedule.is_active ? "19px" : "3px",
-                      transition: "left 0.2s",
-                      boxShadow: "0 1px 3px rgba(0,0,0,0.2)",
-                    }} />
+                    {(() => {
+                      const t = getScheduleTime(schedule);
+                      if (t.includes('T')) {
+                        const d = new Date(t);
+                        if (!isNaN(d.getTime())) {
+                          return d.toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+                        }
+                      }
+                      return t.substring(0, 5);
+                    })()}
                   </div>
-                </label>
+                  <div>
+                    <div style={{ fontWeight: 600, color: "var(--ink)", fontSize: "var(--text-base)" }}>
+                      Dispensar Posição {displaySlotNum}
+                    </div>
+                    <div style={{ fontSize: "var(--text-sm)", color: "var(--ink-2)" }}>
+                      Todo o conteúdo do slot será dispensado
+                    </div>
+                  </div>
+                </div>
 
-                {/* Edit Button */}
-                <button
-                  onClick={() => setEditingSchedule(schedule)}
-                  style={iconButtonStyle}
-                  title="Editar"
-                >
-                  <i className="ph-duotone ph-pencil-simple" />
-                </button>
+                <div style={{ display: "flex", alignItems: "center", gap: "var(--space-3)" }}>
+                  <label style={{ display: "flex", alignItems: "center", cursor: "pointer" }}>
+                    <input
+                      type="checkbox"
+                      checked={schedule.is_active}
+                      onChange={() => toggleActive(schedule)}
+                      style={{ display: "none" }}
+                    />
+                    <div style={{
+                      width: "40px",
+                      height: "24px",
+                      background: schedule.is_active ? "var(--primary)" : "var(--border)",
+                      borderRadius: "12px",
+                      position: "relative",
+                      transition: "background 0.2s",
+                    }}>
+                      <div style={{
+                        width: "18px",
+                        height: "18px",
+                        background: "white",
+                        borderRadius: "50%",
+                        position: "absolute",
+                        top: "3px",
+                        left: schedule.is_active ? "19px" : "3px",
+                        transition: "left 0.2s",
+                        boxShadow: "0 1px 3px rgba(0,0,0,0.2)",
+                      }} />
+                    </div>
+                  </label>
 
-                {/* Delete Button */}
-                <button
-                  onClick={() => handleRemove(schedule.id)}
-                  style={{ ...iconButtonStyle, color: "var(--danger, #ef4444)" }}
-                  title="Remover"
-                >
-                  <i className="ph-duotone ph-trash" />
-                </button>
+                  <button
+                    onClick={() => setEditingSchedule(schedule)}
+                    style={iconButtonStyle}
+                    title="Editar"
+                  >
+                    <i className="ph-duotone ph-pencil-simple" />
+                  </button>
+
+                  <button
+                    onClick={() => handleRemove(schedule.id)}
+                    style={{ ...iconButtonStyle, color: "var(--danger, #ef4444)" }}
+                    title="Remover"
+                  >
+                    <i className="ph-duotone ph-trash" />
+                  </button>
+                </div>
               </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
       )}
 
@@ -196,6 +209,7 @@ export function SchedulesPanel({ dispenser, refreshToken }: SchedulesPanelProps)
         <ScheduleModal
           dispenser={dispenser}
           schedule={editingSchedule}
+          allSchedules={schedules}
           onClose={() => { setIsAdding(false); setEditingSchedule(null); }}
           onSuccess={() => { setIsAdding(false); setEditingSchedule(null); fetchSchedules(); }}
         />
@@ -217,24 +231,80 @@ const iconButtonStyle: React.CSSProperties = {
   borderRadius: "4px",
 };
 
-function ScheduleModal({ dispenser, schedule, onClose, onSuccess }: any) {
+function ScheduleModal({ dispenser, schedule, onClose, onSuccess, allSchedules }: any) {
   const isEditing = !!schedule;
-  const [time, setTime] = useState(schedule ? getScheduleTime(schedule).substring(0, 5) : "08:00");
-  const [slotId, setSlotId] = useState(schedule ? schedule.slot_id : (dispenser.drawers[0]?.slots[0]?.id || ""));
-  const [pills, setPills] = useState(schedule ? String(getScheduleQuantity(schedule)) : "1");
+  
+  const getInitialTime = () => {
+    const now = new Date();
+    now.setMinutes(now.getMinutes() - now.getTimezoneOffset());
+    const defaultTime = now.toISOString().slice(0, 16);
+    
+    if (!schedule) return defaultTime;
+    const t = getScheduleTime(schedule);
+    if (t.includes('T')) return t.slice(0, 16);
+    return now.toISOString().slice(0, 11) + t.slice(0, 5);
+  };
+
+  const [time, setTime] = useState(getInitialTime());
+  const defaultSlotId = dispenser.drawers[0]?.slots.find((s: any) => s.slot_number !== 31)?.id || "";
+  const [slotId, setSlotId] = useState(schedule ? schedule.slot_id : defaultSlotId);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    // Validação cronológica dos slots
+    let selectedSlotNum = 0;
+    for (const d of dispenser.drawers) {
+      const f = d.slots.find((sl: any) => String(sl.id) === String(slotId));
+      if (f) selectedSlotNum = f.slot_number;
+    }
+
+    if (allSchedules) {
+      for (const otherSchedule of allSchedules) {
+        if (schedule && String(otherSchedule.id) === String(schedule.id)) continue;
+        
+        let otherSlotNum = 0;
+        for (const d of dispenser.drawers) {
+          const f = d.slots.find((sl: any) => String(sl.id) === String(otherSchedule.slot_id));
+          if (f) otherSlotNum = f.slot_number;
+        }
+        
+        if (otherSlotNum === 0 || selectedSlotNum === 0) continue;
+        
+        let otherTime = getScheduleTime(otherSchedule);
+        if (!otherTime.includes('T')) {
+          const now = new Date();
+          now.setMinutes(now.getMinutes() - now.getTimezoneOffset());
+          otherTime = now.toISOString().slice(0, 11) + otherTime.slice(0, 5);
+        } else {
+          otherTime = otherTime.slice(0, 16);
+        }
+        
+        const selectedDate = new Date(time);
+        const otherDate = new Date(otherTime);
+        const diffMinutes = (selectedDate.getTime() - otherDate.getTime()) / 60000;
+        
+        if (selectedSlotNum > otherSlotNum && diffMinutes < 5) {
+          alert(`Erro cronológico: O Slot ${selectedSlotNum} deve ter pelo menos 5 minutos de diferença após o Slot ${otherSlotNum} (agendado para ${otherTime.replace('T', ' ')}).`);
+          return;
+        }
+        
+        if (selectedSlotNum < otherSlotNum && diffMinutes > -5) {
+          alert(`Erro cronológico: O Slot ${selectedSlotNum} deve ter pelo menos 5 minutos de diferença antes do Slot ${otherSlotNum} (agendado para ${otherTime.replace('T', ' ')}).`);
+          return;
+        }
+      }
+    }
+
     setIsSubmitting(true);
     try {
       const payload: ScheduleInput = {
         slot_id: slotId,
-        medication_id: "med-id-placeholder", // in real app, find by slot
-        time: `${time}:00`,
-        quantity: parseInt(pills) || 1,
+        time: time, // Now saving full datetime string: YYYY-MM-DDTHH:MM
         is_active: schedule ? schedule.is_active : true,
         dispenser_id: dispenser.id,
+        patient_id: dispenser.patient_id,
       };
 
       if (isEditing) {
@@ -272,9 +342,9 @@ function ScheduleModal({ dispenser, schedule, onClose, onSuccess }: any) {
         </h3>
         <form onSubmit={handleSubmit} style={{ display: "flex", flexDirection: "column", gap: "var(--space-4)" }}>
           <div>
-            <label style={{ display: "block", marginBottom: "4px", fontSize: "var(--text-sm)", fontWeight: 600 }}>Hora</label>
+            <label style={{ display: "block", marginBottom: "4px", fontSize: "var(--text-sm)", fontWeight: 600 }}>Data e Hora</label>
             <input
-              type="time"
+              type="datetime-local"
               value={time}
               onChange={e => setTime(e.target.value)}
               required
@@ -290,24 +360,15 @@ function ScheduleModal({ dispenser, schedule, onClose, onSuccess }: any) {
               style={inputStyle}
             >
               {dispenser.drawers.map((drawer: any) =>
-                drawer.slots.map((slot: any) => (
-                  <option key={slot.id} value={slot.id}>
-                    Posição {slot.slot_number} - {slot.medication ? slot.medication.name : "Vazio"}
-                  </option>
-                ))
+                drawer.slots
+                  .filter((slot: any) => slot.slot_number !== 31)
+                  .map((slot: any) => (
+                    <option key={slot.id} value={slot.id}>
+                      Posição {slot.slot_number} - {slot.medications && slot.medications.length > 0 ? `${slot.medications.length} med(s)` : "Vazio"}
+                    </option>
+                  ))
               )}
             </select>
-          </div>
-          <div>
-            <label style={{ display: "block", marginBottom: "4px", fontSize: "var(--text-sm)", fontWeight: 600 }}>Quantidade de Pílulas</label>
-            <input
-              type="number"
-              value={pills}
-              onChange={e => setPills(e.target.value)}
-              min="1"
-              required
-              style={inputStyle}
-            />
           </div>
           <div style={{ display: "flex", justifyContent: "flex-end", gap: "var(--space-3)", marginTop: "var(--space-4)" }}>
             <button

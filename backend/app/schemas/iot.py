@@ -7,8 +7,6 @@ from pydantic import BaseModel
 class SlotConfig(BaseModel):
     """Schema for individual slot schedule configuration during sync."""
     slot_id: int
-    medication_id: str
-    quantity: int
     time: str
 
 
@@ -23,7 +21,6 @@ class IotEventCreate(BaseModel):
     dispenser_id: str
     schedule_id: Optional[str] = None
     patient_id: Optional[str] = None
-    medication_id: Optional[str] = None
     event_type: str  # e.g., "dispensed", "missed"
     success: bool
     error_message: Optional[str] = None

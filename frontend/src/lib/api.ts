@@ -219,13 +219,16 @@ export interface Medication {
   patient_id?: string;
 }
 
+export interface SlotMedicationItem {
+  medication: Medication;
+  quantity: number;
+}
+
 export interface Slot {
   id: string;
   drawer_id: string;
   slot_number: number;
-  medication_id: string | null;
-  medication: Medication | null;
-  current_pill_count: number;
+  medications: SlotMedicationItem[];
   max_pill_capacity: number;
 }
 
@@ -243,20 +246,14 @@ export interface DispenserDetails extends Dispenser {
 export interface Schedule {
   id: string;
   slot_id: string;
-  medication_id: string;
   scheduled_time?: string; // Legacy alias
   time?: string;
-  pills_per_dose?: number; // Legacy alias
-  quantity?: number;
   is_active: boolean;
-  medication?: Medication;
 }
 
 export interface ScheduleInput {
   slot_id: string;
-  medication_id: string;
   time: string;
-  quantity: number;
   is_active: boolean;
   patient_id?: string;
   dispenser_id?: string;
@@ -264,10 +261,6 @@ export interface ScheduleInput {
 
 export function getScheduleTime(schedule: Schedule) {
   return schedule.time ?? schedule.scheduled_time ?? "";
-}
-
-export function getScheduleQuantity(schedule: Schedule) {
-  return schedule.quantity ?? schedule.pills_per_dose ?? 1;
 }
 
 // Medications
@@ -348,6 +341,26 @@ export async function updateSlot(slotId: string, input: Partial<Slot>) {
   return requestJson<Slot>(`/slots/${slotId}`, {
     method: "PATCH",
     body: JSON.stringify(input),
+  });
+}
+
+export async function addSlotMedication(slotId: string, medicationId: string, quantity: number) {
+  return requestJson<Slot>(`/slots/${slotId}/medications`, {
+    method: "POST",
+    body: JSON.stringify({ medication_id: medicationId, quantity }),
+  });
+}
+
+export async function updateSlotMedicationQuantity(slotId: string, medicationId: string, quantity: number) {
+  return requestJson<Slot>(`/slots/${slotId}/medications/${medicationId}`, {
+    method: "PATCH",
+    body: JSON.stringify({ quantity }),
+  });
+}
+
+export async function removeSlotMedication(slotId: string, medicationId: string) {
+  return requestJson<Slot>(`/slots/${slotId}/medications/${medicationId}`, {
+    method: "DELETE",
   });
 }
 
