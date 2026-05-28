@@ -5,9 +5,6 @@ import { Button } from "../components/ui/Button";
 import { Input } from "../components/ui/Input";
 import { Card, CardContent } from "../components/ui/Card";
 import "../components/ui/ConfirmModal.css";
-<<<<<<< HEAD
-import { listPatients, pairDispenser, discoverDispensers, type Patient as ApiPatient, type DiscoveredDispenser } from "../lib/api";
-=======
 
 interface DiscoveredDispenser {
   id: string;
@@ -17,7 +14,6 @@ interface DiscoveredDispenser {
   rssi: number;
   firmware: string;
 }
->>>>>>> origin/main
 
 interface Patient {
   id: string;
@@ -26,16 +22,6 @@ interface Patient {
   medicacao: string;
 }
 
-<<<<<<< HEAD
-function toPatientRow(patient: ApiPatient): Patient {
-  return {
-    id: patient.id,
-    nome: patient.name,
-    idade: patient.age ?? 0,
-    medicacao: patient.condition ?? "Sem condição informada",
-  };
-}
-=======
 // Shape of GET /status on the ESP32
 interface EspStatus {
   current_slot: number;
@@ -129,7 +115,6 @@ const MOCK_PATIENTS: Patient[] = [
   { id: "10", nome: "João Alves", idade: 22, medicacao: "Guanfacina 1 mg" },
   { id: "11", nome: "Karina Tavares", idade: 38, medicacao: "Bupropiona 150 mg" },
 ];
->>>>>>> origin/main
 
 type SignalLevel = "excelente" | "bom" | "fraco";
 
@@ -291,45 +276,6 @@ function LocalPairingView() {
   const [search, setSearch] = useState("");
   const [selected, setSelected] = useState<DiscoveredDispenser | null>(null);
   const [pairing, setPairing] = useState(false);
-<<<<<<< HEAD
-  const [patients, setPatients] = useState<Patient[]>([]);
-  const [patientsLoading, setPatientsLoading] = useState(true);
-  const [patientsError, setPatientsError] = useState<string | null>(null);
-  const [scanError, setScanError] = useState<string | null>(null);
-  const scanIntervalRef = useRef<number | null>(null);
-
-  useEffect(() => {
-    let mounted = true;
-
-    async function loadPatients() {
-      setPatientsLoading(true);
-      setPatientsError(null);
-      try {
-        const data = await listPatients();
-        if (!mounted) return;
-        setPatients(data.map(toPatientRow));
-      } catch (err) {
-        if (!mounted) return;
-        setPatientsError(err instanceof Error ? err.message : "Falha ao carregar pacientes");
-      } finally {
-        if (mounted) {
-          setPatientsLoading(false);
-        }
-      }
-    }
-
-    void loadPatients();
-
-    return () => {
-      mounted = false;
-    };
-  }, []);
-
-  const startScan = useCallback(async () => {
-    if (scanIntervalRef.current !== null) {
-      window.clearInterval(scanIntervalRef.current);
-      scanIntervalRef.current = null;
-=======
   const [manualIp, setManualIp] = useState("");
   const [manualError, setManualError] = useState<string | null>(null);
   const [manualChecking, setManualChecking] = useState(false);
@@ -338,41 +284,12 @@ function LocalPairingView() {
   const startScan = useCallback(async () => {
     if (scanAbortRef.current) {
       scanAbortRef.current.abort();
->>>>>>> origin/main
     }
     const controller = new AbortController();
     scanAbortRef.current = controller;
 
     setScanning(true);
     setDevices([]);
-<<<<<<< HEAD
-    setScanError(null);
-
-    try {
-      // Fetch discovered dispensers from API
-      const discovered = await discoverDispensers();
-      
-      // Simulate gradual device discovery (UX improvement)
-      let i = 0;
-      scanIntervalRef.current = window.setInterval(() => {
-        if (i >= discovered.length) {
-          if (scanIntervalRef.current !== null) {
-            window.clearInterval(scanIntervalRef.current);
-            scanIntervalRef.current = null;
-          }
-          setScanning(false);
-          return;
-        }
-        
-        const next = discovered[i];
-        setDevices((prev) =>
-          prev.some((d) => d.id === next.id) ? prev : [...prev, next],
-        );
-        i += 1;
-      }, 600);
-    } catch (err) {
-      setScanError(err instanceof Error ? err.message : "Falha ao descobrir dispositivos");
-=======
 
     const detectedSubnet = await detectSubnet();
     setSubnet(detectedSubnet);
@@ -386,7 +303,6 @@ function LocalPairingView() {
     );
 
     if (!controller.signal.aborted) {
->>>>>>> origin/main
       setScanning(false);
     }
   }, []);
@@ -407,13 +323,6 @@ function LocalPairingView() {
     );
   }, [devices, search]);
 
-<<<<<<< HEAD
-  async function handleConfirmPair(patient: Patient) {
-    if (!selected) return;
-    setPairing(true);
-    try {
-      await pairDispenser(selected.serial, patient.id);
-=======
   async function handleManualProbe() {
     const ip = manualIp.trim();
     if (!ip) return;
@@ -438,7 +347,6 @@ function LocalPairingView() {
     try {
       // TODO: registrar pareamento no backend com selected.ip e _patient.id
       await new Promise((r) => setTimeout(r, 600));
->>>>>>> origin/main
       navigate({ to: "/dispensers" });
     } finally {
       setPairing(false);
@@ -544,37 +452,6 @@ function LocalPairingView() {
         </div>
       </div>
 
-<<<<<<< HEAD
-      {/* Scan error */}
-      {scanError && (
-        <Card style={{ marginBottom: "var(--space-5)", borderColor: "var(--danger)" }}>
-          <CardContent>
-            <div
-              style={{
-                display: "flex",
-                alignItems: "flex-start",
-                gap: "var(--space-3)",
-                color: "var(--danger)",
-              }}
-            >
-              <i
-                className="ph-duotone ph-warning-octagon"
-                aria-hidden="true"
-                style={{ fontSize: "1.25rem", marginTop: "2px" }}
-              />
-              <div>
-                <p style={{ margin: 0, fontWeight: 600 }}>
-                  Erro ao descobrir dispositivos
-                </p>
-                <p style={{ margin: "var(--space-1) 0 0", fontSize: "var(--text-sm)" }}>
-                  {scanError}
-                </p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-      )}
-=======
       {/* Manual IP entry */}
       <Card style={{ marginBottom: "var(--space-5)" }}>
         <CardContent>
@@ -603,7 +480,6 @@ function LocalPairingView() {
           </div>
         </CardContent>
       </Card>
->>>>>>> origin/main
 
       {/* Device list */}
       {filtered.length === 0 && !scanning ? (

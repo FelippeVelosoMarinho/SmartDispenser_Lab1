@@ -24,12 +24,6 @@ class User(Base):
     full_name = Column(String, nullable=False)
     email = Column(String, unique=True)
     notifications_enabled = Column(Boolean, default=True)
-<<<<<<< HEAD
-
-    # Relationships
-    patients = relationship('Patient', secondary='patient_caregiver', back_populates='caregivers')
-=======
->>>>>>> origin/main
 
 
 class Patient(Base):

@@ -27,19 +27,10 @@ export function LoginPage() {
     setLoading(true);
     console.info("[login-page] submit", { identifier });
     try {
-<<<<<<< HEAD
-      await login(identifier, password);
-      console.info("[login-page] login success", { identifier });
-      // Navigation is now handled by the useEffect above
-    } catch (err) {
-      console.warn("[login-page] login failed", { identifier, error: err });
-      setError("Não foi possível entrar. Verifique seu nome de usuário/e-mail e senha.");
-=======
       await login(email, password);
     } catch {
       setError("Não foi possível entrar. Verifique seu e-mail e senha.");
     } finally {
->>>>>>> origin/main
       setLoading(false);
     }
   };

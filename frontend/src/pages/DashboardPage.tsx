@@ -168,18 +168,12 @@ export function DashboardPage() {
         width: "100%",
       }}
     >
-<<<<<<< HEAD
-      <div style={{ marginBottom: "var(--space-8)" }}>
-        <p className="eyebrow" style={{ marginBottom: "var(--space-1)", color: "var(--ink-3)" }}>
-          Centro de Controle IoT
-=======
       <div style={{ marginBottom: "var(--space-6)" }}>
         <p
           className="eyebrow"
           style={{ marginBottom: "var(--space-1)", color: "var(--ink-3)" }}
         >
           Smart-Dispenser
->>>>>>> origin/main
         </p>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end" }}>
           <h1

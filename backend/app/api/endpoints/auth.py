@@ -1,12 +1,7 @@
 """Authentication endpoints."""
 
 from datetime import timedelta
-<<<<<<< HEAD
-import logging
-from fastapi import APIRouter, HTTPException, Depends
-=======
 from fastapi import APIRouter, HTTPException, Depends, BackgroundTasks
->>>>>>> origin/main
 
 from app.core.security import (
     create_access_token,
@@ -16,13 +11,8 @@ from app.core.security import (
 )
 from app.core.config import ACCESS_TOKEN_EXPIRE_MINUTES
 from app.core.database import get_db
-<<<<<<< HEAD
-from app.crud.user import create_user, get_user, get_user_by_login_identifier, user_exists
-from app.schemas.user import LoginRequest, TokenResponse, UserCreate, UserPublic
-=======
 from app.crud.user import create_user, get_user, user_exists
 from app.schemas.user import LoginRequest, TokenResponse, UserCreate, UserPublic, UserUpdate
->>>>>>> origin/main
 from sqlalchemy.orm import Session
 from app.services.notifier import send_email_notification
 from app.services.templates import get_welcome_email_template

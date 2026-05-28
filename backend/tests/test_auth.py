@@ -75,15 +75,6 @@ def test_login_and_get_profile():
     )
     assert profile_response.status_code == 200
     assert profile_response.json()["username"] == "pytest_user"
-<<<<<<< HEAD
-
-
-def test_login_with_email_identifier():
-    response = client.post(
-        "/api/auth/login",
-        json={
-            "username": "pytest@example.com",
-=======
     assert profile_response.json()["notifications_enabled"] is True
 
 
@@ -93,14 +84,10 @@ def test_update_profile_notification_setting():
         "/api/auth/login",
         json={
             "username": "pytest_user",
->>>>>>> origin/main
             "password": "strongpassword123"
         }
     )
     assert response.status_code == 200
-<<<<<<< HEAD
-    assert response.json()["access_token"]
-=======
     token = response.json()["access_token"]
 
     # Toggle off notifications
@@ -128,5 +115,4 @@ def test_update_profile_notification_setting():
     )
     assert patch_response_on.status_code == 200
     assert patch_response_on.json()["notifications_enabled"] is True
->>>>>>> origin/main
 

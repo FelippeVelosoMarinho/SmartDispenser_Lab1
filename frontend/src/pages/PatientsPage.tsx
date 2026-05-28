@@ -309,19 +309,10 @@ export function PatientsPage() {
                           size="small"
                           leftIcon="ph-duotone ph-pencil-simple"
                           aria-label={`Editar ${patient.nome}`}
-<<<<<<< HEAD
-                          onClick={() =>
-                            navigate({
-                              to: "/patients/$patientId/edit",
-                              params: { patientId: patient.id },
-                            })
-                          }
-=======
                           onClick={(e) => {
                             e.stopPropagation();
                             navigate({ to: "/patients/$patientId/edit", params: { patientId: patient.id } });
                           }}
->>>>>>> origin/main
                         />
                         <Button
                           variant="ghost"
