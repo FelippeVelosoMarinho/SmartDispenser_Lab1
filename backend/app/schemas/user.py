@@ -10,7 +10,8 @@ class UserCreate(BaseModel):
 
     username: str
     password: str
-    full_name: Optional[str] = None
+    tax_id: str
+    full_name: str
     email: Optional[str] = None
 
     @field_validator('password')

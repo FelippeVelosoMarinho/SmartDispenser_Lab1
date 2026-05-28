@@ -6,7 +6,7 @@ from app.crud.schedule import create_schedule
 from app.crud.log import get_dispensation_logs
 from app.crud.dispenser import get_dispenser_status
 from app.core.database import SessionLocal
-from app.models.domain import Dispenser, Schedule, Patient, User, DispensationLog
+from app.models.domain import Dispenser, Schedule, Patient, User, DispensationLog, Drawer, Slot, Medication
 
 client = TestClient(app)
 
@@ -15,7 +15,10 @@ def clear_db():
     db = SessionLocal()
     db.query(DispensationLog).delete()
     db.query(Schedule).delete()
+    db.query(Slot).delete()
+    db.query(Drawer).delete()
     db.query(Dispenser).delete()
+    db.query(Medication).delete()
     db.query(Patient).delete()
     db.query(User).delete()
     db.commit()
@@ -26,16 +29,62 @@ def clear_db():
     db = SessionLocal()
     db.query(DispensationLog).delete()
     db.query(Schedule).delete()
+    db.query(Slot).delete()
+    db.query(Drawer).delete()
     db.query(Dispenser).delete()
+    db.query(Medication).delete()
     db.query(Patient).delete()
     db.query(User).delete()
     db.commit()
     db.close()
 
+
+def create_schedule_dependencies() -> None:
+    db = SessionLocal()
+    if not db.query(Medication).filter(Medication.id == 1).first():
+        db.add(Medication(id=1, name="Med 1"))
+    if not db.query(Dispenser).filter(Dispenser.hardware_id == "disp_iot").first():
+        dispenser = Dispenser(hardware_id="disp_iot")
+        db.add(dispenser)
+        db.flush()
+        drawer = Drawer(id=1, dispenser_id=dispenser.id, label="Drawer 1")
+        db.add(drawer)
+        db.flush()
+        db.add(
+            Slot(
+                id=1,
+                drawer_id=drawer.id,
+                medication_id=1,
+                position_number=1,
+                max_pill_capacity=10,
+                current_pill_count=0,
+            )
+        )
+    elif not db.query(Slot).filter(Slot.id == 1).first():
+        drawer = db.query(Drawer).filter(Drawer.id == 1).first()
+        if not drawer:
+            dispenser = db.query(Dispenser).filter(Dispenser.hardware_id == "disp_iot").first()
+            drawer = Drawer(id=1, dispenser_id=dispenser.id, label="Drawer 1")
+            db.add(drawer)
+            db.flush()
+        db.add(
+            Slot(
+                id=1,
+                drawer_id=drawer.id,
+                medication_id=1,
+                position_number=1,
+                max_pill_capacity=10,
+                current_pill_count=0,
+            )
+        )
+    db.commit()
+    db.close()
+
 def test_sync_dispenser():
+    create_schedule_dependencies()
     db = SessionLocal()
     # Create patient for schedule
-    user = User(username="testuser", hashed_password="pwd", full_name="User")
+    user = User(username="testuser", hashed_password="pwd", tax_id="12345678901234", full_name="User")
     db.add(user)
     db.commit()
     patient = Patient(caregiver_username="testuser", full_name="Pat", name="Pat")

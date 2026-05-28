@@ -9,7 +9,7 @@ export function LoginPage() {
   const { login, isAuthenticated } = useAuth();
   const navigate = useNavigate();
   const { redirect } = useSearch({ from: "/login" });
-  const [email, setEmail] = useState("");
+  const [identifier, setIdentifier] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -25,8 +25,9 @@ export function LoginPage() {
     e.preventDefault();
     setError(null);
     setLoading(true);
+    console.info("[login-page] submit", { identifier });
     try {
-      await login(email, password);
+      await login(identifier, password);
     } catch {
       setError("Não foi possível entrar. Verifique seu e-mail e senha.");
     } finally {
@@ -60,14 +61,14 @@ export function LoginPage() {
 
           <form className="login-form" onSubmit={handleSubmit} noValidate>
             <Input
-              label="E-mail"
-              type="email"
-              name="email"
-              autoComplete="email"
-              placeholder="voce@exemplo.com"
+              label="Nome de usuário ou e-mail"
+              type="text"
+              name="username"
+              autoComplete="username"
+              placeholder="seu_usuario ou voce@exemplo.com"
               icon="ph-duotone ph-envelope"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
+              value={identifier}
+              onChange={(e) => setIdentifier(e.target.value)}
               required
             />
 
@@ -126,9 +127,16 @@ export function LoginPage() {
 
           <p className="login-signup">
             Não tem uma conta?{" "}
-            <a href="#signup" className="login-signup__link">
-              Solicitar acesso
-            </a>
+              <a
+                role="button"
+                onClick={(e) => {
+                  e.preventDefault();
+                  navigate({ to: "/register" });
+                }}
+                className="login-signup__link"
+              >
+                Solicitar acesso
+              </a>
           </p>
         </div>
 

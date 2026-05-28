@@ -7,10 +7,8 @@ class ScheduleCreate(BaseModel):
     """Schema for creating a schedule."""
     patient_id: str
     dispenser_id: str
-    medication_id: str
     slot_id: int
     time: str  # Format: "HH:MM"
-    quantity: int
 
 
 class SchedulePublic(BaseModel):
@@ -18,7 +16,5 @@ class SchedulePublic(BaseModel):
     id: str
     patient_id: str
     dispenser_id: str
-    medication_id: str
     slot_id: int
     time: str
-    quantity: int

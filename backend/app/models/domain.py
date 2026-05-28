@@ -14,14 +14,18 @@ patient_caregiver = Table(
 )
 
 class User(Base):
-    __tablename__ = 'users'
+    """User model - authenticates as a caregiver."""
+    __tablename__ = 'caregivers'
 
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     username = Column(String, unique=True, nullable=False)
     hashed_password = Column(String, nullable=False)
-    full_name = Column(String)
+    tax_id = Column(String, unique=True, nullable=False)
+    full_name = Column(String, nullable=False)
     email = Column(String, unique=True)
     notifications_enabled = Column(Boolean, default=True)
+
+    patients = relationship('Patient', secondary=patient_caregiver, back_populates='caregivers')
 
 
 class Patient(Base):
@@ -40,18 +44,8 @@ class Patient(Base):
     condition = Column(String)
     caregiver_username = Column(String) # Simple link to User.username for now
 
-    caregivers = relationship('Caregiver', secondary=patient_caregiver, back_populates='patients')
+    caregivers = relationship('User', secondary=patient_caregiver, back_populates='patients')
     dispensers = relationship('Dispenser', back_populates='patient')
-
-class Caregiver(Base):
-    __tablename__ = 'caregivers'
-
-    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    tax_id = Column(String, unique=True, nullable=False)
-    full_name = Column(String, nullable=False)
-    notifications_enabled = Column(Boolean, default=True)
-
-    patients = relationship('Patient', secondary=patient_caregiver, back_populates='caregivers')
 
 class Dispenser(Base):
     __tablename__ = 'dispensers'
@@ -84,14 +78,22 @@ class Slot(Base):
 
     id = Column(Integer, primary_key=True, autoincrement=True)
     drawer_id = Column(Integer, ForeignKey('drawers.id'), nullable=False)
-    medication_id = Column(Integer, ForeignKey('medications.id'))
     position_number = Column(Integer, nullable=False)
     max_pill_capacity = Column(Integer, nullable=False)
-    current_pill_count = Column(Integer, default=0)
 
     drawer = relationship('Drawer', back_populates='slots')
-    medication = relationship('Medication')
+    slot_medications = relationship('SlotMedication', cascade="all, delete-orphan", back_populates='slot')
     schedules = relationship('Schedule', back_populates='slot')
+
+class SlotMedication(Base):
+    __tablename__ = 'slot_medications'
+
+    slot_id = Column(Integer, ForeignKey('slots.id', ondelete='CASCADE'), primary_key=True)
+    medication_id = Column(Integer, ForeignKey('medications.id'), primary_key=True)
+    quantity = Column(Integer, default=0)
+
+    slot = relationship('Slot', back_populates='slot_medications')
+    medication = relationship('Medication')
 
 class Medication(Base):
     __tablename__ = 'medications'
@@ -106,9 +108,7 @@ class Schedule(Base):
 
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     slot_id = Column(Integer, ForeignKey('slots.id'), nullable=True) 
-    medication_id = Column(Integer, ForeignKey('medications.id'), nullable=True) 
     scheduled_time = Column(Time, nullable=True)
-    pills_per_dose = Column(Integer, default=1)
     is_active = Column(Boolean, default=True)
 
     # Legacy fields
@@ -117,7 +117,6 @@ class Schedule(Base):
     time_legacy = Column(String, nullable=True)
 
     slot = relationship('Slot', back_populates='schedules', foreign_keys=[slot_id])
-    medication = relationship('Medication', foreign_keys=[medication_id])
 
 class PatientMedication(Base):
     __tablename__ = 'patient_medications'
@@ -171,4 +170,8 @@ class RefillHistory(Base):
     performed_by_legacy = Column(String, nullable=True)
 
     slot = relationship('Slot')
-    caregiver = relationship('Caregiver')
+    caregiver = relationship('User')
+
+
+# Backwards compatibility alias
+Caregiver = User

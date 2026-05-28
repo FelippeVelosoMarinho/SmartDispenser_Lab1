@@ -52,7 +52,7 @@ Exibição de métricas físicas em formato de grade responsiva (Bento Grid):
 
 #### Seção 2: Gavetas e Posições (`Drawers` / `Slots`)
 Interface tátil ilustrando os compartimentos internos do Smart Dispenser:
-* **Representação Visual das Gavetas:** Cartões que simulam a estrutura física do dispenser (ex: Gaveta 1, Gaveta 2, Gaveta 3).
+* **Representação Visual das Gavetas:** seçoes da coroa circular que simulam a estrutura física do dispenser (ex: Slot 1, Slot 2, ..  .).
 * **Campos em Cada Gaveta:**
   * **Medicamento associado:** Nome e dosagem (ex: *Aspirina 100mg*). Se vazio, exibe *[Compartimento Vazio]*.
   * **Contagem de Estoque:** Barra de progresso visual mostrando a quantidade atual versus a capacidade máxima (ex: `15 / 30 pílulas`).

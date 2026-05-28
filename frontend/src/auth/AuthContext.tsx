@@ -1,92 +1,66 @@
 import { createContext, useContext, useState, useCallback } from "react";
 import type { ReactNode } from "react";
+import {
+  getProfile,
+  getStoredAuthSession,
+  loginWithPassword,
+  setAuthSession,
+} from "../lib/api";
 
 interface AuthState {
   isAuthenticated: boolean;
-  user: { username: string; email?: string; full_name?: string } | null;
-  token: string | null;
+  user: { username: string; full_name: string | null; email: string | null } | null;
+  accessToken: string | null;
 }
 
 export interface AuthContextValue extends AuthState {
-  login: (email: string, password: string) => Promise<void>;
+  login: (username: string, password: string) => Promise<void>;
   logout: () => void;
 }
 
 const AuthContext = createContext<AuthContextValue | null>(null);
 
-const SESSION_KEY = "pillar_auth";
-
 function loadSession(): AuthState {
   try {
-    const raw = sessionStorage.getItem(SESSION_KEY);
-    if (raw) return JSON.parse(raw) as AuthState;
+    const stored = getStoredAuthSession();
+    if (stored) {
+      return {
+        isAuthenticated: true,
+        user: stored.user,
+        accessToken: stored.accessToken,
+      };
+    }
   } catch {
     // ignore parse errors
   }
-  return { isAuthenticated: false, user: null, token: null };
+  return { isAuthenticated: false, user: null, accessToken: null };
 }
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [auth, setAuth] = useState<AuthState>(loadSession);
 
-  const login = useCallback(async (emailOrUsername: string, password: string) => {
-    // Make real backend API call
-    const res = await fetch("/api/auth/login", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        username: emailOrUsername,
-        password: password,
-      }),
-    });
+  const login = useCallback(async (username: string, password: string) => {
+    console.info("[auth] login started", { username });
+    const accessToken = await loginWithPassword(username, password);
+    console.info("[auth] token received", { username });
+    setAuthSession({ accessToken, user: null });
 
-    if (!res.ok) {
-      const errData = await res.json().catch(() => ({}));
-      throw new Error(errData.detail ?? "Incorrect username or password");
-    }
-
-    const tokenData = await res.json();
-    const token = tokenData.access_token;
-
-    // Fetch user profile info
-    const profileRes = await fetch("/api/auth/profile", {
-      headers: {
-        Authorization: `Bearer ${token}`,
-      },
-    });
-
-    let userDetails = {
-      username: emailOrUsername,
-      full_name: emailOrUsername,
-      email: emailOrUsername.includes("@") ? emailOrUsername : "",
-    };
-
-    if (profileRes.ok) {
-      const profileData = await profileRes.ok ? await profileRes.json() : null;
-      if (profileData) {
-        userDetails = {
-          username: profileData.username,
-          full_name: profileData.full_name || profileData.username,
-          email: profileData.email || "",
-        };
-      }
-    }
-
+    const user = await getProfile();
+    console.info("[auth] profile loaded", { username: user.username });
     const state: AuthState = {
       isAuthenticated: true,
-      user: userDetails,
-      token: token,
+      user,
+      accessToken,
     };
-
-    sessionStorage.setItem(SESSION_KEY, JSON.stringify(state));
+    setAuthSession({ accessToken, user });
     setAuth(state);
+    console.info("[auth] login completed", { username: user.username });
   }, []);
 
   const logout = useCallback(() => {
-    sessionStorage.removeItem(SESSION_KEY);
-    setAuth({ isAuthenticated: false, user: null, token: null });
+    console.info("[auth] logout");
+    setAuthSession(null);
+    setAuth({ isAuthenticated: false, user: null, accessToken: null });
   }, []);
 
   return (

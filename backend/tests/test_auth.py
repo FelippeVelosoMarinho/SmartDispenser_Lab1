@@ -11,6 +11,7 @@ def test_register_user_success():
         json={
             "username": "pytest_user",
             "password": "strongpassword123",
+            "tax_id": "12345678901234",
             "full_name": "Pytest User",
             "email": "pytest@example.com"
         }
@@ -28,6 +29,7 @@ def test_register_user_weak_password():
         json={
             "username": "pytest_weak",
             "password": "123", # Less than 8 characters
+            "tax_id": "12345678901234",
             "full_name": "Weak Pass User",
             "email": "weak@example.com"
         }
@@ -43,6 +45,7 @@ def test_register_user_invalid_email():
         json={
             "username": "pytest_email",
             "password": "strongpassword123",
+            "tax_id": "12345678901234",
             "full_name": "Invalid Email User",
             "email": "not-an-email" # Invalid email
         }

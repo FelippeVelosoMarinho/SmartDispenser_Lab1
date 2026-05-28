@@ -6,15 +6,27 @@ from sqlalchemy.engine import Engine
 # Each entry is (description, SQL). Executed in order every startup; all
 # use IF NOT EXISTS / DO NOTHING so re-running is safe.
 _MIGRATIONS: list[tuple[str, str]] = [
-    # --- users ---
+    # --- caregivers ---
     (
-        "users: add notifications_enabled",
-        "ALTER TABLE users ADD COLUMN IF NOT EXISTS notifications_enabled BOOLEAN DEFAULT true;",
+        "caregivers: add notifications_enabled",
+        "ALTER TABLE caregivers ADD COLUMN IF NOT EXISTS notifications_enabled BOOLEAN DEFAULT true;",
+    ),
+    (
+        "caregivers: add tax_id",
+        "ALTER TABLE caregivers ADD COLUMN IF NOT EXISTS tax_id TEXT;",
     ),
     # --- dispensers ---
     (
         "dispensers: patient_id nullable",
-        "ALTER TABLE dispensers ALTER COLUMN patient_id DROP NOT NULL;",
+        """DO $$
+        BEGIN
+            IF EXISTS (
+                SELECT 1 FROM information_schema.columns
+                WHERE table_name='dispensers' AND column_name='patient_id'
+            ) THEN
+                ALTER TABLE dispensers ALTER COLUMN patient_id DROP NOT NULL;
+            END IF;
+        END $$;""",
     ),
     (
         "dispensers: add battery_level",
@@ -27,7 +39,15 @@ _MIGRATIONS: list[tuple[str, str]] = [
     # --- patients ---
     (
         "patients: tax_id nullable",
-        "ALTER TABLE patients ALTER COLUMN tax_id DROP NOT NULL;",
+        """DO $$
+        BEGIN
+            IF EXISTS (
+                SELECT 1 FROM information_schema.columns
+                WHERE table_name='patients' AND column_name='tax_id'
+            ) THEN
+                ALTER TABLE patients ALTER COLUMN tax_id DROP NOT NULL;
+            END IF;
+        END $$;""",
     ),
     (
         "patients: add name",
@@ -82,15 +102,39 @@ _MIGRATIONS: list[tuple[str, str]] = [
     # --- schedules ---
     (
         "schedules: slot_id nullable",
-        "ALTER TABLE schedules ALTER COLUMN slot_id DROP NOT NULL;",
+        """DO $$
+        BEGIN
+            IF EXISTS (
+                SELECT 1 FROM information_schema.columns
+                WHERE table_name='schedules' AND column_name='slot_id'
+            ) THEN
+                ALTER TABLE schedules ALTER COLUMN slot_id DROP NOT NULL;
+            END IF;
+        END $$;""",
     ),
     (
         "schedules: medication_id nullable",
-        "ALTER TABLE schedules ALTER COLUMN medication_id DROP NOT NULL;",
+        """DO $$
+        BEGIN
+            IF EXISTS (
+                SELECT 1 FROM information_schema.columns
+                WHERE table_name='schedules' AND column_name='medication_id'
+            ) THEN
+                ALTER TABLE schedules ALTER COLUMN medication_id DROP NOT NULL;
+            END IF;
+        END $$;""",
     ),
     (
         "schedules: scheduled_time nullable",
-        "ALTER TABLE schedules ALTER COLUMN scheduled_time DROP NOT NULL;",
+        """DO $$
+        BEGIN
+            IF EXISTS (
+                SELECT 1 FROM information_schema.columns
+                WHERE table_name='schedules' AND column_name='scheduled_time'
+            ) THEN
+                ALTER TABLE schedules ALTER COLUMN scheduled_time DROP NOT NULL;
+            END IF;
+        END $$;""",
     ),
     (
         "schedules: add patient_id",
@@ -107,11 +151,27 @@ _MIGRATIONS: list[tuple[str, str]] = [
     # --- dispensation_logs ---
     (
         "dispensation_logs: slot_id nullable",
-        "ALTER TABLE dispensation_logs ALTER COLUMN slot_id DROP NOT NULL;",
+        """DO $$
+        BEGIN
+            IF EXISTS (
+                SELECT 1 FROM information_schema.columns
+                WHERE table_name='dispensation_logs' AND column_name='slot_id'
+            ) THEN
+                ALTER TABLE dispensation_logs ALTER COLUMN slot_id DROP NOT NULL;
+            END IF;
+        END $$;""",
     ),
     (
         "dispensation_logs: scheduled_time_reference nullable",
-        "ALTER TABLE dispensation_logs ALTER COLUMN scheduled_time_reference DROP NOT NULL;",
+        """DO $$
+        BEGIN
+            IF EXISTS (
+                SELECT 1 FROM information_schema.columns
+                WHERE table_name='dispensation_logs' AND column_name='scheduled_time_reference'
+            ) THEN
+                ALTER TABLE dispensation_logs ALTER COLUMN scheduled_time_reference DROP NOT NULL;
+            END IF;
+        END $$;""",
     ),
     (
         "dispensation_logs: add schedule_id_legacy",
@@ -156,11 +216,27 @@ _MIGRATIONS: list[tuple[str, str]] = [
     # --- refill_history ---
     (
         "refill_history: slot_id nullable",
-        "ALTER TABLE refill_history ALTER COLUMN slot_id DROP NOT NULL;",
+        """DO $$
+        BEGIN
+            IF EXISTS (
+                SELECT 1 FROM information_schema.columns
+                WHERE table_name='refill_history' AND column_name='slot_id'
+            ) THEN
+                ALTER TABLE refill_history ALTER COLUMN slot_id DROP NOT NULL;
+            END IF;
+        END $$;""",
     ),
     (
         "refill_history: caregiver_id nullable",
-        "ALTER TABLE refill_history ALTER COLUMN caregiver_id DROP NOT NULL;",
+        """DO $$
+        BEGIN
+            IF EXISTS (
+                SELECT 1 FROM information_schema.columns
+                WHERE table_name='refill_history' AND column_name='caregiver_id'
+            ) THEN
+                ALTER TABLE refill_history ALTER COLUMN caregiver_id DROP NOT NULL;
+            END IF;
+        END $$;""",
     ),
     (
         "refill_history: add dispenser_id_legacy",
@@ -184,5 +260,8 @@ def run_migrations(engine: Engine) -> None:
                 conn.execute(text(sql))
                 print(f"[migration] ok: {description}")
             except Exception as exc:
+                if "does not exist" in str(exc).lower():
+                    print(f"[migration] SKIPPED (not exists): {description}")
+                    continue
                 print(f"[migration] FAILED: {description} — {exc}")
                 raise

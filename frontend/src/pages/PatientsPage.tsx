@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "@tanstack/react-router";
 import { Button } from "../components/ui/Button";
 import { Input } from "../components/ui/Input";
@@ -13,7 +13,12 @@ import {
 } from "../components/ui/Table";
 import { Pagination } from "../components/ui/Pagination";
 import { ConfirmModal } from "../components/ui/ConfirmModal";
-import { useAuth } from "../auth/AuthContext";
+import {
+  deletePatient as deletePatientApi,
+  listPatients,
+  mapPatientStatus,
+  type Patient as ApiPatient,
+} from "../lib/api";
 
 type PatientStatus = "ativo" | "inativo";
 
@@ -26,6 +31,16 @@ interface Patient {
 }
 
 const PAGE_SIZE = 8;
+
+function toPatientRow(patient: ApiPatient): Patient {
+  return {
+    id: patient.id,
+    nome: patient.name,
+    idade: patient.age ?? 0,
+    medicacao: patient.condition ?? "Sem condição informada",
+    status: mapPatientStatus(patient) as PatientStatus,
+  };
+}
 
 function StatusBadge({ status }: { status: PatientStatus }) {
   const isAtivo = status === "ativo";
@@ -56,60 +71,49 @@ function StatusBadge({ status }: { status: PatientStatus }) {
 
 export function PatientsPage() {
   const navigate = useNavigate();
-  const { token } = useAuth();
+
   const [search, setSearch] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
   const [patients, setPatients] = useState<Patient[]>([]);
-  const [loading, setLoading] = useState(true);
   const [patientToDelete, setPatientToDelete] = useState<Patient | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
+    let mounted = true;
+
     async function loadPatients() {
+      setLoading(true);
+      setError(null);
       try {
-        const res = await fetch("/api/patients", {
-          headers: {
-            "Authorization": token ? `Bearer ${token}` : "",
-          },
-        });
-        if (res.ok) {
-          const data = await res.json();
-          const mapped = data.map((p: any) => ({
-            id: p.id,
-            nome: p.name,
-            idade: p.age || 0,
-            medicacao: p.condition || "",
-            status: "ativo" as PatientStatus,
-          }));
-          setPatients(mapped);
-        }
+        const data = await listPatients();
+        if (!mounted) return;
+        setPatients(data.map(toPatientRow));
       } catch (err) {
-        console.error("Erro ao carregar pacientes:", err);
+        if (!mounted) return;
+        setError(err instanceof Error ? err.message : "Falha ao carregar pacientes");
       } finally {
-        setLoading(false);
+        if (mounted) {
+          setLoading(false);
+        }
       }
     }
-    loadPatients();
-  }, [token]);
+
+    void loadPatients();
+
+    return () => {
+      mounted = false;
+    };
+  }, []);
 
   async function handleDeleteConfirm() {
     if (!patientToDelete) return;
     try {
-      const res = await fetch(`/api/patients/${patientToDelete.id}`, {
-        method: "DELETE",
-        headers: {
-          "Authorization": token ? `Bearer ${token}` : "",
-        },
-      });
-      if (res.ok) {
-        setPatients((prev) => prev.filter((p) => p.id !== patientToDelete.id));
-      } else {
-        const errorData = await res.json().catch(() => ({}));
-        throw new Error(errorData.detail ?? "Erro ao deletar paciente do servidor.");
-      }
-    } catch (err: any) {
-      alert(err.message || "Erro de conexão ao deletar o paciente.");
-    } finally {
+      await deletePatientApi(patientToDelete.id);
+      setPatients((prev) => prev.filter((p) => p.id !== patientToDelete.id));
       setPatientToDelete(null);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Falha ao apagar paciente");
     }
   }
 
@@ -184,13 +188,28 @@ export function PatientsPage() {
       {/* Search */}
       <div style={{ marginBottom: "var(--space-5)", maxWidth: "360px" }}>
         <Input
-          placeholder="Buscar por nome ou medicação"
+          placeholder="Buscar por nome ou condição"
           icon="ph-duotone ph-magnifying-glass"
           value={search}
           onChange={handleSearch}
           aria-label="Buscar pacientes"
         />
       </div>
+
+      {error && (
+        <div
+          style={{
+            marginBottom: "var(--space-5)",
+            padding: "var(--space-4)",
+            borderRadius: "var(--radius)",
+            background: "var(--danger-soft, rgba(220, 38, 38, 0.08))",
+            color: "var(--danger-ink, #991b1b)",
+          }}
+          role="alert"
+        >
+          {error}
+        </div>
+      )}
 
       {/* Table card */}
       <Card>
@@ -200,9 +219,9 @@ export function PatientsPage() {
               <tr>
                 <TableHead>Nome</TableHead>
                 <TableHead>Idade</TableHead>
-                <TableHead>Medicacao ativa</TableHead>
+                <TableHead>Condição</TableHead>
                 <TableHead>Status</TableHead>
-                <TableHead align="right">Acoes</TableHead>
+                <TableHead align="right">Ações</TableHead>
               </tr>
             </TableHeader>
             <TableBody>
@@ -221,8 +240,12 @@ export function PatientsPage() {
                         color: "var(--ink-3)",
                       }}
                     >
-                      <div className="btn-spinner" style={{ borderColor: "var(--border-subtle)", borderTopColor: "var(--primary)" }} />
-                      <span>Carregando pacientes...</span>
+                      <i
+                        className="ph-duotone ph-users"
+                        style={{ fontSize: "2.5rem" }}
+                        aria-hidden="true"
+                      />
+                      <span>Nenhum paciente encontrado.</span>
                     </div>
                   </TableCell>
                 </TableRow>
@@ -345,7 +368,7 @@ export function PatientsPage() {
         }
         confirmLabel="Apagar"
         cancelLabel="Cancelar"
-        onConfirm={handleDeleteConfirm}
+        onConfirm={() => void handleDeleteConfirm()}
         onCancel={() => setPatientToDelete(null)}
       />
     </div>

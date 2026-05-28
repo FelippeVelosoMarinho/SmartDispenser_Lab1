@@ -15,19 +15,13 @@ CREATE TABLE "patients" (
   "caregiver_username" text
 );
 
-CREATE TABLE "users" (
+CREATE TABLE "caregivers" (
   "id" uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   "username" text UNIQUE NOT NULL,
   "hashed_password" text NOT NULL,
+  "tax_id" text UNIQUE,
   "full_name" text,
   "email" text UNIQUE,
-  "notifications_enabled" boolean DEFAULT true
-);
-
-CREATE TABLE "caregivers" (
-  "id" uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-  "tax_id" text UNIQUE NOT NULL,
-  "full_name" text NOT NULL,
   "notifications_enabled" boolean DEFAULT true
 );
 
@@ -59,10 +53,8 @@ CREATE TABLE "drawers" (
 CREATE TABLE "slots" (
   "id" serial PRIMARY KEY,
   "drawer_id" integer NOT NULL REFERENCES "drawers" ("id"),
-  "medication_id" integer,
   "position_number" integer NOT NULL,
-  "max_pill_capacity" integer NOT NULL,
-  "current_pill_count" integer DEFAULT 0
+  "max_pill_capacity" integer NOT NULL
 );
 
 -- 3. Clinical Data & Rules
@@ -73,12 +65,17 @@ CREATE TABLE "medications" (
   "description" text
 );
 
+CREATE TABLE "slot_medications" (
+  "slot_id" integer REFERENCES "slots" ("id") ON DELETE CASCADE,
+  "medication_id" integer REFERENCES "medications" ("id"),
+  "quantity" integer DEFAULT 0,
+  PRIMARY KEY ("slot_id", "medication_id")
+);
+
 CREATE TABLE "schedules" (
   "id" uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   "slot_id" integer REFERENCES "slots" ("id"),
-  "medication_id" integer REFERENCES "medications" ("id"),
   "scheduled_time" time,
-  "pills_per_dose" integer DEFAULT 1,
   "is_active" boolean DEFAULT true,
   "patient_id" uuid,
   "dispenser_id" text,

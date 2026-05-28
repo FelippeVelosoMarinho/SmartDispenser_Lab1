@@ -1,5 +1,6 @@
 """Authentication endpoints."""
 
+import logging
 from datetime import timedelta
 from fastapi import APIRouter, HTTPException, Depends, BackgroundTasks
 
@@ -11,13 +12,14 @@ from app.core.security import (
 )
 from app.core.config import ACCESS_TOKEN_EXPIRE_MINUTES
 from app.core.database import get_db
-from app.crud.user import create_user, get_user, user_exists
+from app.crud.user import create_user, get_user, user_exists, get_user_by_login_identifier
 from app.schemas.user import LoginRequest, TokenResponse, UserCreate, UserPublic, UserUpdate
 from sqlalchemy.orm import Session
 from app.services.notifier import send_email_notification
 from app.services.templates import get_welcome_email_template
 
 router = APIRouter(prefix="/api/auth", tags=["auth"])
+logger = logging.getLogger(__name__)
 
 
 @router.post("/register", response_model=UserPublic, status_code=201)
@@ -38,6 +40,7 @@ async def register(
         db=db,
         username=user.username,
         hashed_password=hashed,
+        tax_id=user.tax_id,
         full_name=user.full_name,
         email=user.email,
     )
@@ -66,14 +69,17 @@ async def register(
 @router.post("/login", response_model=TokenResponse)
 async def login(form: LoginRequest, db: Session = Depends(get_db)):
     """Login and return JWT token."""
-    user = get_user(db, form.username)
+    logger.info("Login attempt started for identifier=%s", form.username)
+    user = get_user_by_login_identifier(db, form.username)
     if not user:
+        logger.warning("Login failed: user not found for identifier=%s", form.username)
         raise HTTPException(
             status_code=400,
             detail="Incorrect username or password"
         )
 
     if not verify_password(form.password, user.hashed_password):
+        logger.warning("Login failed: invalid password for identifier=%s", form.username)
         raise HTTPException(
             status_code=400,
             detail="Incorrect username or password"
@@ -84,6 +90,7 @@ async def login(form: LoginRequest, db: Session = Depends(get_db)):
         data={"sub": user.username},
         expires_delta=access_token_expires
     )
+    logger.info("Login succeeded for username=%s", user.username)
     return TokenResponse(access_token=access_token)
 
 

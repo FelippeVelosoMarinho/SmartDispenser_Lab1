@@ -3,33 +3,29 @@ import { useNavigate } from "@tanstack/react-router";
 import { Button } from "../components/ui/Button";
 import { Input } from "../components/ui/Input";
 import { Card, CardContent, CardFooter } from "../components/ui/Card";
-import { useAuth } from "../auth/AuthContext";
-
-type PatientStatus = "ativo" | "inativo";
+import { createPatient } from "../lib/api";
 
 interface FormState {
   nome: string;
   idade: string;
-  medicacao: string;
-  status: PatientStatus;
+  condition: string;
 }
 
 interface FormErrors {
   nome?: string;
   idade?: string;
-  medicacao?: string;
+  condition?: string;
 }
 
 const INITIAL_STATE: FormState = {
   nome: "",
   idade: "",
-  medicacao: "",
-  status: "ativo",
+  condition: "",
 };
 
 export function AddPatientPage() {
   const navigate = useNavigate();
-  const { token } = useAuth();
+
   const [form, setForm] = useState<FormState>(INITIAL_STATE);
   const [errors, setErrors] = useState<FormErrors>({});
   const [submitting, setSubmitting] = useState(false);
@@ -45,8 +41,8 @@ export function AddPatientPage() {
     } else if (!Number.isInteger(idadeNum) || idadeNum <= 0 || idadeNum > 130) {
       next.idade = "Idade deve ser um número entre 1 e 130.";
     }
-    if (!form.medicacao.trim()) {
-      next.medicacao = "Informe a medicação.";
+    if (!form.condition.trim()) {
+      next.condition = "Informe a condição ou medicação.";
     }
     return next;
   }
@@ -64,27 +60,15 @@ export function AddPatientPage() {
     setErrors(nextErrors);
     if (Object.keys(nextErrors).length > 0) return;
 
+    const idadeNum = Number(form.idade);
+
     setSubmitting(true);
     try {
-      const res = await fetch("/api/patients", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "Authorization": token ? `Bearer ${token}` : "",
-        },
-        body: JSON.stringify({
-          name: form.nome,
-          age: Number(form.idade),
-          condition: form.medicacao,
-          dispensers: [],
-        }),
+      await createPatient({
+        name: form.nome.trim(),
+        age: idadeNum,
+        condition: form.condition.trim(),
       });
-
-      if (!res.ok) {
-        const errorData = await res.json().catch(() => ({}));
-        throw new Error(errorData.detail ?? "Erro ao salvar paciente no servidor.");
-      }
-
       navigate({ to: "/patients" });
     } catch (err: any) {
       alert(err.message || "Erro de conexão ao criar o paciente.");
@@ -193,69 +177,15 @@ export function AddPatientPage() {
               />
 
               <Input
-                label="Medicação ativa"
-                placeholder="Ex.: Ritalina 10 mg"
+                label="Condição / medicação"
+                placeholder="Ex.: TDAH ou Ritalina 10 mg"
                 icon="ph-duotone ph-pill"
-                value={form.medicacao}
-                onChange={(e) => updateField("medicacao", e.target.value)}
-                error={errors.medicacao}
-                helperText="Inclua o nome do medicamento e a dosagem."
+                value={form.condition}
+                onChange={(e) => updateField("condition", e.target.value)}
+                error={errors.condition}
+                helperText="Descreva a condição clínica ou a medicação principal."
                 required
               />
-
-              <div className="pillar-input-wrapper">
-                <span className="pillar-input__label">Status</span>
-                <div
-                  role="radiogroup"
-                  aria-label="Status do paciente"
-                  style={{
-                    display: "flex",
-                    gap: "var(--space-3)",
-                    flexWrap: "wrap",
-                  }}
-                >
-                  {(["ativo", "inativo"] as PatientStatus[]).map((value) => {
-                    const checked = form.status === value;
-                    return (
-                      <label
-                        key={value}
-                        style={{
-                          display: "inline-flex",
-                          alignItems: "center",
-                          gap: "var(--space-2)",
-                          padding: "10px 16px",
-                          borderRadius: "var(--radius)",
-                          border: `1.5px solid ${checked ? "var(--primary)" : "var(--border)"}`,
-                          background: checked
-                            ? "var(--primary-soft)"
-                            : "var(--surface)",
-                          color: checked ? "var(--primary)" : "var(--ink)",
-                          fontFamily: "var(--font-sans)",
-                          fontSize: "var(--text-sm)",
-                          fontWeight: 600,
-                          cursor: "pointer",
-                          transition: "all 0.15s ease-out",
-                          textTransform: "capitalize",
-                        }}
-                      >
-                        <input
-                          type="radio"
-                          name="status"
-                          value={value}
-                          checked={checked}
-                          onChange={() => updateField("status", value)}
-                          style={{ position: "absolute", opacity: 0 }}
-                        />
-                        <i
-                          className={`ph-duotone ${value === "ativo" ? "ph-check-circle" : "ph-minus-circle"}`}
-                          aria-hidden="true"
-                        />
-                        {value}
-                      </label>
-                    );
-                  })}
-                </div>
-              </div>
             </div>
           </CardContent>
 

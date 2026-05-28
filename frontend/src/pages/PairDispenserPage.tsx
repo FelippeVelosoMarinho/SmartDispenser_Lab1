@@ -354,18 +354,6 @@ function LocalPairingView() {
   }
 
   return (
-    <>
-      <p style={{ marginBottom: "var(--space-4)", color: "var(--ink-3)", fontSize: "var(--text-sm)" }}>
-        Certifique-se de que o dispensador está ligado e conectado à mesma rede Wi-Fi que este dispositivo.
-        {subnet && (
-          <span style={{ marginLeft: "var(--space-2)", color: "var(--ink-2)" }}>
-            Rede detectada:{" "}
-            <code style={{ fontFamily: "var(--font-mono)", fontSize: "0.8rem" }}>
-              {subnet}.0/24
-            </code>
-          </span>
-        )}
-      </p>
     <div
       style={{
         flex: 1,
@@ -531,12 +519,13 @@ function LocalPairingView() {
       <PatientPickerModal
         open={selected !== null}
         device={selected}
-        patients={MOCK_PATIENTS}
-        loading={pairing}
+        patients={patients}
+        loading={pairing || patientsLoading}
+        error={patientsError}
         onCancel={() => setSelected(null)}
         onConfirm={handleConfirmPair}
       />
-    </>
+    </div>
   );
 }
 
@@ -764,6 +753,7 @@ interface PatientPickerModalProps {
   device: DiscoveredDispenser | null;
   patients: Patient[];
   loading: boolean;
+  error: string | null;
   onCancel: () => void;
   onConfirm: (patient: Patient) => void;
 }
@@ -773,6 +763,7 @@ function PatientPickerModal({
   device,
   patients,
   loading,
+  error,
   onCancel,
   onConfirm,
 }: PatientPickerModalProps) {
@@ -864,6 +855,19 @@ function PatientPickerModal({
               paddingRight: "4px",
             }}
           >
+            {error && (
+              <div
+                style={{
+                  padding: "var(--space-4)",
+                  borderRadius: "var(--radius)",
+                  background: "var(--danger-soft, rgba(220, 38, 38, 0.08))",
+                  color: "var(--danger-ink, #991b1b)",
+                }}
+                role="alert"
+              >
+                {error}
+              </div>
+            )}
             {filtered.length === 0 ? (
               <div
                 style={{

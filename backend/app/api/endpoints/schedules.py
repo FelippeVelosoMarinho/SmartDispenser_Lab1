@@ -1,7 +1,10 @@
 """Schedules endpoints."""
 
 from typing import List, Optional
+import logging
 from fastapi import APIRouter, Depends, HTTPException, Query
+
+logger = logging.getLogger(__name__)
 
 from app.core.security import get_current_user
 from app.core.database import get_db
@@ -23,10 +26,8 @@ def _format_schedule(schedule) -> dict:
         "id": str(schedule.id),
         "patient_id": str(schedule.patient_id) if schedule.patient_id else "",
         "dispenser_id": schedule.dispenser_id or "",
-        "medication_id": str(schedule.medication_id) if schedule.medication_id else "",
         "slot_id": schedule.slot_id or 0,
         "time": schedule.time_legacy or "",
-        "quantity": schedule.pills_per_dose or 1,
     }
 
 @router.get("", response_model=List[SchedulePublic])
@@ -62,15 +63,26 @@ async def register_schedule(
     db: Session = Depends(get_db)
 ):
     """Cria um novo agendamento (vincula slot_id, time e quantity)."""
-    patient = get_patient(db, schedule_in.patient_id)
-    if not patient or patient.caregiver_username != current_user.username:
-        raise HTTPException(
-            status_code=403,
-            detail="Not authorized to create schedules for this patient"
-        )
+    logger.info(f"Recebido pedido para criar agendamento: {schedule_in.model_dump()}")
+    try:
+        patient = get_patient(db, schedule_in.patient_id)
+        if not patient:
+            logger.error(f"Paciente não encontrado para o ID: {schedule_in.patient_id}")
+            raise HTTPException(status_code=404, detail="Patient not found")
+            
+        if patient.caregiver_username != current_user.username:
+            logger.error(f"Usuário {current_user.username} não autorizado para o paciente {patient.id}")
+            raise HTTPException(
+                status_code=403,
+                detail="Not authorized to create schedules for this patient"
+            )
 
-    schedule = create_schedule(db, schedule_in.model_dump())
-    return _format_schedule(schedule)
+        schedule = create_schedule(db, schedule_in.model_dump())
+        logger.info(f"Agendamento criado com sucesso: {schedule.id}")
+        return _format_schedule(schedule)
+    except Exception as e:
+        logger.exception(f"Erro inesperado ao criar agendamento: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Erro interno: {str(e)}")
 
 
 @router.delete("/{schedule_id}", status_code=204)
