@@ -11,6 +11,10 @@ _MIGRATIONS: list[tuple[str, str]] = [
         "caregivers: add notifications_enabled",
         "ALTER TABLE caregivers ADD COLUMN IF NOT EXISTS notifications_enabled BOOLEAN DEFAULT true;",
     ),
+    (
+        "caregivers: add tax_id",
+        "ALTER TABLE caregivers ADD COLUMN IF NOT EXISTS tax_id TEXT;",
+    ),
     # --- dispensers ---
     (
         "dispensers: patient_id nullable",

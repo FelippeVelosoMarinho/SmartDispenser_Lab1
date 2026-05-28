@@ -27,7 +27,7 @@ export function LoginPage() {
     setLoading(true);
     console.info("[login-page] submit", { identifier });
     try {
-      await login(email, password);
+      await login(identifier, password);
     } catch {
       setError("Não foi possível entrar. Verifique seu e-mail e senha.");
     } finally {

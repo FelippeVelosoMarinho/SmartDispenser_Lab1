@@ -19,6 +19,7 @@ CREATE TABLE "caregivers" (
   "id" uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   "username" text UNIQUE NOT NULL,
   "hashed_password" text NOT NULL,
+  "tax_id" text UNIQUE,
   "full_name" text,
   "email" text UNIQUE,
   "notifications_enabled" boolean DEFAULT true

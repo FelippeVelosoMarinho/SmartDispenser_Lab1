@@ -12,7 +12,7 @@ from app.core.security import (
 )
 from app.core.config import ACCESS_TOKEN_EXPIRE_MINUTES
 from app.core.database import get_db
-from app.crud.user import create_user, get_user, user_exists
+from app.crud.user import create_user, get_user, user_exists, get_user_by_login_identifier
 from app.schemas.user import LoginRequest, TokenResponse, UserCreate, UserPublic, UserUpdate
 from sqlalchemy.orm import Session
 from app.services.notifier import send_email_notification
