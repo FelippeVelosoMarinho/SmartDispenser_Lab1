@@ -308,9 +308,7 @@ export async function getDispenserDetails(dispenserId: string): Promise<Dispense
               id: "slot-1",
               drawer_id: "drawer-1",
               slot_number: 1,
-              medication_id: null,
-              medication: null,
-              current_pill_count: 0,
+              medications: [],
               max_pill_capacity: 30,
             }
           ]
@@ -324,9 +322,12 @@ export async function getDispenserDetails(dispenserId: string): Promise<Dispense
               id: "slot-2",
               drawer_id: "drawer-2",
               slot_number: 1,
-              medication_id: "med-1",
-              medication: { id: "med-1", name: "Aspirina", dosage: "100mg" },
-              current_pill_count: 5,
+              medications: [
+                {
+                  medication: { id: "med-1", name: "Aspirina", dosage: "100mg" },
+                  quantity: 5,
+                }
+              ],
               max_pill_capacity: 30,
             }
           ]

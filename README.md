@@ -87,7 +87,7 @@ docker compose up --build -d
 | Serviço | Container | Porta no host | Descrição |
 |---------|-----------|---------------|-----------|
 | `db` | `smart_dispenser_db` | **5433** → 5432 | PostgreSQL 16 |
-| `backend` | `smart_dispenser_backend` | **8000** → 8000 | FastAPI + Uvicorn |
+| `backend` | `smart_dispenser_backend` | **8001** → 8000 | FastAPI + Uvicorn |
 
 Credenciais do banco (Compose): usuário `user`, senha `password`, banco `smart_dispenser`.
 
@@ -101,9 +101,9 @@ docker compose --profile prod up --build -d
 
 | Serviço extra | Container | Porta no host | URL típica |
 |---------------|-----------|---------------|------------|
-| `frontend` | `smart_dispenser_frontend` | **8080** → 80 | `http://localhost:8080` |
+| `frontend` | `smart_dispenser_frontend` | **8082** → 80 | `http://localhost:8082` |
 
-- **Backend / OpenAPI**: `http://localhost:8000` — documentação em `http://localhost:8000/docs`
+- **Backend / OpenAPI**: `http://localhost:8001` — documentação em `http://localhost:8001/docs`
 - **Postgres (host)**: `localhost:5433`
 
 ### Perfil **dev** — Vite com hot reload + API + banco
@@ -116,7 +116,7 @@ docker compose --profile dev up --build -d
 
 | Serviço extra | Container | Porta no host | URL típica |
 |---------------|-----------|---------------|------------|
-| `frontend-dev` | `smart_dispenser_frontend_dev` | **80** → 5173 | `http://localhost` |
+| `frontend-dev` | `smart_dispenser_frontend_dev` | **8081** → 5173 | `http://localhost:8081` |
 
 Variável no Compose: `VITE_API_URL=http://smart_dispenser_backend:8000` (proxy interno do Vite para `/api`).
 
@@ -156,13 +156,13 @@ Após subir os serviços (`docker compose up --build -d`), você pode testar os 
 1) Health check (inclui teste de alcance do ESP32):
 
 ```bash
-curl -s http://127.0.0.1:8000/api/health | jq
+curl -s http://127.0.0.1:8001/api/health | jq
 ```
 
 2) Registrar um cuidador (ex.: `alice`):
 
 ```bash
-curl -s -X POST http://127.0.0.1:8000/api/auth/register \
+curl -s -X POST http://127.0.0.1:8001/api/auth/register \
    -H "Content-Type: application/json" \
    -d '{"username":"alice","password":"secret","full_name":"Alice"}' | jq
 ```
@@ -170,17 +170,18 @@ curl -s -X POST http://127.0.0.1:8000/api/auth/register \
 3) Login e captura de token:
 
 ```bash
-RESP=$(curl -s -X POST http://127.0.0.1:8000/api/auth/login \
+RESP=$(curl -s -X POST http://127.0.0.1:8001/api/auth/login \
    -H "Content-Type: application/json" \
    -d '{"username":"alice","password":"secret"}')
 echo "$RESP" | jq
+
 TOKEN=$(echo "$RESP" | jq -r .access_token)
 ```
 
 4) Acessar perfil com o token:
 
 ```bash
-curl -s http://127.0.0.1:8000/api/auth/profile -H "Authorization: Bearer $TOKEN" | jq
+curl -s http://127.0.0.1:8001/api/auth/profile -H "Authorization: Bearer $TOKEN" | jq
 ```
 
 Se o `curl` não retornar JSON legível, remova `| jq` e verifique a saída bruta.

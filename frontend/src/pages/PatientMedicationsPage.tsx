@@ -57,7 +57,7 @@ const TIME_OPTIONS: { value: TimeOfDay; label: string; icon: string }[] = [
 export function PatientMedicationsPage() {
   const navigate = useNavigate();
   const { patientId } = useParams({ from: "/_authenticated/patients/$patientId/medications" });
-  const { token } = useAuth();
+  const { accessToken: token } = useAuth();
 
   const [patientName, setPatientName] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
@@ -266,7 +266,7 @@ export function PatientMedicationsPage() {
       <div style={{ marginBottom: "var(--space-6)" }}>
         <button
           type="button"
-          onClick={() => navigate({ to: "/patients/$patientId/edit", params: { patientId } })}
+          onClick={() => navigate({ to: `/patients/${patientId}/edit` as any })}
           style={backBtnStyle}
         >
           <i className="ph-duotone ph-arrow-left" aria-hidden="true" />

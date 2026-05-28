@@ -1,12 +1,14 @@
 import { useState, useEffect } from "react";
-import {
+import type {
   Schedule,
   DispenserDetails,
+  ScheduleInput,
+} from "../../lib/api";
+import {
   listSchedules,
   updateSchedule,
   deleteSchedule,
   createSchedule,
-  ScheduleInput,
   getScheduleTime,
 } from "../../lib/api";
 

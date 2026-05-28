@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "@tanstack/react-router";
-import { listDispensers, getDispenserDetails, DispenserDetails } from "../lib/api";
+import { listDispensers, getDispenserDetails } from "../lib/api";
+import type { DispenserDetails } from "../lib/api";
 import { TelemetryGrid } from "../components/dashboard/TelemetryGrid";
 import { CompartmentsSection } from "../components/dashboard/CompartmentsSection";
 import { SchedulesPanel } from "../components/dashboard/SchedulesPanel";

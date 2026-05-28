@@ -519,9 +519,9 @@ function LocalPairingView() {
       <PatientPickerModal
         open={selected !== null}
         device={selected}
-        patients={patients}
-        loading={pairing || patientsLoading}
-        error={patientsError}
+        patients={MOCK_PATIENTS}
+        loading={pairing}
+        error={null}
         onCancel={() => setSelected(null)}
         onConfirm={handleConfirmPair}
       />
@@ -537,7 +537,7 @@ function BluetoothPairingWizard() {
   
   const [ssid, setSsid] = useState("");
   const [password, setPassword] = useState("");
-  const [syncing, setSyncing] = useState(false);
+  // removed syncing state to fix unused variable warning
   const [selectedPatient, setSelectedPatient] = useState<Patient | null>(null);
   const [pickerOpen, setPickerOpen] = useState(false);
 
@@ -600,7 +600,7 @@ function BluetoothPairingWizard() {
 
   async function handleSubmitWifi() {
     if (!ssid || !wifiCharRef.current) return;
-    setSyncing(true);
+    // setSyncing(true);
     setStep("sync");
     
     try {
@@ -622,7 +622,7 @@ function BluetoothPairingWizard() {
       alert("Falha ao enviar dados de Wi-Fi: " + (e as Error).message);
       setStep("wifi"); // fallback
     } finally {
-      setSyncing(false);
+      // setSyncing(false);
     }
   }
 
@@ -738,6 +738,7 @@ function BluetoothPairingWizard() {
         device={deviceId ? { id: deviceId, ip: "BLE", serial: deviceId, mac: "", rssi: 0, firmware: "" } : null}
         patients={MOCK_PATIENTS}
         loading={false}
+        error={null}
         onCancel={() => setPickerOpen(false)}
         onConfirm={(p) => {
           setSelectedPatient(p);

@@ -1,4 +1,4 @@
-import { DispenserDetails } from "../../lib/api";
+import type { DispenserDetails } from "../../lib/api";
 
 interface TelemetryGridProps {
   dispenser: DispenserDetails;
@@ -6,7 +6,7 @@ interface TelemetryGridProps {
 
 export function TelemetryGrid({ dispenser }: TelemetryGridProps) {
   const isOnline = dispenser.is_online;
-  const battery = dispenser.battery_level;
+  // unused: const battery = dispenser.battery_level;
   const hasCriticalStock = dispenser.critical_stock;
 
   return (

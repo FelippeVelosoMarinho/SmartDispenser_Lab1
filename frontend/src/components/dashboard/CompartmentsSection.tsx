@@ -1,8 +1,9 @@
 import React, { useEffect, useState } from "react";
-import {
+import type {
   DispenserDetails,
   Medication,
-  Slot,
+} from "../../lib/api";
+import {
   createMedication,
   listMedications,
   addSlotMedication,
@@ -263,7 +264,7 @@ function SlotMedicationsModal({ slot, dispenser, onClose, onDispenserChange }: a
   // State for creating a new medication on the fly
   const [newMedicationName, setNewMedicationName] = useState("");
   const [newMedicationDosage, setNewMedicationDosage] = useState("");
-  const [newMedicationDescription, setNewMedicationDescription] = useState("");
+  // unused: const [newMedicationDescription, setNewMedicationDescription] = useState("");
   
   // State for inline editing quantity
   const [editingQtyMedId, setEditingQtyMedId] = useState<string | null>(null);
@@ -308,7 +309,7 @@ function SlotMedicationsModal({ slot, dispenser, onClose, onDispenserChange }: a
     const createdMedication = await createMedication({
       name,
       dosage: newMedicationDosage.trim() || undefined,
-      description: newMedicationDescription.trim() || undefined,
+      description: undefined,
     });
 
     setMedicationsCatalog((current) => [createdMedication, ...current]);
