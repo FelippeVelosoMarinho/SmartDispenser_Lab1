@@ -197,7 +197,7 @@ Se quiser, eu posso adicionar estes passos também no `backend/README.md`.
 
 ## 🛠️ Resumo de Soluções
 
-Durante o desenvolvimento deste POC, resolvemos desafios críticos:
+Durante o desenvolvimento deste TP, resolvemos desafios críticos:
 
 - **Arduino**: Uso da versão **2.0.17** do Core ESP32 no Boards Manager.
 - **Linux**: Permissões de USB via grupo `dialout` (`sudo usermod -a -G dialout $USER`).
