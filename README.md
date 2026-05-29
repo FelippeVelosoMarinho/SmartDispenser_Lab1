@@ -34,7 +34,7 @@ bun --version
 
 ### 1. Hardware (Firmware)
 
-O cérebro físico do dispenser. Ele precisa estar na rede para que o backend consiga alcançá-lo pelo IP.
+Ele precisa estar na rede para que o backend consiga alcançá-lo pelo IP.
 
 1. Abra o arquivo `firmware/eco-dispenser/eco-dispenser.ino` no **Arduino IDE**.
 2. Siga as instruções de instalação de bibliotecas no [README do Firmware](firmware/README.md).
