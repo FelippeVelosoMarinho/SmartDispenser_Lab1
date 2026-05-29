@@ -195,7 +195,7 @@ Se quiser, eu posso adicionar estes passos também no `backend/README.md`.
 
 ---
 
-## 🛠️ Resumo de Soluções (Troubleshooting)
+## 🛠️ Resumo de Soluções
 
 Durante o desenvolvimento deste POC, resolvemos desafios críticos:
 
