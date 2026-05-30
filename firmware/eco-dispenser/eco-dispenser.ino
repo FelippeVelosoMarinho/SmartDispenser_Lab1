@@ -30,6 +30,10 @@
 
 AsyncWebServer server(SERVER_PORT);
 
+// Variáveis para o Heartbeat periódico
+unsigned long lastHeartbeat = 0;
+const unsigned long HEARTBEAT_INTERVAL = 5 * 60 * 1000; // 5 minutos
+
 static void sendHeartbeat() {
   if (WiFi.status() != WL_CONNECTED) return;
   if (strlen(BACKEND_URL) == 0) {
@@ -46,9 +50,10 @@ static void sendHeartbeat() {
   // dispenser_id usa o MAC address como identificador único do hardware
   String mac  = WiFi.macAddress();
   String body = "{\"dispenser_id\":\"" + mac + "\","
-                "\"battery_level\":100.0,"
-                "\"online\":true,"
-                "\"critical_stock\":false}";
+                "\"uptime_s\":" + String(millis() / 1000) + ","
+                "\"current_slot\":" + String(getCurrentSlot()) + ","
+                "\"wifi_rssi\":" + String(WiFi.RSSI()) + ","
+                "\"online\":true}";
 
   int code = http.POST(body);
   if (code > 0) {
@@ -122,6 +127,7 @@ void setup() {
   Serial.println(WiFi.localIP());
 
   sendHeartbeat();
+  lastHeartbeat = millis(); // Inicia a contagem de tempo do heartbeat
 
   setupApiServer(server);
   server.begin();
@@ -130,5 +136,11 @@ void setup() {
 
 void loop() {
   checkButtons();
+
+  if (millis() - lastHeartbeat >= HEARTBEAT_INTERVAL) {
+    sendHeartbeat();
+    lastHeartbeat = millis();
+  }
+
   delay(10);
 }
