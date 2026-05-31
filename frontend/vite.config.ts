@@ -16,6 +16,7 @@ const dirname =
 export default defineConfig({
   plugins: [react()],
   server: {
+    allowedHosts: true,
     proxy: {
       "/api": {
         // In Docker dev, backend is reachable via service name; locally via 127.0.0.1
