@@ -79,9 +79,9 @@ void setup() {
   pinMode(LED_ONBOARD, OUTPUT);
   digitalWrite(LED_ONBOARD, HIGH); // HIGH = apagado (lógica invertida no SuperMini)
 
-  carouselSetup();
-  alertsSetup();
-  buttonsSetup();
+  // carouselSetup();
+  // alertsSetup();
+  // buttonsSetup();
 
   // ── Obter credenciais WiFi ────────────────────────────────────────────
   String ssid, pass;
