@@ -19,11 +19,11 @@ const int BUZZER_PIN  = 21;
 const int BUZZER_FREQ = 1000; // Hz — frequência base do bipe
 
 // ── Motor de vibração (via transistor NPN BC547) ──────────────────────
-const int VIB_PIN = 22;
+const int VIB_PIN = 10; // C3: Pino 10
 
 // ── Botões (INPUT_PULLUP — repouso HIGH, pressionado LOW) ─────────────
-const int BTN_VOL_UP   = 12;
-const int BTN_VOL_DOWN = 13;
+const int BTN_VOL_UP   = 6;  // C3: Pino 6
+const int BTN_VOL_DOWN = 7;  // C3: Pino 7
 const int BTN_CONFIRM  = 0;
 const int DEBOUNCE_MS  = 50;
 
