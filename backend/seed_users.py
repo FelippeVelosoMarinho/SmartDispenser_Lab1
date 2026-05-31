@@ -19,7 +19,12 @@ from app.models.domain import User
 from app.crud.user import get_user, create_user
 
 USERS_TO_SEED = [
-    {"email": "diogo@professor.br", "username": "diogo@professor.iff.edu.br", "full_name": "Prof Diogo <3"},
+    {"email": "diogo@professor.br", "username": "diogo@professor.iff.edu.br", "full_name": "Prof Diogo <3", "tax_id": "000.000.000-01"},
+    {"email": "felippe@pillar.br", "username": "felippe@pillar.br", "full_name": "Felippe: O gostoso", "tax_id": "000.000.000-02"},
+    # {"email": "luis@pillar.br", "username": "luis@pillar.br", "full_name": "Luis Pião", "tax_id": "000.000.000-03"},
+    # {"email": "josue@pillar.br", "username": "josue@pillar.br", "full_name": "Josoé", "tax_id": "000.000.000-04"},
+    # {"email": "igor@pillar.br", "username": "igor@pillar.br", "full_name": "Igor", "tax_id": "000.000.000-05"},
+    # {"email": "raissa@pillar.br", "username": "raissa@pillar.br", "full_name": "Rarazinha", "tax_id": "000.000.000-06"},
 ]
 DEFAULT_PASSWORD = "123Seguro&"
 
@@ -35,6 +40,7 @@ def seed_database(db: Session, password: str):
         username = user_info["username"]
         email = user_info["email"]
         full_name = user_info["full_name"]
+        tax_id = user_info["tax_id"]
         
         # Verifica se o usuário já existe por username ou email
         existing_user = db.query(User).filter((User.username == username) | (User.email == email)).first()
@@ -48,6 +54,7 @@ def seed_database(db: Session, password: str):
                     username=username,
                     email=email,
                     full_name=full_name,
+                    tax_id=tax_id,
                     hashed_password=hashed_pwd
                 )
                 db.add(new_user)

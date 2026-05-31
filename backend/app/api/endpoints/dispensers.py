@@ -1,6 +1,7 @@
 """Dispensers endpoints."""
 
 from typing import List
+import datetime
 
 from fastapi import APIRouter, Depends, HTTPException
 
@@ -213,6 +214,8 @@ async def pair_dispenser(
         is_new = True
 
     dispenser.patient_id = patient.id
+    dispenser.is_online = True
+    dispenser.last_sync = datetime.datetime.utcnow()
     db.add(dispenser)
     db.commit()
     db.refresh(dispenser)

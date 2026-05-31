@@ -749,7 +749,7 @@ function BluetoothPairingWizard() {
                   }
                 }
                 setConcluding(false);
-                navigate({ to: "/dispensers" });
+                navigate({ to: "/" });
               }}
             >
               Concluir

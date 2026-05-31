@@ -8,6 +8,18 @@ from sqlalchemy.engine import Engine
 _MIGRATIONS: list[tuple[str, str]] = [
     # --- caregivers ---
     (
+        "caregivers: add username",
+        "ALTER TABLE caregivers ADD COLUMN IF NOT EXISTS username TEXT UNIQUE;",
+    ),
+    (
+        "caregivers: add hashed_password",
+        "ALTER TABLE caregivers ADD COLUMN IF NOT EXISTS hashed_password TEXT;",
+    ),
+    (
+        "caregivers: add email",
+        "ALTER TABLE caregivers ADD COLUMN IF NOT EXISTS email TEXT UNIQUE;",
+    ),
+    (
         "caregivers: add notifications_enabled",
         "ALTER TABLE caregivers ADD COLUMN IF NOT EXISTS notifications_enabled BOOLEAN DEFAULT true;",
     ),
