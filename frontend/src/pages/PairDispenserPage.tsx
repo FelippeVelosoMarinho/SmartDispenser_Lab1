@@ -712,14 +712,59 @@ function BluetoothPairingWizard() {
 
         {step === "done" && (
           <div style={{ textAlign: "center", display: "flex", flexDirection: "column", alignItems: "center", gap: "var(--space-4)" }}>
-            <div style={{ background: "var(--success-soft)", color: "var(--success-ink)", width: 80, height: 80, borderRadius: 40, display: "flex", alignItems: "center", justifyContent: "center" }}>
-              <i className="ph-duotone ph-check-circle" style={{ fontSize: "3rem" }} />
+            <div style={{ background: "var(--primary-soft)", color: "var(--primary)", width: 80, height: 80, borderRadius: 40, display: "flex", alignItems: "center", justifyContent: "center" }}>
+              <i className="ph-duotone ph-paper-plane-tilt" style={{ fontSize: "3rem" }} />
             </div>
             <div>
-              <h2 style={{ fontSize: "var(--text-xl)", margin: "0 0 var(--space-2)" }}>Conectado à Internet!</h2>
+              <h2 style={{ fontSize: "var(--text-xl)", margin: "0 0 var(--space-2)", fontWeight: 700 }}>Configuração Enviada!</h2>
               <p style={{ color: "var(--ink-3)", margin: 0, fontSize: "var(--text-sm)" }}>
-                O dispensador foi configurado com sucesso e está online.
+                As credenciais foram transmitidas para o dispositivo via Bluetooth.
               </p>
+            </div>
+
+            {/* Differentiating BLE and Wi-Fi Statuses */}
+            <div style={{
+              width: "100%",
+              display: "flex",
+              flexDirection: "column",
+              gap: "var(--space-3)",
+              background: "rgba(255, 255, 255, 0.4)",
+              border: "1px solid var(--border)",
+              borderRadius: "var(--radius-lg)",
+              padding: "var(--space-4)",
+              textAlign: "left"
+            }}>
+              {/* BLE Status */}
+              <div style={{ display: "flex", alignItems: "center", gap: "var(--space-3)" }}>
+                <i className="ph-duotone ph-bluetooth" style={{ fontSize: "1.5rem", color: "var(--success, #10b981)" }} />
+                <div style={{ flex: 1 }}>
+                  <div style={{ fontSize: "var(--text-sm)", fontWeight: 600, color: "var(--ink)" }}>Pareamento Bluetooth</div>
+                  <div style={{ fontSize: "var(--text-xs)", color: "var(--success-ink, #047857)" }}>Conectado e Configurado com Sucesso</div>
+                </div>
+                <i className="ph-duotone ph-check-circle" style={{ fontSize: "1.25rem", color: "var(--success, #10b981)" }} />
+              </div>
+
+              <hr style={{ border: "none", borderTop: "1px solid var(--border)", margin: 0 }} />
+
+              {/* Wi-Fi Status */}
+              <div style={{ display: "flex", alignItems: "start", gap: "var(--space-3)" }}>
+                <i className="ph-duotone ph-wifi-high" style={{ fontSize: "1.5rem", color: "#f59e0b" }} />
+                <div style={{ flex: 1 }}>
+                  <div style={{ fontSize: "var(--text-sm)", fontWeight: 600, color: "var(--ink)" }}>Conexão Wi-Fi (Dispositivo)</div>
+                  <div style={{ fontSize: "var(--text-xs)", color: "#b45309", marginBottom: "var(--space-2)" }}>Tentando conectar à rede: <strong>{ssid}</strong></div>
+                  <div style={{
+                    fontSize: "var(--text-xs)",
+                    color: "var(--ink-3)",
+                    background: "rgba(245, 158, 11, 0.08)",
+                    border: "1px dashed rgba(245, 158, 11, 0.3)",
+                    padding: "var(--space-2)",
+                    borderRadius: "var(--radius-sm)",
+                    lineHeight: 1.4
+                  }}>
+                    ⚠️ <strong>Importante:</strong> O ESP32-C3 suporta <strong>apenas redes de 2.4GHz</strong>. Se ele falhar ao se conectar a esta rede, o dispositivo reiniciará no modo de pareamento e continuará aparecendo como "Indisponível" no painel.
+                  </div>
+                </div>
+              </div>
             </div>
             
             <div style={{ marginTop: "var(--space-2)", width: "100%", padding: "var(--space-4)", background: "var(--surface-dim)", borderRadius: "var(--radius)", textAlign: "left" }}>
