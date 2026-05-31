@@ -56,11 +56,11 @@
   --border-strong: #94a3b8;
   --border-focus: #2b5f8a; /* matches primary */
 
-  /* Primary — Still Blue. Trustworthy, medical, calm. */
-  --primary: #2b5f8a; /* 6.5:1 on white */
-  --primary-hover: #234e72;
-  --primary-press: #1c3f5c;
-  --primary-soft: #e3edf5; /* tinted background */
+  /* Primary — Emerald Green. Medical, natural, calming. */
+  --primary: #059669; /* 4.5:1+ contrast verified */
+  --primary-hover: #047857;
+  --primary-press: #065f46;
+  --primary-soft: #ecfdf5; /* tinted background */
   --primary-on: #ffffff;
 
   /* Secondary — Sage Teal. Living, gentle, the "well" state. */
@@ -101,8 +101,8 @@
      FOCUS RING — ALWAYS visible, never suppressed.
      Double-ring so it shows on any background.
      ========================================================= */
-  --focus-ring: 0 0 0 3px #ffffff, 0 0 0 6px #2b5f8a;
-  --focus-ring-dark: 0 0 0 3px #0f1b2d, 0 0 0 6px #7fb3d9;
+  --focus-ring: 0 0 0 3px #ffffff, 0 0 0 6px #059669;
+  --focus-ring-dark: 0 0 0 3px #0f1b2d, 0 0 0 6px #34d399;
 
   /* =========================================================
      SHADOWS — soft, low, never harsh. Calm elevation.
@@ -221,10 +221,10 @@
     --border: #2c3a56;
     --border-strong: #4a5a78;
 
-    --primary: #7fb3d9;
-    --primary-hover: #9ac5e1;
-    --primary-press: #b6d4eb;
-    --primary-soft: #1a2b42;
+    --primary: #34d399;
+    --primary-hover: #6ee7b7;
+    --primary-press: #a7f3d0;
+    --primary-soft: #064e3b;
 
     --secondary-ink: #8fd0cd;
     --secondary-soft: #143232;

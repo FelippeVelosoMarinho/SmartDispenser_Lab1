@@ -11,8 +11,8 @@ def get_dispenser_status(db: Session, hardware_id: str) -> dict:
     if not dispenser:
         return {
             "dispenser_id": hardware_id,
-            "battery_level": 85.5,
-            "online": True,
+            "battery_level": 0.0,
+            "online": False,
             "critical_stock": False
         }
         

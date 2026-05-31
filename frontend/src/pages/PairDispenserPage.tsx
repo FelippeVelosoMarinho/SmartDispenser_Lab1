@@ -5,7 +5,8 @@ import { Button } from "../components/ui/Button";
 import { Input } from "../components/ui/Input";
 import { Card, CardContent } from "../components/ui/Card";
 import "../components/ui/ConfirmModal.css";
-import { listPatients, pairDispenser, type Patient as ApiPatient } from "../lib/api";
+import { listPatients, pairDispenser, getDispenserStatus, type Patient as ApiPatient } from "../lib/api";
+import { useToast } from "../components/ui/Toast";
 
 interface DiscoveredDispenser {
   id: string;
@@ -540,12 +541,14 @@ function LocalPairingView() {
 
 function BluetoothPairingWizard() {
   const navigate = useNavigate();
-  const [step, setStep] = useState<"scan" | "wifi" | "sync" | "done">("scan");
+  const [step, setStep] = useState<"scan" | "wifi" | "sync" | "done" | "wifi_error">("scan");
   const [bleScanning, setBleScanning] = useState(false);
   const [deviceId, setDeviceId] = useState<string | null>(null);
   
   const [ssid, setSsid] = useState("");
   const [password, setPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
+  const toast = useToast();
   // removed syncing state to fix unused variable warning
   const [selectedPatient, setSelectedPatient] = useState<Patient | null>(null);
   const [pickerOpen, setPickerOpen] = useState(false);
@@ -611,7 +614,6 @@ function BluetoothPairingWizard() {
 
   async function handleSubmitWifi() {
     if (!ssid || !wifiCharRef.current) return;
-    // setSyncing(true);
     setStep("sync");
     
     try {
@@ -625,15 +627,35 @@ function BluetoothPairingWizard() {
       // Desconecta e aguarda sucesso (na prática a API receberia um webhook ou polling)
       serverRef.current?.disconnect();
 
-      // Simulando tempo para o ESP32 conectar ao Wi-Fi e mandar requisição para API
-      await new Promise(r => setTimeout(r, 3000));
-      setStep("done");
+      // Aguarda 5 segundos antes do primeiro check para dar tempo do ESP32 subir o Wi-Fi
+      await new Promise(r => setTimeout(r, 5000));
+
+      let connected = false;
+      const maxRetries = 12; // 12 retries * 2s = 24s total polling
+      for (let i = 0; i < maxRetries; i++) {
+        try {
+          const status = await getDispenserStatus(deviceId || "") as any;
+          if (status && status.online) {
+            connected = true;
+            break;
+          }
+        } catch (err) {
+          console.warn("Aguardando heartbeat...", err);
+        }
+        await new Promise(r => setTimeout(r, 2000));
+      }
+
+      if (connected) {
+        toast.success("Dispensador conectado com sucesso!");
+        setStep("done");
+      } else {
+        toast.danger("Falha ao conectar o dispensador à rede Wi-Fi.");
+        setStep("wifi_error");
+      }
     } catch (e) {
       console.error(e);
-      alert("Falha ao enviar dados de Wi-Fi: " + (e as Error).message);
+      toast.danger("Falha ao enviar dados de Wi-Fi: " + (e as Error).message);
       setStep("wifi"); // fallback
-    } finally {
-      // setSyncing(false);
     }
   }
 
@@ -675,7 +697,7 @@ function BluetoothPairingWizard() {
             <hr style={{ border: "none", borderTop: "1px solid var(--border)", margin: "var(--space-2) 0" }} />
 
             <div>
-              <h3 style={{ fontSize: "var(--text-lg)", margin: "0 0 var(--space-2)" }}>Configurar Wi-Fi</h3>
+              <h3 style={{ fontSize: "var(--text-lg)", margin: "0 0 var(--space-2)", fontWeight: 600 }}>Configurar Wi-Fi</h3>
               <p style={{ color: "var(--ink-3)", margin: "0 0 var(--space-4)", fontSize: "var(--text-sm)" }}>
                 Informe a rede Wi-Fi que o dispensador utilizará para se comunicar com a plataforma.
               </p>
@@ -684,11 +706,49 @@ function BluetoothPairingWizard() {
             <div style={{ display: "flex", flexDirection: "column", gap: "var(--space-3)" }}>
               <div>
                 <label style={{ display: "block", marginBottom: "var(--space-1)", fontSize: "var(--text-sm)", fontWeight: 600 }}>Nome da Rede (SSID)</label>
-                <Input value={ssid} onChange={e => setSsid(e.target.value)} placeholder="Ex: Minha Casa" />
+                <Input 
+                  value={ssid} 
+                  onChange={e => setSsid(e.target.value)} 
+                  placeholder="Nome exato da rede (ex: MinhaRede) - Case Sensitive" 
+                />
+                <small style={{ display: "block", marginTop: "4px", color: "var(--ink-3)", fontSize: "var(--text-xs)" }}>
+                  ⚠️ O nome da rede deve ser digitado exatamente como está configurado, respeitando maiúsculas e minúsculas.
+                </small>
               </div>
               <div>
                 <label style={{ display: "block", marginBottom: "var(--space-1)", fontSize: "var(--text-sm)", fontWeight: 600 }}>Senha do Wi-Fi</label>
-                <Input type="password" value={password} onChange={e => setPassword(e.target.value)} placeholder="Senha da rede" />
+                <div style={{ position: "relative" }}>
+                  <Input 
+                    type={showPassword ? "text" : "password"} 
+                    value={password} 
+                    onChange={e => setPassword(e.target.value)} 
+                    placeholder="Senha da rede" 
+                    style={{ paddingRight: "44px" }}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    style={{
+                      position: "absolute",
+                      right: "12px",
+                      top: "50%",
+                      transform: "translateY(-50%)",
+                      background: "none",
+                      border: "none",
+                      cursor: "pointer",
+                      color: "var(--ink-3)",
+                      fontSize: "1.2rem",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      zIndex: 10,
+                      height: "40px",
+                      width: "40px"
+                    }}
+                  >
+                    <i className={showPassword ? "ph-bold ph-eye-slash" : "ph-bold ph-eye"} />
+                  </button>
+                </div>
               </div>
             </div>
 
@@ -700,25 +760,77 @@ function BluetoothPairingWizard() {
 
         {step === "sync" && (
           <div style={{ textAlign: "center", display: "flex", flexDirection: "column", alignItems: "center", gap: "var(--space-4)", padding: "var(--space-6) 0" }}>
-            <i className="ph-duotone ph-circle-notch" style={{ fontSize: "3rem", color: "var(--primary)", animation: "spin 1s linear infinite" }} />
+            <i className="ph-duotone ph-circle-notch" style={{ fontSize: "3.5rem", color: "var(--primary)", animation: "spin 1s linear infinite" }} />
             <div>
-              <h2 style={{ fontSize: "var(--text-xl)", margin: "0 0 var(--space-2)" }}>Sincronizando...</h2>
-              <p style={{ color: "var(--ink-3)", margin: 0, fontSize: "var(--text-sm)" }}>
-                O dispensador está tentando se conectar à rede <strong>{ssid}</strong>.
+              <h2 style={{ fontSize: "var(--text-xl)", margin: "0 0 var(--space-2)", fontWeight: 700 }}>Conectando ao Wi-Fi...</h2>
+              <p style={{ color: "var(--ink-3)", margin: "0 0 var(--space-4)", fontSize: "var(--text-sm)", lineHeight: 1.5 }}>
+                O dispensador está tentando se conectar à rede <strong>{ssid}</strong> e sincronizar com o nosso servidor.
+              </p>
+              <div style={{
+                background: "var(--surface-sunk)",
+                border: "1px dashed var(--border)",
+                borderRadius: "var(--radius-lg)",
+                padding: "var(--space-4)",
+                fontSize: "var(--text-xs)",
+                color: "var(--ink-2)",
+                textAlign: "left"
+              }}>
+                ℹ️ <strong>Status:</strong> Credenciais de Wi-Fi gravadas com sucesso via Bluetooth! O canal Bluetooth foi encerrado para que o dispensador possa ativar o rádio Wi-Fi. Aguardando a resposta de conexão do dispositivo...
+              </div>
+            </div>
+          </div>
+        )}
+
+        {step === "wifi_error" && (
+          <div style={{ textAlign: "center", display: "flex", flexDirection: "column", alignItems: "center", gap: "var(--space-4)" }}>
+            <div style={{ background: "var(--danger-soft)", color: "var(--danger)", width: 80, height: 80, borderRadius: 40, display: "flex", alignItems: "center", justifyContent: "center" }}>
+              <i className="ph-duotone ph-warning-octagon" style={{ fontSize: "3rem" }} />
+            </div>
+            <div>
+              <h2 style={{ fontSize: "var(--text-xl)", margin: "0 0 var(--space-2)", fontWeight: 700 }}>Conexão Wi-Fi Falhou!</h2>
+              <p style={{ color: "var(--ink-2)", margin: "0 0 var(--space-4)", fontSize: "var(--text-sm)", lineHeight: 1.5 }}>
+                O dispensador foi pareado com sucesso via Bluetooth, mas <strong>não conseguiu se conectar</strong> à rede Wi-Fi <strong>{ssid}</strong> no tempo limite.
               </p>
             </div>
+
+            <div style={{
+              width: "100%",
+              display: "flex",
+              flexDirection: "column",
+              gap: "var(--space-3)",
+              background: "var(--surface-sunk)",
+              border: "1px dashed var(--border)",
+              borderRadius: "var(--radius-lg)",
+              padding: "var(--space-4)",
+              textAlign: "left"
+            }}>
+              <p style={{ margin: "0 0 var(--space-1)", fontSize: "var(--text-xs)", fontWeight: 700, textTransform: "uppercase", color: "var(--ink-3)" }}>💡 Dicas para Solução de Problemas:</p>
+              <ul style={{ margin: 0, paddingLeft: "var(--space-4)", fontSize: "var(--text-xs)", color: "var(--ink-2)", display: "flex", flexDirection: "column", gap: "var(--space-2)" }}>
+                <li><strong>Rede 2.4GHz Necessária:</strong> Garanta que a rede Wi-Fi seja de 2.4GHz (o ESP32 não suporta redes de 5GHz).</li>
+                <li><strong>Nome da Rede (SSID):</strong> Verifique se digitou o nome da rede exatamente igual, incluindo maiúsculas/minúsculas (ex: <code>MinhaRede</code> é diferente de <code>minharede</code>).</li>
+                <li><strong>Senha Correta:</strong> Verifique se digitou a senha do Wi-Fi corretamente (utilize o botão de visualizar na próxima tentativa).</li>
+              </ul>
+            </div>
+
+            <Button 
+              style={{ width: "100%", marginTop: "var(--space-2)" }} 
+              leftIcon="ph-duotone ph-arrow-left"
+              onClick={() => setStep("wifi")}
+            >
+              Tentar Novamente
+            </Button>
           </div>
         )}
 
         {step === "done" && (
           <div style={{ textAlign: "center", display: "flex", flexDirection: "column", alignItems: "center", gap: "var(--space-4)" }}>
             <div style={{ background: "var(--primary-soft)", color: "var(--primary)", width: 80, height: 80, borderRadius: 40, display: "flex", alignItems: "center", justifyContent: "center" }}>
-              <i className="ph-duotone ph-paper-plane-tilt" style={{ fontSize: "3rem" }} />
+              <i className="ph-duotone ph-check-circle" style={{ fontSize: "3rem" }} />
             </div>
             <div>
-              <h2 style={{ fontSize: "var(--text-xl)", margin: "0 0 var(--space-2)", fontWeight: 700 }}>Configuração Enviada!</h2>
+              <h2 style={{ fontSize: "var(--text-xl)", margin: "0 0 var(--space-2)", fontWeight: 700 }}>Conectado com Sucesso!</h2>
               <p style={{ color: "var(--ink-3)", margin: 0, fontSize: "var(--text-sm)" }}>
-                As credenciais foram transmitidas para o dispositivo via Bluetooth.
+                O dispensador estabeleceu conexão com o Wi-Fi e está online.
               </p>
             </div>
 
@@ -736,34 +848,24 @@ function BluetoothPairingWizard() {
             }}>
               {/* BLE Status */}
               <div style={{ display: "flex", alignItems: "center", gap: "var(--space-3)" }}>
-                <i className="ph-duotone ph-bluetooth" style={{ fontSize: "1.5rem", color: "var(--success, #10b981)" }} />
+                <i className="ph-duotone ph-bluetooth" style={{ fontSize: "1.5rem", color: "var(--primary)" }} />
                 <div style={{ flex: 1 }}>
                   <div style={{ fontSize: "var(--text-sm)", fontWeight: 600, color: "var(--ink)" }}>Pareamento Bluetooth</div>
-                  <div style={{ fontSize: "var(--text-xs)", color: "var(--success-ink, #047857)" }}>Conectado e Configurado com Sucesso</div>
+                  <div style={{ fontSize: "var(--text-xs)", color: "var(--success-ink, #047857)" }}>Conectado e Configurado</div>
                 </div>
-                <i className="ph-duotone ph-check-circle" style={{ fontSize: "1.25rem", color: "var(--success, #10b981)" }} />
+                <i className="ph-duotone ph-check-circle" style={{ fontSize: "1.25rem", color: "var(--primary)" }} />
               </div>
 
               <hr style={{ border: "none", borderTop: "1px solid var(--border)", margin: 0 }} />
 
               {/* Wi-Fi Status */}
-              <div style={{ display: "flex", alignItems: "start", gap: "var(--space-3)" }}>
-                <i className="ph-duotone ph-wifi-high" style={{ fontSize: "1.5rem", color: "#f59e0b" }} />
+              <div style={{ display: "flex", alignItems: "center", gap: "var(--space-3)" }}>
+                <i className="ph-duotone ph-wifi-high" style={{ fontSize: "1.5rem", color: "var(--primary)" }} />
                 <div style={{ flex: 1 }}>
                   <div style={{ fontSize: "var(--text-sm)", fontWeight: 600, color: "var(--ink)" }}>Conexão Wi-Fi (Dispositivo)</div>
-                  <div style={{ fontSize: "var(--text-xs)", color: "#b45309", marginBottom: "var(--space-2)" }}>Tentando conectar à rede: <strong>{ssid}</strong></div>
-                  <div style={{
-                    fontSize: "var(--text-xs)",
-                    color: "var(--ink-3)",
-                    background: "rgba(245, 158, 11, 0.08)",
-                    border: "1px dashed rgba(245, 158, 11, 0.3)",
-                    padding: "var(--space-2)",
-                    borderRadius: "var(--radius-sm)",
-                    lineHeight: 1.4
-                  }}>
-                    ⚠️ <strong>Importante:</strong> O ESP32-C3 suporta <strong>apenas redes de 2.4GHz</strong>. Se ele falhar ao se conectar a esta rede, o dispositivo reiniciará no modo de pareamento e continuará aparecendo como "Indisponível" no painel.
-                  </div>
+                  <div style={{ fontSize: "var(--text-xs)", color: "var(--success-ink, #047857)" }}>Conectado à rede: <strong>{ssid}</strong></div>
                 </div>
+                <i className="ph-duotone ph-check-circle" style={{ fontSize: "1.25rem", color: "var(--primary)" }} />
               </div>
             </div>
             
