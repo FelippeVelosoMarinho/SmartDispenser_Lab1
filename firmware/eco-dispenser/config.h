@@ -28,7 +28,7 @@ const int BTN_CONFIRM  = 0;
 const int DEBOUNCE_MS  = 50;
 
 // ── LED onboard (diagnóstico) ─────────────────────────────────────────
-const int LED_ONBOARD = 2;
+const int LED_ONBOARD = 8; // era 2, mudei só pra conseguir testar no meu espinho
 
 // ── Servidor HTTP ─────────────────────────────────────────────────────
 const int SERVER_PORT = 80;
