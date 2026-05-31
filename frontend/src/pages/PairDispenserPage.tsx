@@ -5,6 +5,7 @@ import { Button } from "../components/ui/Button";
 import { Input } from "../components/ui/Input";
 import { Card, CardContent } from "../components/ui/Card";
 import "../components/ui/ConfirmModal.css";
+import { listPatients, pairDispenser, type Patient as ApiPatient } from "../lib/api";
 
 interface DiscoveredDispenser {
   id: string;
@@ -108,13 +109,20 @@ async function scanSubnet(
   }
 }
 
-const MOCK_PATIENTS: Patient[] = [
-  { id: "1", nome: "Ana Souza", idade: 34, medicacao: "Ritalina 10 mg" },
-  { id: "2", nome: "Bruno Lima", idade: 52, medicacao: "Sertralina 50 mg" },
-  { id: "6", nome: "Fábio Rocha", idade: 63, medicacao: "Atenolol 25 mg" },
-  { id: "10", nome: "João Alves", idade: 22, medicacao: "Guanfacina 1 mg" },
-  { id: "11", nome: "Karina Tavares", idade: 38, medicacao: "Bupropiona 150 mg" },
-];
+function usePatients() {
+  const [patients, setPatients] = useState<Patient[]>([]);
+  useEffect(() => {
+    listPatients().then((data) => {
+      setPatients(data.map((p) => ({
+        id: p.id,
+        nome: p.name,
+        idade: p.age ?? 0,
+        medicacao: p.condition ?? "Sem condição",
+      })));
+    }).catch(console.error);
+  }, []);
+  return patients;
+}
 
 type SignalLevel = "excelente" | "bom" | "fraco";
 
@@ -280,6 +288,7 @@ function LocalPairingView() {
   const [manualError, setManualError] = useState<string | null>(null);
   const [manualChecking, setManualChecking] = useState(false);
   const scanAbortRef = useRef<AbortController | null>(null);
+  const patientsList = usePatients();
 
   const startScan = useCallback(async () => {
     if (scanAbortRef.current) {
@@ -519,7 +528,7 @@ function LocalPairingView() {
       <PatientPickerModal
         open={selected !== null}
         device={selected}
-        patients={MOCK_PATIENTS}
+        patients={patientsList}
         loading={pairing}
         error={null}
         onCancel={() => setSelected(null)}
@@ -540,6 +549,8 @@ function BluetoothPairingWizard() {
   // removed syncing state to fix unused variable warning
   const [selectedPatient, setSelectedPatient] = useState<Patient | null>(null);
   const [pickerOpen, setPickerOpen] = useState(false);
+  const [concluding, setConcluding] = useState(false);
+  const patientsList = usePatients();
 
   // Web Bluetooth Refs
   const wifiCharRef = useRef<BluetoothRemoteGATTCharacteristic | null>(null);
@@ -725,7 +736,22 @@ function BluetoothPairingWizard() {
               )}
             </div>
 
-            <Button style={{ width: "100%", marginTop: "var(--space-2)" }} onClick={() => navigate({ to: "/dispensers" })}>
+            <Button 
+              style={{ width: "100%", marginTop: "var(--space-2)" }} 
+              loading={concluding}
+              onClick={async () => {
+                setConcluding(true);
+                if (selectedPatient && deviceId) {
+                  try {
+                    await pairDispenser(deviceId, selectedPatient.id);
+                  } catch (e) {
+                    console.error("Falha ao parear no backend:", e);
+                  }
+                }
+                setConcluding(false);
+                navigate({ to: "/dispensers" });
+              }}
+            >
               Concluir
             </Button>
           </div>
@@ -736,7 +762,7 @@ function BluetoothPairingWizard() {
       <PatientPickerModal
         open={pickerOpen}
         device={deviceId ? { id: deviceId, ip: "BLE", serial: deviceId, mac: "", rssi: 0, firmware: "" } : null}
-        patients={MOCK_PATIENTS}
+        patients={patientsList}
         loading={false}
         error={null}
         onCancel={() => setPickerOpen(false)}
