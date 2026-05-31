@@ -67,7 +67,9 @@ static void sendHeartbeat() {
 void setup() {
   Serial.begin(115200);
   unsigned long startWait = millis();
-  while (!Serial && millis() - startWait < 5000);
+  while (!Serial && millis() - startWait < 5000) {
+    delay(10);
+  }
 
   Serial.println("\n🌿 Eco-Dispenser iniciando...");
 
