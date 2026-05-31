@@ -80,7 +80,7 @@ void clearStoredCredentials() {
 // ── BLE ───────────────────────────────────────────────────────────────
 
 class WifiCfgCallbacks : public NimBLECharacteristicCallbacks {
-  void onWrite(NimBLECharacteristic* pChar) override {
+  void onWrite(NimBLECharacteristic* pChar, NimBLEConnInfo& connInfo) override {
     String payload = String(pChar->getValue().c_str());
     Serial.println("[BLE] Recebido: " + payload);
 
