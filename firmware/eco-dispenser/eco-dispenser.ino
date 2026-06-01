@@ -41,9 +41,10 @@ static void sendHeartbeat() {
     return;
   }
 
-  // Declarado como static para reutilizar a conexão e evitar dealloc/thread collision na stack do lwIP
-  static WiFiClient client;
-  static HTTPClient http;
+  // A conexão deve ser limpa a cada requisição para evitar que pcb (TCP blocks)
+  // fiquem presos (stale) na memória. Variáveis static aqui burlam o lock do lwIP!
+  WiFiClient client;
+  HTTPClient http;
   String url = String(BACKEND_URL) + "/iot/heartbeat";
   
   if (http.begin(client, url)) {
