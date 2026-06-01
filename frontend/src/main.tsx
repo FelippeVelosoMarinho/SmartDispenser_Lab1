@@ -4,7 +4,7 @@ import { RouterProvider } from "@tanstack/react-router";
 import "./styles/design-tokens.css";
 import "./index.css";
 import { AuthProvider, useAuth } from "./auth/AuthContext";
-import { ToastProvider } from "./components/ui/Toast";
+import { ToastProvider } from "./components/ui";
 import { router } from "./router";
 
 function RoutedApp() {

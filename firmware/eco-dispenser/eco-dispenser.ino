@@ -41,27 +41,32 @@ static void sendHeartbeat() {
     return;
   }
 
+  WiFiClient client;
   HTTPClient http;
   String url = String(BACKEND_URL) + "/iot/heartbeat";
-  http.begin(url);
-  http.addHeader("Content-Type", "application/json");
-  http.setTimeout(5000);
+  
+  if (http.begin(client, url)) {
+    http.addHeader("Content-Type", "application/json");
+    http.setTimeout(5000);
 
-  // dispenser_id usa o MAC address como identificador único do hardware
-  String mac  = WiFi.macAddress();
-  String body = "{\"dispenser_id\":\"" + mac + "\","
-                "\"uptime_s\":" + String(millis() / 1000) + ","
-                "\"current_slot\":" + String(getCurrentSlot()) + ","
-                "\"wifi_rssi\":" + String(WiFi.RSSI()) + ","
-                "\"online\":true}";
+    // dispenser_id usa o MAC address como identificador único do hardware
+    String mac  = WiFi.macAddress();
+    String body = "{\"dispenser_id\":\"" + mac + "\","
+                  "\"uptime_s\":" + String(millis() / 1000) + ","
+                  "\"current_slot\":" + String(getCurrentSlot()) + ","
+                  "\"wifi_rssi\":" + String(WiFi.RSSI()) + ","
+                  "\"online\":true}";
 
-  int code = http.POST(body);
-  if (code > 0) {
-    Serial.println("[Heartbeat] " + String(code) + " ← " + url);
+    int code = http.POST(body);
+    if (code > 0) {
+      Serial.println("[Heartbeat] " + String(code) + " ← " + url);
+    } else {
+      Serial.println("[Heartbeat] Falha ao contactar backend: " + http.errorToString(code));
+    }
+    http.end();
   } else {
-    Serial.println("[Heartbeat] Falha ao contactar backend: " + http.errorToString(code));
+    Serial.println("[Heartbeat] Falha ao inicializar conexão HTTP");
   }
-  http.end();
 }
 
 void setup() {
@@ -79,9 +84,9 @@ void setup() {
   pinMode(LED_ONBOARD, OUTPUT);
   digitalWrite(LED_ONBOARD, HIGH); // HIGH = apagado (lógica invertida no SuperMini)
 
-  // carouselSetup();
-  // alertsSetup();
-  // buttonsSetup();
+  carouselSetup();
+  alertsSetup();
+  buttonsSetup();
 
   // ── Obter credenciais WiFi ────────────────────────────────────────────
   String ssid, pass;

@@ -6,7 +6,7 @@ import { Input } from "../components/ui/Input";
 import { Card, CardContent } from "../components/ui/Card";
 import "../components/ui/ConfirmModal.css";
 import { listPatients, pairDispenser, getDispenserStatus, type Patient as ApiPatient } from "../lib/api";
-import { useToast } from "../components/ui/Toast";
+import { useToast } from "../components/ui";
 
 interface DiscoveredDispenser {
   id: string;
@@ -355,9 +355,11 @@ function LocalPairingView() {
     if (!selected) return;
     setPairing(true);
     try {
-      // TODO: registrar pareamento no backend com selected.ip e _patient.id
-      await new Promise((r) => setTimeout(r, 600));
-      navigate({ to: "/dispensers" });
+      await pairDispenser(selected.serial, _patient.id);
+      navigate({ to: "/dashboard" });
+    } catch (err) {
+      console.error(err);
+      alert("Falha ao parear no servidor: " + (err as Error).message);
     } finally {
       setPairing(false);
     }
@@ -905,7 +907,7 @@ function BluetoothPairingWizard() {
                   }
                 }
                 setConcluding(false);
-                navigate({ to: "/" });
+                navigate({ to: "/dashboard" });
               }}
             >
               Concluir

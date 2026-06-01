@@ -29,6 +29,8 @@ services:
       - ESP32_IP=192.168.109.25 # Altere para o IP real se necessário
     ports:
       - "8001:8000"
+    volumes:
+      - ./backend:/app
     depends_on:
       db:
         condition: service_healthy

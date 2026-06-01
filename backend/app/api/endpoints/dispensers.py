@@ -54,12 +54,18 @@ _MOCK_DISCOVERED = [
 
 
 def _format_dispenser(dispenser: Dispenser) -> dict:
+    is_online = bool(dispenser.is_online)
+    if is_online and dispenser.last_sync:
+        now = datetime.datetime.utcnow()
+        if now - dispenser.last_sync > datetime.timedelta(minutes=15):
+            is_online = False
+            
     return {
         "id": str(dispenser.id),
         "hardware_id": dispenser.hardware_id,
         "patient_id": str(dispenser.patient_id) if dispenser.patient_id else None,
         "patient_name": dispenser.patient.full_name if dispenser.patient else None,
-        "is_online": bool(dispenser.is_online),
+        "is_online": is_online,
         "battery_level": float(dispenser.battery_level) if dispenser.battery_level is not None else 100.0,
         "critical_stock": bool(dispenser.critical_stock),
         "last_sync": dispenser.last_sync,
