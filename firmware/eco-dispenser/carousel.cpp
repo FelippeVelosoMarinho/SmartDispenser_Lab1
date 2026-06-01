@@ -26,8 +26,10 @@ static int loadSlot() {
 // ── Public API ────────────────────────────────────────────────────────
 
 void carouselSetup() {
+#if SERVO_NEEDS_PWM_TIMER
   ESP32PWM::allocateTimer(0);
-  servo.setPeriodHertz(50); // Servo padrão roda em 50Hz
+#endif
+  servo.setPeriodHertz(50);
   servo.attach(SERVO_PIN, 500, 2400);
   servo.write(SERVO_REST);
   delay(200);

@@ -1,43 +1,43 @@
 #ifndef CONFIG_H
 #define CONFIG_H
 
-// ── Servo (roleta) ────────────────────────────────────────────────────
-const int   SERVO_PIN      = 2;
-const int   TOTAL_SLOTS    = 21;
-const int   SERVO_REST     = 0;   // graus — posição de repouso
-const int   SERVO_ADVANCE  = 90;  // graus — posição de avanço (ajustar com o hardware real)
-const int   SERVO_DELAY_MS = 400; // ms aguardando o servo alcançar a posição
+// ── Seleção de placa ──────────────────────────────────────────────────
+// Opção A: descomente manualmente a placa em uso:
+// #define BOARD_ESP32_WROOM
+// #define BOARD_ESP32_C3_SUPERMINI
+//
+// Opção B: deixe ambos comentados — o roteador detecta automaticamente
+// a placa selecionada em Tools > Board na Arduino IDE.
 
-// ── LEDs de período do dia ────────────────────────────────────────────
-const int LED_MORNING   = 3;  // ☀️  Sol        — manhã
-const int LED_AFTERNOON = 4;  // ⛅  Sol + nuvem — tarde
-const int LED_NIGHT     = 5;  // 🌙  Lua         — noite
+#if defined(BOARD_ESP32_C3_SUPERMINI)
+  #include "boards/config_c3_supermini.h"
+#elif defined(BOARD_ESP32_WROOM)
+  #include "boards/config_wroom32.h"
+#elif defined(CONFIG_IDF_TARGET_ESP32C3)
+  #include "boards/config_c3_supermini.h"
+#elif defined(CONFIG_IDF_TARGET_ESP32)
+  #include "boards/config_wroom32.h"
+#else
+  #error "Placa não suportada. Defina BOARD_ESP32_C3_SUPERMINI ou BOARD_ESP32_WROOM em config.h, ou selecione uma placa ESP32 na IDE."
+#endif
 
-// ── Buzzer ────────────────────────────────────────────────────────────
-// GPIOs 6-11 são flash interna no WROOM — usar pinos seguros para testes
-const int BUZZER_PIN  = 21;
-const int BUZZER_FREQ = 1000; // Hz — frequência base do bipe
+// ── Helpers de LED onboard (polaridade varia por placa) ───────────────
 
-// ── Motor de vibração (via transistor NPN BC547) ──────────────────────
-const int VIB_PIN = 10; // C3: Pino 10
+#define LED_ONBOARD_OFF() \
+  digitalWrite(LED_ONBOARD, LED_ONBOARD_ACTIVE_LOW ? HIGH : LOW)
 
-// ── Botões (INPUT_PULLUP — repouso HIGH, pressionado LOW) ─────────────
-const int BTN_VOL_UP   = 6;  // C3: Pino 6
-const int BTN_VOL_DOWN = 7;  // C3: Pino 7
-const int BTN_CONFIRM  = 0;
-const int DEBOUNCE_MS  = 50;
+#define LED_ONBOARD_TOGGLE() \
+  digitalWrite(LED_ONBOARD, !digitalRead(LED_ONBOARD))
 
-// ── LED onboard (diagnóstico) ─────────────────────────────────────────
-const int LED_ONBOARD = 8; // era 2, mudei só pra conseguir testar no meu espinho
+// ── Configurações comuns (software) ───────────────────────────────────
 
-// ── Servidor HTTP ─────────────────────────────────────────────────────
+const int TOTAL_SLOTS = 21;
+const int DEBOUNCE_MS = 50;
 const int SERVER_PORT = 80;
 
 // ── Backend ───────────────────────────────────────────────────────────
 // URL base da API (sem trailing slash). Definida em secrets.h.
-// Exemplo: "http://192.168.1.100:8000"
-// Deixar vazio ("") para desabilitar o heartbeat.
 extern const char* BACKEND_URL;
-const unsigned long HEARTBEAT_INTERVAL_MS = 30UL * 1000UL; // 30s para atualização frequente no backend/frontend
+const unsigned long HEARTBEAT_INTERVAL_MS = 30UL * 1000UL;
 
 #endif

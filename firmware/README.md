@@ -1,6 +1,19 @@
-# 🔌 Firmware — ESP32-C3
+# 🔌 Firmware — ESP32 (multi-placa)
 
-Este diretório contém o código para o **ESP32-C3 SuperMini**. A gravação **deve ser feita manualmente via Arduino IDE**.
+Este diretório contém o firmware do **Eco-Dispenser**, compilável para diferentes variantes de ESP32 sem alterar pinos manualmente a cada troca de placa.
+
+## Placas suportadas
+
+| Placa | Board na IDE | Arquivo de pinos |
+|-------|--------------|------------------|
+| ESP32-C3 SuperMini | `ESP32C3 Dev Module` | `boards/config_c3_supermini.h` |
+| ESP32 WROOM / DevKit | `ESP32 Dev Module` | `boards/config_wroom32.h` |
+
+A seleção é **automática** com base na placa escolhida em `Tools > Board`. Para forçar manualmente, descomente `#define BOARD_ESP32_...` em `eco-dispenser/config.h`.
+
+Cada arquivo de placa define pinos, polaridade do LED onboard e se o servo exige `ESP32PWM::allocateTimer()`.
+
+### ESP32-C3 SuperMini
 
 https://randomnerdtutorials.com/getting-started-esp32-c3-super-mini/
 
@@ -36,10 +49,16 @@ Antes de instalar, faça uma limpeza:
 
 ### 3. Configurações de Upload
 
-No menu `Tools`, selecione:
+No menu `Tools`, selecione conforme sua placa:
 
+**ESP32-C3 SuperMini:**
 - **Board**: `ESP32C3 Dev Module`
 - **USB CDC On Boot**: `Enabled`
+
+**ESP32 WROOM / DevKit:**
+- **Board**: `ESP32 Dev Module`
+
+Em ambos os casos:
 - **Port**: Selecione a porta onde seu ESP32 está conectado.
 
 ## ⚙️ Configuração do Wi-Fi

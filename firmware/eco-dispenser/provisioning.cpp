@@ -154,7 +154,7 @@ void runBleProvisioning() {
 
   // Pisca LED onboard até receber credenciais
   while (!gProvisioningDone) {
-    digitalWrite(LED_ONBOARD, !digitalRead(LED_ONBOARD));
+    LED_ONBOARD_TOGGLE();
     delay(300);
   }
 

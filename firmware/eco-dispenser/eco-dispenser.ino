@@ -1,6 +1,6 @@
 /*
  * Eco-Dispenser Inteligente
- * Firmware: ESP32-C3 SuperMini
+ * Firmware: ESP32 (multi-placa — ver config.h)
  *
  * Arquitetura:
  *   config.h      — pinos e constantes
@@ -103,13 +103,13 @@ void setup() {
     delay(10);
   }
 
-  Serial.println("\n🌿 Eco-Dispenser iniciando...");
+  Serial.println("\n🌿 Eco-Dispenser iniciando (" BOARD_LABEL ")...");
 
   // FORÇA A LIMPEZA DA MEMÓRIA PARA GARANTIR QUE VÁ PARA O BLUETOOTH (Comentado para produção)
   // clearStoredCredentials();
 
   pinMode(LED_ONBOARD, OUTPUT);
-  digitalWrite(LED_ONBOARD, HIGH); // HIGH = apagado (lógica invertida no SuperMini)
+  LED_ONBOARD_OFF();
 
   carouselSetup();
   alertsSetup();
@@ -151,7 +151,7 @@ void setup() {
   while (WiFi.status() != WL_CONNECTED && retries < 30) {
     delay(500);
     Serial.print(".");
-    digitalWrite(LED_ONBOARD, !digitalRead(LED_ONBOARD));
+    LED_ONBOARD_TOGGLE();
     retries++;
   }
 
@@ -171,7 +171,7 @@ void setup() {
     ESP.restart();
   }
 
-  digitalWrite(LED_ONBOARD, HIGH);
+  LED_ONBOARD_OFF();
   Serial.println("\n✅ Wi-Fi conectado!");
   Serial.print("📍 IP: ");
   Serial.println(WiFi.localIP());
