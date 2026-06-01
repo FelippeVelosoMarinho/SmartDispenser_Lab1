@@ -6,7 +6,7 @@ Para garantir a compilação e funcionamento corretos do firmware do **Eco-Dispe
 
 * **Placa:** ESP32C3 Dev Module (ou placas genéricas ESP32-C3 SuperMini)
 * **Core / Board Package:** ESP32 by Espressif Systems
-* **Versão Testada:** `3.x.x` (Ex: 3.0.x ou superior)
+* **Versão Recomendada:** `3.0.x+`
 
 > **Nota:** A versão 3.x.x do ESP32 Core introduziu diversas mudanças em relação à versão 2.x, afetando principalmente bibliotecas como o AsyncTCP e NimBLE. Se você for utilizar a versão `2.x.x` do Core, pode ser necessário reverter os patches manuais aplicados nas bibliotecas.
 
@@ -16,12 +16,13 @@ Para garantir a compilação e funcionamento corretos do firmware do **Eco-Dispe
   * **Versão Testada:** `>= 2.0.0`
   * **Motivo:** O projeto utiliza o BLE (Bluetooth Low Energy) leve para provisionamento do WiFi através das classes `NimBLEDevice` e suas callbacks (ex: `NimBLECharacteristicCallbacks::onWrite` que agora aceita `NimBLEConnInfo&`).
 
-* **ESPAsyncWebServer** (por me-no-dev / lacamera)
-  * **Versão Testada:** Última disponível no repositório / Library Manager.
-  * **Nota Crítica:** Com o ESP32 Core 3.x, há um erro conhecido ("discards qualifiers") envolvendo o `AsyncServer::status()` no arquivo `ESPAsyncWebServer.h`. Este problema foi contornado no código aplicando um `const_cast`. Se a biblioteca oficial receber uma atualização, este *patch* não será mais necessário.
+* **ESP Async WebServer** (por ESP32Async / mathieucarbou)
+  * **Versão Recomendada:** `>= 3.6.x`
+  * **Importante:** Instale a biblioteca com espaços no nome (**ESP Async WebServer**). A biblioteca antiga `ESPAsyncWebServer` (sem espaços) costuma estar desatualizada e pode causar o crash `assert failed: tcp_alloc (Required to lock TCPIP core functionality!)` no Core 3.x.
 
-* **AsyncTCP** (por me-no-dev / mathieucarbou)
-  * Dependência automática do `ESPAsyncWebServer` para ESP32. Assegure-se de baixar as versões recentes que tentam manter compatibilidade com o Core 3.x.
+* **Async TCP** (por ESP32Async / mathieucarbou)
+  * **Versão Recomendada:** `>= 3.3.6`
+  * **Importante:** Instale a biblioteca com espaços no nome (**Async TCP**). A biblioteca antiga `AsyncTCP` (sem espaços) pode ser incompatível com o Core 3.x.
 
 ## Solução de Problemas Comuns
 

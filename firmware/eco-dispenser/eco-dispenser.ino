@@ -33,6 +33,8 @@ AsyncWebServer server(SERVER_PORT);
 // Variáveis para o Heartbeat periódico
 unsigned long lastHeartbeat = 0;
 const unsigned long HEARTBEAT_INTERVAL = 5 * 60 * 1000; // 5 minutos
+static bool pendingInitialHeartbeat = true;
+static unsigned long initialHeartbeatAt = 0;
 
 static void sendHeartbeat() {
   if (WiFi.status() != WL_CONNECTED) return;
@@ -50,6 +52,7 @@ static void sendHeartbeat() {
   if (http.begin(client, url)) {
     http.addHeader("Content-Type", "application/json");
     http.setTimeout(5000);
+    http.setReuse(false);
 
     String mac  = WiFi.macAddress();
     String ip   = WiFi.localIP().toString();
@@ -68,16 +71,26 @@ static void sendHeartbeat() {
     int code = http.POST(body);
     if (code > 0) {
       Serial.println("[Heartbeat] " + String(code) + " ← " + url);
-      // CORREÇÃO CRÍTICA: Ler o corpo da resposta (getString) limpa o buffer RX do lwIP.
-      // Sem isso, chamar http.end() com dados na fila causa o crash 'tcp_alloc' no C3!
-      String response = http.getString(); 
+      // Limpa RX do lwIP antes de encerrar, evitando o crash tcp_alloc no ESP32-C3.
+      WiFiClient* stream = http.getStreamPtr();
+      String response = "";
+      if (stream) {
+        while (stream->available()) {
+          (void)stream->read();
+        }
+      } else {
+        response = http.getString();
+      }
       if (code != 200) {
+        if (response.length() == 0) response = http.getString();
         Serial.println("[Heartbeat] Resposta Erro: " + response);
       }
     } else {
       Serial.println("[Heartbeat] Falha ao contactar backend: " + http.errorToString(code));
     }
     http.end();
+    client.stop();
+    delay(100);
   } else {
     Serial.println("[Heartbeat] Falha ao inicializar conexão HTTP");
   }
@@ -127,6 +140,10 @@ void setup() {
 
   // ── Conectar ao WiFi ──────────────────────────────────────────────────
   Serial.println("Conectando ao Wi-Fi: " + ssid);
+  WiFi.mode(WIFI_STA);
+  WiFi.setAutoReconnect(true);
+  WiFi.persistent(true);
+  WiFi.setSleep(WIFI_PS_NONE);
   WiFi.begin(ssid.c_str(), pass.c_str());
 
   int retries = 0;
@@ -138,10 +155,18 @@ void setup() {
   }
 
   if (WiFi.status() != WL_CONNECTED) {
-    // Credenciais provavelmente erradas — limpa e reinicia para tentar BLE
-    Serial.println("\n❌ Falha ao conectar. Limpando credenciais e reiniciando...");
-    clearStoredCredentials();
-    delay(1000);
+    // Não apaga credenciais na primeira falha: isso causa loop BLE infinito em quedas/transientes.
+    int fails = incrementWifiFailureCount();
+    Serial.println("\n❌ Falha ao conectar ao Wi-Fi. Tentativas consecutivas: " + String(fails));
+    if (fails >= 3) {
+      Serial.println("🧹 Muitas falhas consecutivas. Limpando credenciais e reiniciando em modo BLE...");
+      clearStoredCredentials();
+      resetWifiFailureCount();
+      delay(500);
+    } else {
+      Serial.println("🔁 Reiniciando para tentar reconectar (sem apagar credenciais)...");
+      delay(500);
+    }
     ESP.restart();
   }
 
@@ -149,21 +174,30 @@ void setup() {
   Serial.println("\n✅ Wi-Fi conectado!");
   Serial.print("📍 IP: ");
   Serial.println(WiFi.localIP());
+  resetWifiFailureCount();
 
   // Aguarda a estabilização da rede para evitar conflitos de concorrência na pilha lwIP
   Serial.println("[Rede] Aguardando estabilização (3s)...");
   delay(3000);
 
-  sendHeartbeat();
-  lastHeartbeat = millis(); // Inicia a contagem de tempo do heartbeat
-
   setupApiServer(server);
   server.begin();
   Serial.println("🚀 Servidor HTTP iniciado na porta " + String(SERVER_PORT));
+
+  // Evita disparar HTTP no exato instante pós-conexão/pós-BLE deinit.
+  pendingInitialHeartbeat = true;
+  initialHeartbeatAt = millis() + 2000;
+  lastHeartbeat = millis();
 }
 
 void loop() {
   checkButtons();
+
+  if (pendingInitialHeartbeat && WiFi.status() == WL_CONNECTED && (long)(millis() - initialHeartbeatAt) >= 0) {
+    sendHeartbeat();
+    pendingInitialHeartbeat = false;
+    lastHeartbeat = millis();
+  }
 
   if (millis() - lastHeartbeat >= HEARTBEAT_INTERVAL) {
     sendHeartbeat();

@@ -6,6 +6,7 @@
 static const char* NVS_NS      = "wifi_creds";
 static const char* NVS_SSID    = "ssid";
 static const char* NVS_PASS    = "pass";
+static const char* NVS_FAILS   = "wifi_fail_count";
 
 // UUIDs definidos em firmware/BLE_PROVISIONING_SPEC.md
 static const char* BLE_SERVICE_UUID  = "4fafc201-1fb5-459e-8fcc-c5c9c331914b";
@@ -75,6 +76,31 @@ void clearStoredCredentials() {
   prefs.clear();
   prefs.end();
   Serial.println("[Prov] Credenciais WiFi apagadas da NVS.");
+}
+
+int getWifiFailureCount() {
+  Preferences prefs;
+  prefs.begin(NVS_NS, false);
+  int n = prefs.getInt(NVS_FAILS, 0);
+  prefs.end();
+  return n;
+}
+
+int incrementWifiFailureCount() {
+  Preferences prefs;
+  prefs.begin(NVS_NS, false);
+  int n = prefs.getInt(NVS_FAILS, 0);
+  n++;
+  prefs.putInt(NVS_FAILS, n);
+  prefs.end();
+  return n;
+}
+
+void resetWifiFailureCount() {
+  Preferences prefs;
+  prefs.begin(NVS_NS, false);
+  prefs.putInt(NVS_FAILS, 0);
+  prefs.end();
 }
 
 // ── BLE ───────────────────────────────────────────────────────────────

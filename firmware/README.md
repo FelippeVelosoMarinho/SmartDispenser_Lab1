@@ -15,14 +15,16 @@ Para compilar este projeto, você deve configurar seu ambiente seguindo estes pa
    `https://espressif.github.io/arduino-esp32/package_esp32_index.json`
 3. Vá em `Tools > Board > Boards Manager`.
 4. Procure por `esp32` (da Espressif Systems).
-5. **CRÍTICO**: Selecione a versão **2.0.17** e clique em Install. (A versão 3.x causa erros de compilação com bibliotecas assíncronas).
+5. **Recomendado**: Selecione a versão **3.0.x+** e clique em Install.
+   - Se você estiver usando bibliotecas antigas (`ESPAsyncWebServer` / `AsyncTCP` sem espaços), atualize para os forks mantidos (**ESP Async WebServer** + **Async TCP**) para evitar o crash `assert failed: tcp_alloc (Required to lock TCPIP core functionality!)`.
+   - Se você precisar ficar no Core **2.0.17** por algum motivo, use bibliotecas compatíveis e não misture recomendações entre documentos.
 
 ### 2. Instalar Bibliotecas (Manual)
 
 Vá em `Sketch > Include Library > Manage Libraries...` e instale:
 
-1. **ESPAsyncWebServer** (autor: me-no-dev ou ESP32Async).
-2. **AsyncTCP** (autor: me-no-dev ou ESP32Async).
+1. **ESP Async WebServer** (autor: ESP32Async / mathieucarbou).
+2. **Async TCP** (autor: ESP32Async / mathieucarbou).
 
 ### 3. Configurações de Upload
 
