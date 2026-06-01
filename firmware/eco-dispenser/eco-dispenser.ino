@@ -73,8 +73,8 @@ void setup() {
 
   Serial.println("\n🌿 Eco-Dispenser iniciando...");
 
-  // FORÇA A LIMPEZA DA MEMÓRIA PARA GARANTIR QUE VÁ PARA O BLUETOOTH
-  clearStoredCredentials();
+  // FORÇA A LIMPEZA DA MEMÓRIA PARA GARANTIR QUE VÁ PARA O BLUETOOTH (Comentado para produção)
+  // clearStoredCredentials();
 
   pinMode(LED_ONBOARD, OUTPUT);
   digitalWrite(LED_ONBOARD, HIGH); // HIGH = apagado (lógica invertida no SuperMini)
