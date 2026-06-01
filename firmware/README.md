@@ -16,8 +16,8 @@ Para compilar este projeto, você deve configurar seu ambiente seguindo estes pa
 3. Vá em `Tools > Board > Boards Manager`.
 4. Procure por `esp32` (da Espressif Systems).
 5. **Recomendado**: Selecione a versão **3.0.x+** e clique em Install.
-   - Se você estiver usando bibliotecas antigas (`ESPAsyncWebServer` / `AsyncTCP` sem espaços), atualize para os forks mantidos (**ESP Async WebServer** + **Async TCP**) para evitar o crash `assert failed: tcp_alloc (Required to lock TCPIP core functionality!)`.
-   - Se você precisar ficar no Core **2.0.17** por algum motivo, use bibliotecas compatíveis e não misture recomendações entre documentos.
+   - Use apenas os forks mantidos: **ESP Async WebServer** + **Async TCP**.
+   - **Não misture** com `ESPAsyncWebServer` / `AsyncTCP` (sem espaços), pois isso costuma causar `assert failed: tcp_alloc (Required to lock TCPIP core functionality!)`.
 
 ### 2. Instalar Bibliotecas (Manual)
 
@@ -25,6 +25,14 @@ Vá em `Sketch > Include Library > Manage Libraries...` e instale:
 
 1. **ESP Async WebServer** (autor: ESP32Async / mathieucarbou).
 2. **Async TCP** (autor: ESP32Async / mathieucarbou).
+
+Antes de instalar, faça uma limpeza:
+
+1. Feche a Arduino IDE.
+2. Remova as pastas antigas em `~/Arduino/libraries/`:
+   - `ESPAsyncWebServer`
+   - `AsyncTCP`
+3. Reabra a IDE e instale apenas as bibliotecas acima.
 
 ### 3. Configurações de Upload
 

@@ -24,6 +24,18 @@ Para garantir a compilação e funcionamento corretos do firmware do **Eco-Dispe
   * **Versão Recomendada:** `>= 3.3.6`
   * **Importante:** Instale a biblioteca com espaços no nome (**Async TCP**). A biblioteca antiga `AsyncTCP` (sem espaços) pode ser incompatível com o Core 3.x.
 
+### Limpeza obrigatória de bibliotecas antigas (evita conflito silencioso)
+
+Antes de compilar no Core 3.x, remova completamente instalações antigas para não misturar forks:
+
+1. Feche a Arduino IDE.
+2. Vá até a pasta `~/Arduino/libraries/`.
+3. Remova (se existirem): `ESPAsyncWebServer` e `AsyncTCP`.
+4. Abra a IDE novamente e instale apenas:
+   - `ESP Async WebServer` (ESP32Async / mathieucarbou)
+   - `Async TCP` (ESP32Async / mathieucarbou)
+5. Recompile e confira no log de compilação que os caminhos usados incluem os nomes com espaço/fork novo.
+
 ## Solução de Problemas Comuns
 
 1. **`undefined reference to 'BACKEND_URL'`:**
@@ -37,8 +49,9 @@ Para garantir a compilação e funcionamento corretos do firmware do **Eco-Dispe
 2. **`'void WifiCfgCallbacks::onWrite(...)' marked 'override', but does not override`:**
    Este erro ocorre se a sua versão da biblioteca `NimBLE-Arduino` for antiga (série 1.x.x). Nela, o segundo parâmetro `NimBLEConnInfo&` não existia. Atualize a biblioteca ou ajuste o código em `provisioning.cpp`.
 
-3. **Erro no `ESP_Async_WebServer` - `passing 'const AsyncServer' as 'this' argument discards qualifiers`:**
-   Este erro ocorre quando usando o ESP32 Core 3.x+. A solução temporária aplicada no projeto foi envolver a chamada interna `_server.status()` num `const_cast<AsyncWebServer *>(this)` no arquivo `ESPAsyncWebServer.h` da biblioteca instalada na sua máquina.
+3. **Mistura de bibliotecas Async (crashes/reset após conectar no Wi-Fi):**
+   Se o firmware compila, conecta e logo reinicia com `tcp_alloc`, quase sempre existe conflito entre versões/forks.
+   **Solução:** remova as libs antigas (`ESPAsyncWebServer` / `AsyncTCP`), mantenha somente os forks (`ESP Async WebServer` / `Async TCP`) e compile com ESP32 Core `3.0.x+`.
 
 4. **`text section exceeds available space in board` / `Sketch too big`:**
    O firmware utiliza BLE (NimBLE), WiFi e servidor web assíncrono. Juntos, eles geram um binário maior que o limite padrão de ~1.2MB alocado para o aplicativo no esquema de partições padrão do ESP32.
