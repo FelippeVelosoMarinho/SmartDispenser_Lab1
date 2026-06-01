@@ -144,18 +144,22 @@ export function DispensersPage() {
   useEffect(() => {
     let mounted = true;
 
-    async function loadDispensers() {
-      setLoading(true);
-      setError(null);
+    async function loadDispensers(quiet = false) {
+      if (!quiet) {
+        setLoading(true);
+        setError(null);
+      }
       try {
         const data = await listDispensers();
         if (!mounted) return;
         setDispensers(data.map(toDispenserRow));
       } catch (err) {
         if (!mounted) return;
-        setError(err instanceof Error ? err.message : "Falha ao carregar dispensadores");
+        if (!quiet) {
+          setError(err instanceof Error ? err.message : "Falha ao carregar dispensadores");
+        }
       } finally {
-        if (mounted) {
+        if (mounted && !quiet) {
           setLoading(false);
         }
       }
@@ -163,8 +167,14 @@ export function DispensersPage() {
 
     void loadDispensers();
 
+    // Poll quiet updates in the background every 5 seconds
+    const interval = setInterval(() => {
+      void loadDispensers(true);
+    }, 5000);
+
     return () => {
       mounted = false;
+      clearInterval(interval);
     };
   }, []);
 
@@ -293,7 +303,7 @@ export function DispensersPage() {
               {loading ? (
                 <TableRow>
                   <TableCell
-                    colSpan={5}
+                    colSpan={6}
                     style={{ textAlign: "center", padding: "var(--space-10)" }}
                   >
                     <div
@@ -313,7 +323,7 @@ export function DispensersPage() {
               ) : pageItems.length === 0 ? (
                 <TableRow>
                   <TableCell
-                    colSpan={5}
+                    colSpan={6}
                     style={{ textAlign: "center", padding: "var(--space-10)" }}
                   >
                     <div

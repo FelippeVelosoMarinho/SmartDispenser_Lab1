@@ -38,6 +38,7 @@ class HeartbeatCreate(BaseModel):
     battery_level: float = 100.0
     online: bool = True
     critical_stock: bool = False
+    ip_address: Optional[str] = None
 
 
 class HeartbeatResponse(BaseModel):

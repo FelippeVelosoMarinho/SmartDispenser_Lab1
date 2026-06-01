@@ -55,6 +55,7 @@ class Dispenser(Base):
     patient_id = Column(UUID(as_uuid=True), ForeignKey('patients.id'), nullable=True) # made nullable
     is_online = Column(Boolean, default=False)
     last_sync = Column(DateTime)
+    ip_address = Column(String, nullable=True)
     
     # Telemetry fields
     battery_level = Column(Numeric, default=100.0)

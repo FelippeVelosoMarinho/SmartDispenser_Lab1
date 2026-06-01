@@ -22,6 +22,7 @@ class DispenserStatusPublic(BaseModel):
     battery_level: float
     online: bool
     critical_stock: bool
+    ip_address: Optional[str] = None
 
 
 class DispenserPairRequest(BaseModel):
@@ -41,3 +42,4 @@ class DispenserPublic(BaseModel):
     battery_level: float
     critical_stock: bool
     last_sync: Optional[datetime] = None
+    ip_address: Optional[str] = None

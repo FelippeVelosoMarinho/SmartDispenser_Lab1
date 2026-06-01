@@ -318,6 +318,7 @@ async def process_heartbeat(
         "battery_level": heartbeat.battery_level,
         "online": heartbeat.online,
         "critical_stock": heartbeat.critical_stock,
+        "ip_address": heartbeat.ip_address,
     }
     
     crud_dispenser.update_dispenser_status(db, heartbeat.dispenser_id, status_data)

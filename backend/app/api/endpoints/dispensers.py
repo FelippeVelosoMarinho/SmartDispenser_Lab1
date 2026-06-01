@@ -69,6 +69,7 @@ def _format_dispenser(dispenser: Dispenser) -> dict:
         "battery_level": float(dispenser.battery_level) if dispenser.battery_level is not None else 100.0,
         "critical_stock": bool(dispenser.critical_stock),
         "last_sync": dispenser.last_sync,
+        "ip_address": dispenser.ip_address,
     }
 
 

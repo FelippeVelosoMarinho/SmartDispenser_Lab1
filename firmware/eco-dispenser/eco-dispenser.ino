@@ -41,21 +41,22 @@ static void sendHeartbeat() {
     return;
   }
 
-  WiFiClient client;
-  HTTPClient http;
+  // Declarado como static para reutilizar a conexão e evitar dealloc/thread collision na stack do lwIP
+  static WiFiClient client;
+  static HTTPClient http;
   String url = String(BACKEND_URL) + "/iot/heartbeat";
   
   if (http.begin(client, url)) {
     http.addHeader("Content-Type", "application/json");
     http.setTimeout(5000);
 
-    // dispenser_id usa o MAC address como identificador único do hardware
     String mac  = WiFi.macAddress();
+    String ip   = WiFi.localIP().toString();
     String body = "{\"dispenser_id\":\"" + mac + "\","
-                  "\"uptime_s\":" + String(millis() / 1000) + ","
-                  "\"current_slot\":" + String(getCurrentSlot()) + ","
-                  "\"wifi_rssi\":" + String(WiFi.RSSI()) + ","
-                  "\"online\":true}";
+                  "\"battery_level\":100.0,"
+                  "\"online\":true,"
+                  "\"critical_stock\":false,"
+                  "\"ip_address\":\"" + ip + "\"}";
 
     int code = http.POST(body);
     if (code > 0) {

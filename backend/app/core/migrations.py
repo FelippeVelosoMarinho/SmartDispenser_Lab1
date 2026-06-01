@@ -262,6 +262,10 @@ _MIGRATIONS: list[tuple[str, str]] = [
         "refill_history: add performed_by_legacy",
         "ALTER TABLE refill_history ADD COLUMN IF NOT EXISTS performed_by_legacy TEXT;",
     ),
+    (
+        "dispensers: add ip_address",
+        "ALTER TABLE dispensers ADD COLUMN IF NOT EXISTS ip_address TEXT;",
+    ),
 ]
 
 
