@@ -52,7 +52,13 @@ static void sendHeartbeat() {
 
     String mac  = WiFi.macAddress();
     String ip   = WiFi.localIP().toString();
+    
+    // Payload "Universal": Contém os campos novos E os antigos.
+    // Assim não dá erro 422 se o backend remoto ainda estiver desatualizado.
     String body = "{\"dispenser_id\":\"" + mac + "\","
+                  "\"uptime_s\":" + String(millis() / 1000) + ","
+                  "\"current_slot\":" + String(getCurrentSlot()) + ","
+                  "\"wifi_rssi\":" + String(WiFi.RSSI()) + ","
                   "\"battery_level\":100.0,"
                   "\"online\":true,"
                   "\"critical_stock\":false,"
@@ -61,6 +67,12 @@ static void sendHeartbeat() {
     int code = http.POST(body);
     if (code > 0) {
       Serial.println("[Heartbeat] " + String(code) + " ← " + url);
+      // CORREÇÃO CRÍTICA: Ler o corpo da resposta (getString) limpa o buffer RX do lwIP.
+      // Sem isso, chamar http.end() com dados na fila causa o crash 'tcp_alloc' no C3!
+      String response = http.getString(); 
+      if (code != 200) {
+        Serial.println("[Heartbeat] Resposta Erro: " + response);
+      }
     } else {
       Serial.println("[Heartbeat] Falha ao contactar backend: " + http.errorToString(code));
     }
