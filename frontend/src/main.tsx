@@ -4,6 +4,7 @@ import { RouterProvider } from "@tanstack/react-router";
 import "./styles/design-tokens.css";
 import "./index.css";
 import { AuthProvider, useAuth } from "./auth/AuthContext";
+import { ToastProvider } from "./components/ui/Toast";
 import { router } from "./router";
 
 function RoutedApp() {
@@ -14,7 +15,9 @@ function RoutedApp() {
 createRoot(document.getElementById("root")!).render(
   <StrictMode>
     <AuthProvider>
-      <RoutedApp />
+      <ToastProvider>
+        <RoutedApp />
+      </ToastProvider>
     </AuthProvider>
   </StrictMode>,
 );
