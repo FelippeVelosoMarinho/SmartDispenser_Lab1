@@ -1,4 +1,6 @@
-# 🌿 Pillar — MVP POC
+# 🌿 PillHub
+
+<img justify-content="center" align-items="center" width="320" height="320" alt="pill_remaster" src="https://github.com/user-attachments/assets/e6a6fa6d-384c-40c2-bf85-f11015b20003" />
 
 Sistema de monitoramento e controle em tempo real para dispensers inteligentes, integrando Hardware (ESP32-C3), Backend (FastAPI) e Frontend (React).
 
