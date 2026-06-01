@@ -325,3 +325,18 @@ async def process_heartbeat(
     return HeartbeatResponse(
         message="Heartbeat recorded successfully."
     )
+
+
+# Legacy router for IoT paths called by ESP32 firmware directly
+legacy_router = APIRouter(prefix="/iot", tags=["iot"])
+
+@legacy_router.post("/heartbeat", response_model=HeartbeatResponse)
+async def process_legacy_heartbeat(
+    heartbeat: HeartbeatCreate,
+    background_tasks: BackgroundTasks,
+    db: Session = Depends(get_db)
+):
+    """
+    Legacy endpoint for ESP32 firmware heartbeat at /iot/heartbeat.
+    """
+    return await process_heartbeat(heartbeat, background_tasks, db)

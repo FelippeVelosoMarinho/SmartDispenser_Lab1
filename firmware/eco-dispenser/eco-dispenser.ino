@@ -131,6 +131,10 @@ void setup() {
   Serial.print("📍 IP: ");
   Serial.println(WiFi.localIP());
 
+  // Aguarda a estabilização da rede para evitar conflitos de concorrência na pilha lwIP
+  Serial.println("[Rede] Aguardando estabilização (3s)...");
+  delay(3000);
+
   sendHeartbeat();
   lastHeartbeat = millis(); // Inicia a contagem de tempo do heartbeat
 

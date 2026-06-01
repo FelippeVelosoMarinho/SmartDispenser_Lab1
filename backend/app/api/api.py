@@ -7,6 +7,7 @@ from app.api.endpoints import auth, iot, patients, medications, schedules, logs,
 api_router = APIRouter()
 api_router.include_router(auth.router)
 api_router.include_router(iot.router)
+api_router.include_router(iot.legacy_router)
 api_router.include_router(patients.router)
 api_router.include_router(patient_medications.router)
 api_router.include_router(medications.router)

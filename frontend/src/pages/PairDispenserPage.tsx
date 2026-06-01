@@ -621,11 +621,20 @@ function BluetoothPairingWizard() {
       const encoder = new TextEncoder();
       const data = encoder.encode(payload);
       
-      // Escreve as credenciais no ESP32
-      await wifiCharRef.current.writeValue(data);
+      // Escreve as credenciais no ESP32. Se o dispositivo desconectar imediatamente ao receber os dados (comportamento padrão do firmware),
+      // ignoramos o erro de GATT e prosseguimos com o polling do Wi-Fi para ver se ele conectou!
+      try {
+        await wifiCharRef.current.writeValue(data);
+      } catch (writeErr) {
+        console.warn("Dispositivo pode ter desconectado após receber os dados (prosseguindo):", writeErr);
+      }
       
       // Desconecta e aguarda sucesso (na prática a API receberia um webhook ou polling)
-      serverRef.current?.disconnect();
+      try {
+        serverRef.current?.disconnect();
+      } catch (err) {
+        // Ignora falhas ao tentar forçar a desconexão manual
+      }
 
       // Aguarda 5 segundos antes do primeiro check para dar tempo do ESP32 subir o Wi-Fi
       await new Promise(r => setTimeout(r, 5000));
