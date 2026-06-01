@@ -38,5 +38,6 @@ const int SERVER_PORT = 80;
 // Exemplo: "http://192.168.1.100:8000"
 // Deixar vazio ("") para desabilitar o heartbeat.
 extern const char* BACKEND_URL;
+const unsigned long HEARTBEAT_INTERVAL_MS = 30UL * 1000UL; // 30s para atualização frequente no backend/frontend
 
 #endif

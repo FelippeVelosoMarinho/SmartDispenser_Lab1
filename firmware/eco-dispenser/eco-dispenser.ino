@@ -32,9 +32,9 @@ AsyncWebServer server(SERVER_PORT);
 
 // Variáveis para o Heartbeat periódico
 unsigned long lastHeartbeat = 0;
-const unsigned long HEARTBEAT_INTERVAL = 5 * 60 * 1000; // 5 minutos
 static bool pendingInitialHeartbeat = true;
 static unsigned long initialHeartbeatAt = 0;
+static wl_status_t lastWifiStatus = WL_IDLE_STATUS;
 
 static void sendHeartbeat() {
   if (WiFi.status() != WL_CONNECTED) return;
@@ -145,6 +145,7 @@ void setup() {
   WiFi.persistent(true);
   WiFi.setSleep(WIFI_PS_NONE);
   WiFi.begin(ssid.c_str(), pass.c_str());
+  lastWifiStatus = WiFi.status();
 
   int retries = 0;
   while (WiFi.status() != WL_CONNECTED && retries < 30) {
@@ -193,13 +194,25 @@ void setup() {
 void loop() {
   checkButtons();
 
+  wl_status_t currentWifiStatus = WiFi.status();
+  if (currentWifiStatus != lastWifiStatus) {
+    if (currentWifiStatus == WL_CONNECTED) {
+      Serial.println("[WiFi] Reconectado automaticamente. Agendando heartbeat imediato...");
+      pendingInitialHeartbeat = true;
+      initialHeartbeatAt = millis() + 1000;
+    } else {
+      Serial.println("[WiFi] Conexão perdida. Aguardando reconexão...");
+    }
+    lastWifiStatus = currentWifiStatus;
+  }
+
   if (pendingInitialHeartbeat && WiFi.status() == WL_CONNECTED && (long)(millis() - initialHeartbeatAt) >= 0) {
     sendHeartbeat();
     pendingInitialHeartbeat = false;
     lastHeartbeat = millis();
   }
 
-  if (millis() - lastHeartbeat >= HEARTBEAT_INTERVAL) {
+  if (WiFi.status() == WL_CONNECTED && millis() - lastHeartbeat >= HEARTBEAT_INTERVAL_MS) {
     sendHeartbeat();
     lastHeartbeat = millis();
   }
