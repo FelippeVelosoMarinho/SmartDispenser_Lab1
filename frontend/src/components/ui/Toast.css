@@ -40,33 +40,22 @@
   pointer-events: auto;
 
   /* Animation */
-  animation: pillar-toast-slide-in var(--dur-slow) var(--ease-out);
+  animation: pillar-toast-fade-in var(--dur-slow) var(--ease-out);
 }
 
-@keyframes pillar-toast-slide-in {
+@keyframes pillar-toast-fade-in {
   from {
     opacity: 0;
-    transform: translateY(16px);
   }
   to {
     opacity: 1;
-    transform: translateY(0);
   }
 }
 
 /* Respect reduced motion */
 @media (prefers-reduced-motion: reduce) {
   .pillar-toast {
-    animation: pillar-toast-fade-in var(--dur) ease-out;
-  }
-
-  @keyframes pillar-toast-fade-in {
-    from {
-      opacity: 0;
-    }
-    to {
-      opacity: 1;
-    }
+    animation: none;
   }
 }
 
@@ -150,7 +139,7 @@
 }
 
 .pillar-toast__close:active {
-  transform: scale(0.95);
+  background: var(--surface-dim);
 }
 
 .pillar-toast__close:focus-visible {

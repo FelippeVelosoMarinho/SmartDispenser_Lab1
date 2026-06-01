@@ -19,6 +19,7 @@ import {
   listDispensers,
   type Dispenser as ApiDispenser,
 } from "../lib/api";
+import { APP_NAME } from "../lib/brand";
 import "../App.css";
 
 type DispenserStatus = "conectado" | "desconectado";
@@ -234,7 +235,7 @@ export function DispensersPage() {
             className="eyebrow"
             style={{ marginBottom: "var(--space-1)", color: "var(--ink-3)" }}
           >
-            Smart-Dispenser
+            {APP_NAME}
           </p>
           <h1
             style={{

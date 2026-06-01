@@ -1,0 +1,67 @@
+.pillhub-logo {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-3);
+  text-decoration: none;
+  color: inherit;
+}
+
+.pillhub-logo__mark {
+  flex-shrink: 0;
+  object-fit: contain;
+  display: block;
+}
+
+.pillhub-logo--sm .pillhub-logo__mark {
+  width: 32px;
+  height: 32px;
+}
+
+.pillhub-logo--md .pillhub-logo__mark {
+  width: 40px;
+  height: 40px;
+}
+
+.pillhub-logo--lg .pillhub-logo__mark {
+  width: 48px;
+  height: 48px;
+}
+
+.pillhub-logo__wordmark {
+  font-family: var(--font-sans);
+  font-weight: 600;
+  font-size: var(--text-base);
+  letter-spacing: var(--tracking-tight);
+  color: var(--ink);
+  white-space: nowrap;
+  line-height: 1;
+}
+
+.pillhub-logo--lg .pillhub-logo__wordmark {
+  font-size: var(--text-xl);
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .pillhub-logo:hover .pillhub-logo__mark {
+    animation: pillhub-wiggle 0.5s ease-in-out;
+  }
+}
+
+@keyframes pillhub-wiggle {
+  0%,
+  100% {
+    transform: rotate(0deg);
+  }
+  25% {
+    transform: rotate(-8deg);
+  }
+  75% {
+    transform: rotate(8deg);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .pillhub-logo:hover .pillhub-logo__mark {
+    animation: none;
+  }
+}

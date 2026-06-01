@@ -5,6 +5,7 @@ import { Input } from "../components/ui/Input";
 import { Card, CardContent, CardFooter } from "../components/ui/Card";
 import { ConfirmModal } from "../components/ui/ConfirmModal";
 import { useAuth } from "../auth/AuthContext";
+import { APP_NAME } from "../lib/brand";
 import "./PatientMedicationsPage.css";
 
 type Frequency = "diaria" | "semanal" | "mensal";
@@ -273,7 +274,7 @@ export function PatientMedicationsPage() {
           Voltar para edição do paciente
         </button>
         <p className="eyebrow" style={{ marginBottom: "var(--space-1)", color: "var(--ink-3)" }}>
-          Smart-Dispenser
+          {APP_NAME}
         </p>
         <h1
           style={{

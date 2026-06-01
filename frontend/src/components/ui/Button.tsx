@@ -87,22 +87,20 @@ export const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
       primary: cn(
         "bg-primary text-primary-on shadow-1",
         !isDisabled && "hover:bg-primary-hover",
-        !isDisabled && "active:bg-primary-press active:scale-[0.98]",
+        !isDisabled && "active:bg-primary-press",
       ),
       secondary: cn(
         "bg-surface text-ink border-[1.5px] border-border shadow-1",
         !isDisabled && "hover:bg-surface-dim hover:border-border-strong",
-        !isDisabled && "active:bg-surface-sunk active:scale-[0.98]",
+        !isDisabled && "active:bg-surface-sunk",
       ),
       ghost: cn(
         "bg-transparent text-ink border-none",
         !isDisabled && "hover:bg-primary-soft hover:text-primary",
-        !isDisabled && "active:scale-[0.98]",
       ),
       danger: cn(
         "bg-danger text-white shadow-1",
         !isDisabled && "hover:bg-danger-ink",
-        !isDisabled && "active:scale-[0.98]",
       ),
       link: cn(
         "bg-transparent text-primary border-none px-2 py-1 min-h-0 no-underline",

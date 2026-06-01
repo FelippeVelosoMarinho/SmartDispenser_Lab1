@@ -7,6 +7,7 @@ import { Card, CardContent } from "../components/ui/Card";
 import "../components/ui/ConfirmModal.css";
 import { listPatients, pairDispenser, getDispenserStatus, type Patient as ApiPatient } from "../lib/api";
 import { useToast } from "../components/ui";
+import { APP_NAME } from "../lib/brand";
 
 interface DiscoveredDispenser {
   id: string;
@@ -398,7 +399,7 @@ function LocalPairingView() {
           Voltar para dispensadores
         </button>
         <p className="eyebrow" style={{ marginBottom: "var(--space-1)", color: "var(--ink-3)" }}>
-          Smart-Dispenser
+          {APP_NAME}
         </p>
         <h1
           style={{

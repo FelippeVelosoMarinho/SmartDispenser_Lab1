@@ -43,43 +43,16 @@
 /* Brand */
 .login-brand {
   display: flex;
-  align-items: center;
-  gap: var(--space-4);
-}
-
-.login-brand__mark {
-  width: 48px;
-  height: 48px;
-  background: var(--primary-soft);
-  border-radius: var(--radius);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  flex-shrink: 0;
-}
-
-.login-brand__mark i {
-  font-size: 24px;
-  color: var(--primary);
-}
-
-.login-brand__text {
-  display: flex;
   flex-direction: column;
-  gap: 2px;
+  align-items: flex-start;
+  gap: var(--space-2);
 }
 
-.login-brand__text .eyebrow {
+.login-brand__tagline {
+  font-size: var(--text-sm);
   color: var(--ink-3);
-}
-
-.login-brand__name {
-  font-size: var(--text-xl);
-  font-weight: 700;
-  color: var(--ink);
-  letter-spacing: var(--tracking-tight);
   margin: 0;
-  line-height: 1;
+  max-width: none;
 }
 
 /* Heading */

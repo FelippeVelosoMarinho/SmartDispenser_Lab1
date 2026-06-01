@@ -19,6 +19,7 @@ import {
   mapPatientStatus,
   type Patient as ApiPatient,
 } from "../lib/api";
+import { APP_NAME } from "../lib/brand";
 
 type PatientStatus = "ativo" | "inativo";
 
@@ -162,7 +163,7 @@ export function PatientsPage() {
             className="eyebrow"
             style={{ marginBottom: "var(--space-1)", color: "var(--ink-3)" }}
           >
-            Smart-Dispenser
+            {APP_NAME}
           </p>
           <h1
             style={{

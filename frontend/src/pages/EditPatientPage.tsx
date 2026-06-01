@@ -4,6 +4,7 @@ import { Button } from "../components/ui/Button";
 import { Input } from "../components/ui/Input";
 import { Card, CardContent, CardFooter } from "../components/ui/Card";
 import { getPatient, updatePatient } from "../lib/api";
+import { APP_NAME } from "../lib/brand";
 
 interface FormState {
   nome: string;
@@ -242,7 +243,7 @@ export function EditPatientPage() {
           className="eyebrow"
           style={{ marginBottom: "var(--space-1)", color: "var(--ink-3)" }}
         >
-          Smart-Dispenser
+          {APP_NAME}
         </p>
         <h1
           style={{

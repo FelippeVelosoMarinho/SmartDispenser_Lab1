@@ -1,6 +1,7 @@
 import type { Meta, StoryObj } from "@storybook/react";
 import { Sidebar } from "../components/ui/Sidebar";
 import type { NavItem } from "../components/ui/Sidebar";
+import { PillHubLogo } from "../components/brand/PillHubLogo";
 import { useState } from "react";
 
 const SidebarDemo = ({ initialOpen = true }: { initialOpen?: boolean }) => {
@@ -52,17 +53,7 @@ const SidebarDemo = ({ initialOpen = true }: { initialOpen?: boolean }) => {
         isOpen={isOpen}
         onToggle={() => setIsOpen(!isOpen)}
         navItems={navItems}
-        header={
-          <div
-            style={{
-              fontWeight: 700,
-              fontSize: "20px",
-              color: "var(--primary)",
-            }}
-          >
-            Pillar
-          </div>
-        }
+        header={<PillHubLogo size="md" showWordmark={isOpen} />}
       />
       <div style={{ flex: 1, padding: "24px", background: "var(--canvas)" }}>
         <h2>Content Area</h2>

@@ -5,6 +5,7 @@ import type { DispenserDetails } from "../lib/api";
 import { TelemetryGrid } from "../components/dashboard/TelemetryGrid";
 import { CompartmentsSection } from "../components/dashboard/CompartmentsSection";
 import { SchedulesPanel } from "../components/dashboard/SchedulesPanel";
+import { APP_NAME } from "../lib/brand";
 
 export function DashboardPage() {
   const [dispensers, setDispensers] = useState<any[]>([]);
@@ -187,7 +188,7 @@ export function DashboardPage() {
           className="eyebrow"
           style={{ marginBottom: "var(--space-1)", color: "var(--ink-3)" }}
         >
-          Smart-Dispenser
+          {APP_NAME}
         </p>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end" }}>
           <h1

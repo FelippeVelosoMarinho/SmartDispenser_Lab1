@@ -2,6 +2,8 @@ import { useState, useEffect } from "react";
 import { useNavigate, useSearch } from "@tanstack/react-router";
 import { Button } from "../components/ui/Button";
 import { Input } from "../components/ui/Input";
+import { PillHubLogo } from "../components/brand/PillHubLogo";
+import { APP_NAME, APP_TAGLINE } from "../lib/brand";
 import { useAuth } from "../auth/AuthContext";
 import "./LoginPage.css";
 
@@ -43,13 +45,8 @@ export function LoginPage() {
         <div className="login-card" role="main">
           {/* Brand mark */}
           <div className="login-brand">
-            <div className="login-brand__mark" aria-hidden="true">
-              <i className="ph-duotone ph-pill" />
-            </div>
-            <div className="login-brand__text">
-              <span className="eyebrow">Smart-Dispenser</span>
-              <h1 className="login-brand__name">Pillar</h1>
-            </div>
+            <PillHubLogo size="lg" showWordmark />
+            <p className="login-brand__tagline">{APP_TAGLINE}</p>
           </div>
 
           <div className="login-heading">
@@ -141,7 +138,7 @@ export function LoginPage() {
         </div>
 
         <footer className="login-footer">
-          <p>Smart-Dispenser • ESP32-C3 • Open source</p>
+          <p>{APP_NAME} • ESP32-C3 • Open source</p>
         </footer>
       </main>
     </div>
