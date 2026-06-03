@@ -1,6 +1,10 @@
 #ifndef CONFIG_H
 #define CONFIG_H
 
+// Necessário antes da detecção de placa: CONFIG_IDF_TARGET_* vem de sdkconfig.h,
+// que só entra no escopo após Arduino.h (ou .cpp que incluem WiFi.h etc.).
+#include <Arduino.h>
+
 // ── Seleção de placa ──────────────────────────────────────────────────
 // Opção A: descomente manualmente a placa em uso:
 // #define BOARD_ESP32_WROOM
@@ -15,10 +19,15 @@
   #include "boards/config_wroom32.h"
 #elif defined(CONFIG_IDF_TARGET_ESP32C3)
   #include "boards/config_c3_supermini.h"
+#elif defined(ARDUINO_ESP32C3_DEV)
+  // Fallback: macro -D da IDE quando sdkconfig ainda não foi exposto
+  #include "boards/config_c3_supermini.h"
 #elif defined(CONFIG_IDF_TARGET_ESP32)
   #include "boards/config_wroom32.h"
+#elif defined(ARDUINO_ESP32_DEV)
+  #include "boards/config_wroom32.h"
 #else
-  #error "Placa não suportada. Defina BOARD_ESP32_C3_SUPERMINI ou BOARD_ESP32_WROOM em config.h, ou selecione uma placa ESP32 na IDE."
+  #error "Placa não suportada. Defina BOARD_ESP32_C3_SUPERMINI ou BOARD_ESP32_WROOM em config.h, ou selecione ESP32C3 Dev Module / ESP32 Dev Module em Tools > Board."
 #endif
 
 // ── Helpers de LED onboard (polaridade varia por placa) ───────────────
