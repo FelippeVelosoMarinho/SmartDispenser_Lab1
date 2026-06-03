@@ -47,7 +47,7 @@ static void sendHeartbeat() {
   // fiquem presos (stale) na memória. Variáveis static aqui burlam o lock do lwIP!
   WiFiClient client;
   HTTPClient http;
-  String url = String(BACKEND_URL) + "/iot/heartbeat";
+  String url = String(BACKEND_URL) + "/api/heartbeat";
   
   if (http.begin(client, url)) {
     http.addHeader("Content-Type", "application/json");
