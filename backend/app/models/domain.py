@@ -116,6 +116,7 @@ class Schedule(Base):
     patient_id = Column(UUID(as_uuid=True), nullable=True)
     dispenser_id = Column(String, nullable=True)
     time_legacy = Column(String, nullable=True)
+    last_triggered_at = Column(DateTime, nullable=True)
 
     slot = relationship('Slot', back_populates='schedules', foreign_keys=[slot_id])
 

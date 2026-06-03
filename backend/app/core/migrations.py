@@ -266,6 +266,10 @@ _MIGRATIONS: list[tuple[str, str]] = [
         "dispensers: add ip_address",
         "ALTER TABLE dispensers ADD COLUMN IF NOT EXISTS ip_address TEXT;",
     ),
+    (
+        "schedules: add last_triggered_at",
+        "ALTER TABLE schedules ADD COLUMN IF NOT EXISTS last_triggered_at TIMESTAMP;",
+    ),
 ]
 
 
