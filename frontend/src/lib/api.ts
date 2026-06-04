@@ -38,6 +38,14 @@ export interface Dispenser {
   last_sync: string | null;
 }
 
+export interface DispenserStatusPublic {
+  dispenser_id: string;
+  battery_level: number;
+  online: boolean;
+  critical_stock: boolean;
+  ip_address?: string | null;
+}
+
 export interface PairDispenserInput {
   patientId: string;
 }
@@ -350,7 +358,7 @@ export async function createMedication(input: { name: string; dosage?: string; d
 
 // Dispenser Status (Telemetry)
 export async function getDispenserStatus(hardwareId: string) {
-  return requestJson<Dispenser>(`/dispensers/${hardwareId}/status`);
+  return requestJson<DispenserStatusPublic>(`/dispensers/${hardwareId}/status`);
 }
 
 // Dispensers with drawers and slots

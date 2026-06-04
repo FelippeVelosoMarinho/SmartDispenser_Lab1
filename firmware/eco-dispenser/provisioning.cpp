@@ -2,6 +2,7 @@
 #include "config.h"
 #include <Preferences.h>
 #include <NimBLEDevice.h>
+#include <WiFi.h>
 
 static const char* NVS_NS      = "wifi_creds";
 static const char* NVS_SSID    = "ssid";
@@ -136,7 +137,7 @@ void runBleProvisioning() {
   NimBLECharacteristic* pStatusChar = pService->createCharacteristic(
     BLE_STATUS_UUID, NIMBLE_PROPERTY::READ
   );
-  String hwJson = "{\"hw_id\":\"" + String(NimBLEDevice::getAddress().toString().c_str()) + "\"}";
+  String hwJson = "{\"hw_id\":\"" + WiFi.macAddress() + "\"}";
   pStatusChar->setValue(hwJson.c_str());
 
   // Característica de config WiFi (write): recebe {"ssid":"...","pass":"..."}
