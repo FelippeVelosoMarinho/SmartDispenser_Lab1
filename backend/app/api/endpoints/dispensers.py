@@ -26,6 +26,7 @@ from app.schemas.dispenser import (
     DispenserResetConfigurationResult,
     DispenserStatusPublic,
 )
+from app.services.dispenser_online import refresh_dispenser_online_state
 
 router = APIRouter(prefix="/api/dispensers", tags=["dispensers"])
 
@@ -62,13 +63,9 @@ _MOCK_DISCOVERED = [
 ]
 
 
-def _format_dispenser(dispenser: Dispenser) -> dict:
-    is_online = bool(dispenser.is_online)
-    if is_online and dispenser.last_sync:
-        now = datetime.datetime.utcnow()
-        if now - dispenser.last_sync > datetime.timedelta(minutes=15):
-            is_online = False
-            
+def _format_dispenser(dispenser: Dispenser, db: Session) -> dict:
+    is_online = refresh_dispenser_online_state(db, dispenser, persist=True)
+
     return {
         "id": str(dispenser.id),
         "hardware_id": dispenser.hardware_id,
@@ -144,7 +141,7 @@ async def list_dispensers(
     dispensers = []
     for patient in patients:
         dispensers.extend(patient.dispensers or [])
-    return [_format_dispenser(dispenser) for dispenser in dispensers]
+    return [_format_dispenser(dispenser, db) for dispenser in dispensers]
 
 
 @router.get("/{dispenser_id}")
@@ -204,7 +201,7 @@ async def get_dispenser_details(
         )
 
     return {
-        **_format_dispenser(dispenser),
+        **_format_dispenser(dispenser, db),
         "drawers": [_format_drawer(drawer) for drawer in sorted(dispenser.drawers, key=lambda item: item.id)],
     }
 
@@ -230,8 +227,8 @@ async def pair_dispenser(
         is_new = True
 
     dispenser.patient_id = patient.id
-    dispenser.is_online = True
-    dispenser.last_sync = datetime.datetime.utcnow()
+    # Online only after a real heartbeat from the hardware (not at pair time).
+    dispenser.is_online = False
     db.add(dispenser)
     db.commit()
     db.refresh(dispenser)
@@ -254,7 +251,7 @@ async def pair_dispenser(
         db.commit()
         db.refresh(dispenser)
 
-    return _format_dispenser(dispenser)
+    return _format_dispenser(dispenser, db)
 
 
 def _get_dispenser_for_caregiver(

@@ -375,10 +375,10 @@ export async function getDispenserDetails(dispenserId: string): Promise<Dispense
       hardware_id: dispenserId, // simplified
       patient_id: null,
       patient_name: null,
-      is_online: true,
+      is_online: false,
       battery_level: 85,
       critical_stock: false,
-      last_sync: new Date().toISOString(),
+      last_sync: null,
       drawers: [
         {
           id: "drawer-1",

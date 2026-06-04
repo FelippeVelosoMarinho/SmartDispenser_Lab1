@@ -18,6 +18,7 @@ from app.schemas.dispenser import (
     DispenserDeletionStatus,
     DispenserResetConfigurationResult,
 )
+from app.services.dispenser_online import refresh_dispenser_online_state
 
 
 def get_dispenser_status(db: Session, hardware_id: str) -> dict:
@@ -32,14 +33,7 @@ def get_dispenser_status(db: Session, hardware_id: str) -> dict:
             "ip_address": None
         }
         
-    is_online = dispenser.is_online
-    if is_online and dispenser.last_sync:
-        now = datetime.datetime.utcnow()
-        if now - dispenser.last_sync > datetime.timedelta(minutes=15):
-            is_online = False
-            dispenser.is_online = False
-            db.commit()
-            db.refresh(dispenser)
+    is_online = refresh_dispenser_online_state(db, dispenser, persist=True)
 
     return {
         "dispenser_id": dispenser.hardware_id,
