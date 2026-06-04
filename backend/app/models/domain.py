@@ -112,10 +112,12 @@ class Schedule(Base):
     scheduled_time = Column(Time, nullable=True)
     is_active = Column(Boolean, default=True)
 
+    scheduled_at = Column(DateTime, nullable=True)
+
     # Legacy fields
     patient_id = Column(UUID(as_uuid=True), nullable=True)
-    dispenser_id = Column(String, nullable=True)
-    time_legacy = Column(String, nullable=True)
+    dispenser_id = Column(String, nullable=True)  # hardware_id do dispenser
+    time_legacy = Column(String, nullable=True)   # ISO datetime ou HH:MM
     last_triggered_at = Column(DateTime, nullable=True)
 
     slot = relationship('Slot', back_populates='schedules', foreign_keys=[slot_id])

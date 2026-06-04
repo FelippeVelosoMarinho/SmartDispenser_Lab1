@@ -76,10 +76,12 @@ CREATE TABLE "schedules" (
   "id" uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   "slot_id" integer REFERENCES "slots" ("id"),
   "scheduled_time" time,
+  "scheduled_at" timestamp,
   "is_active" boolean DEFAULT true,
   "patient_id" uuid,
   "dispenser_id" text,
-  "time_legacy" text
+  "time_legacy" text,
+  "last_triggered_at" timestamp
 );
 
 -- 4. Event Logging (History)

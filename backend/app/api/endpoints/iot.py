@@ -159,9 +159,14 @@ async def sync_dispenser(hardware_id: str, db: Session = Depends(get_db)):
     
     slot_configs = []
     for sched in schedules:
+        if sched.is_active is False:
+            continue
+        time_val = sched.time_legacy or ""
+        if sched.scheduled_at:
+            time_val = sched.scheduled_at.strftime("%Y-%m-%dT%H:%M")
         slot_configs.append(SlotConfig(
             slot_id=sched.slot_id or 0,
-            time=sched.time_legacy or "",
+            time=time_val,
         ))
         
     return SyncResponse(

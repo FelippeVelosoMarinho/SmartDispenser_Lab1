@@ -71,7 +71,8 @@ void setupApiServer(AsyncWebServer& server) {
   });
 
   // POST /dispense
-  // Body: {"period": "morning"|"afternoon"|"night", "silent_mode": true|false}
+  // Body: {"period": "morning"|"afternoon"|"night", "silent_mode": bool,
+  //        "expected_slot": 0-20}  // optional — slot index after advance
   server.on("/dispense", HTTP_POST,
     [](AsyncWebServerRequest* request) {},
     NULL,
@@ -82,10 +83,30 @@ void setupApiServer(AsyncWebServer& server) {
 
       String period    = extractField(body, "period");
       String silentStr = extractField(body, "silent_mode");
+      String expectedStr = extractField(body, "expected_slot");
       bool silentMode  = (silentStr == "true");
+      bool hasExpected = (expectedStr.length() > 0);
 
       if (period != "morning" && period != "afternoon" && period != "night") {
         period = "morning";
+      }
+
+      if (hasExpected) {
+        int expectedAfter = expectedStr.toInt();
+        if (expectedAfter < 0 || expectedAfter >= TOTAL_SLOTS) {
+          String resp = "{\"success\":false,\"error\":\"invalid_expected_slot\","
+                        "\"current_slot\":" + String(getCurrentSlot()) + "}";
+          sendJson(request, 400, resp);
+          return;
+        }
+        int requiredBefore = (expectedAfter - 1 + TOTAL_SLOTS) % TOTAL_SLOTS;
+        if (getCurrentSlot() != requiredBefore) {
+          String resp = "{\"success\":false,\"error\":\"slot_mismatch\","
+                        "\"current_slot\":" + String(getCurrentSlot()) + ","
+                        "\"expected_slot\":" + String(expectedAfter) + "}";
+          sendJson(request, 409, resp);
+          return;
+        }
       }
 
       advanceCarousel();

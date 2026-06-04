@@ -247,6 +247,7 @@ export interface Schedule {
   id: string;
   slot_id: string;
   scheduled_time?: string; // Legacy alias
+  scheduled_at?: string | null;
   time?: string;
   is_active: boolean;
 }

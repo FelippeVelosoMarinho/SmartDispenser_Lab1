@@ -270,6 +270,10 @@ _MIGRATIONS: list[tuple[str, str]] = [
         "schedules: add last_triggered_at",
         "ALTER TABLE schedules ADD COLUMN IF NOT EXISTS last_triggered_at TIMESTAMP;",
     ),
+    (
+        "schedules: add scheduled_at",
+        "ALTER TABLE schedules ADD COLUMN IF NOT EXISTS scheduled_at TIMESTAMP;",
+    ),
 ]
 
 

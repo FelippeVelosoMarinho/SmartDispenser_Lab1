@@ -78,6 +78,30 @@ class TestDispenseSchema:
         assert r.status_code in (200, 400)
         requests.post(f"{base_url}/confirm", timeout=TIMEOUT)
 
+    def test_expected_slot_mismatch_returns_409(self, base_url, calibrated):
+        """Com roleta no slot 0, pedir expected_slot=5 exige estar no slot 4 antes — deve 409."""
+        requests.post(f"{base_url}/calibrate", timeout=TIMEOUT)
+        r = requests.post(
+            f"{base_url}/dispense",
+            json={"period": "morning", "silent_mode": True, "expected_slot": 5},
+            timeout=TIMEOUT,
+        )
+        assert r.status_code == 409
+        data = r.json()
+        assert data.get("error") == "slot_mismatch"
+        assert data.get("current_slot") == 0
+
+    def test_expected_slot_match_advances(self, base_url, calibrated):
+        requests.post(f"{base_url}/calibrate", timeout=TIMEOUT)
+        r = requests.post(
+            f"{base_url}/dispense",
+            json={"period": "morning", "silent_mode": True, "expected_slot": 1},
+            timeout=TIMEOUT,
+        )
+        assert r.status_code == 200
+        assert r.json()["current_slot"] == 1
+        requests.post(f"{base_url}/confirm", timeout=TIMEOUT)
+
 
 class TestConfirmSchema:
     """POST /confirm deve retornar o schema esperado."""

@@ -26,7 +26,7 @@ export function SchedulesPanel({ dispenser, refreshToken }: SchedulesPanelProps)
   const fetchSchedules = async () => {
     setIsLoading(true);
     try {
-      const data = await listSchedules(dispenser.id);
+      const data = await listSchedules(dispenser.hardware_id);
       setSchedules(data);
     } catch (err) {
       console.error(err);
@@ -37,7 +37,7 @@ export function SchedulesPanel({ dispenser, refreshToken }: SchedulesPanelProps)
 
   useEffect(() => {
     fetchSchedules();
-  }, [dispenser.id, refreshToken]);
+  }, [dispenser.hardware_id, refreshToken]);
 
   const toggleActive = async (schedule: Schedule) => {
     try {
@@ -248,7 +248,8 @@ function ScheduleModal({ dispenser, schedule, onClose, onSuccess, allSchedules }
   };
 
   const [time, setTime] = useState(getInitialTime());
-  const defaultSlotId = dispenser.drawers[0]?.slots.find((s: any) => s.slot_number !== 31)?.id || "";
+  const isValidPosition = (n: number) => n >= 1 && n <= 21;
+  const defaultSlotId = dispenser.drawers[0]?.slots.find((s: any) => isValidPosition(s.slot_number))?.id || "";
   const [slotId, setSlotId] = useState(schedule ? schedule.slot_id : defaultSlotId);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -305,7 +306,7 @@ function ScheduleModal({ dispenser, schedule, onClose, onSuccess, allSchedules }
         slot_id: slotId,
         time: time, // Now saving full datetime string: YYYY-MM-DDTHH:MM
         is_active: schedule ? schedule.is_active : true,
-        dispenser_id: dispenser.id,
+        dispenser_id: dispenser.hardware_id,
         patient_id: dispenser.patient_id,
       };
 
@@ -363,7 +364,7 @@ function ScheduleModal({ dispenser, schedule, onClose, onSuccess, allSchedules }
             >
               {dispenser.drawers.map((drawer: any) =>
                 drawer.slots
-                  .filter((slot: any) => slot.slot_number !== 31)
+                  .filter((slot: any) => slot.slot_number >= 1 && slot.slot_number <= 21)
                   .map((slot: any) => (
                     <option key={slot.id} value={slot.id}>
                       Posição {slot.slot_number} - {slot.medications && slot.medications.length > 0 ? `${slot.medications.length} med(s)` : "Vazio"}
