@@ -24,6 +24,7 @@ services:
       dockerfile: Dockerfile
     container_name: smart_dispenser_backend
     restart: always
+    command: uvicorn main:app --host 0.0.0.0 --port 8000 --reload
     environment:
       - DATABASE_URL=postgresql://user:password@db:5432/smart_dispenser
       - ESP32_IP=192.168.109.25 # Altere para o IP real se necessário
