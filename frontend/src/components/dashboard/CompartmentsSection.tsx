@@ -13,7 +13,6 @@ import {
 
 interface CompartmentsSectionProps {
   dispenser: DispenserDetails;
-  onSchedulesChange: () => void;
   onDispenserChange: () => void;
 }
 
@@ -65,7 +64,7 @@ function AnnularSlice({
   );
 }
 
-export function CompartmentsSection({ dispenser, onSchedulesChange, onDispenserChange }: CompartmentsSectionProps) {
+export function CompartmentsSection({ dispenser, onDispenserChange }: CompartmentsSectionProps) {
   const [editingSlotId, setEditingSlotId] = useState<string | null>(null);
   const [hoveredSlotId, setHoveredSlotId] = useState<string | null>(null);
 
@@ -248,7 +247,6 @@ export function CompartmentsSection({ dispenser, onSchedulesChange, onDispenserC
           dispenser={dispenser}
           slot={editingSlot}
           onClose={() => setEditingSlotId(null)}
-          onSchedulesChange={onSchedulesChange}
           onDispenserChange={onDispenserChange}
         />
       )}

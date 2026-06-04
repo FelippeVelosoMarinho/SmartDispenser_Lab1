@@ -15,9 +15,13 @@ import { Pagination } from "../components/ui/Pagination";
 import { ConfirmModal } from "../components/ui/ConfirmModal";
 
 import {
+  ApiError,
   deleteDispenser as deleteDispenserApi,
+  getDispenserDeletionStatus,
   listDispensers,
+  resetDispenserConfiguration,
   type Dispenser as ApiDispenser,
+  type DispenserDeletionStatus,
 } from "../lib/api";
 import { APP_NAME } from "../lib/brand";
 import "../App.css";
@@ -139,6 +143,9 @@ export function DispensersPage() {
   const [dispenserToDelete, setDispenserToDelete] = useState<Dispenser | null>(
     null,
   );
+  const [deletionStatus, setDeletionStatus] =
+    useState<DispenserDeletionStatus | null>(null);
+  const [deleteBusy, setDeleteBusy] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -179,14 +186,79 @@ export function DispensersPage() {
     };
   }, []);
 
+  useEffect(() => {
+    if (!dispenserToDelete) {
+      setDeletionStatus(null);
+      return;
+    }
+
+    let cancelled = false;
+    void (async () => {
+      try {
+        const status = await getDispenserDeletionStatus(dispenserToDelete.serial);
+        if (!cancelled) setDeletionStatus(status);
+      } catch {
+        if (!cancelled) setDeletionStatus(null);
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [dispenserToDelete]);
+
+  async function handlePrepareRemoval() {
+    if (!dispenserToDelete) return;
+    setDeleteBusy(true);
+    setError(null);
+    try {
+      await resetDispenserConfiguration(dispenserToDelete.serial);
+      const status = await getDispenserDeletionStatus(dispenserToDelete.serial);
+      setDeletionStatus(status);
+    } catch (err) {
+      setError(
+        err instanceof ApiError
+          ? err.message
+          : err instanceof Error
+            ? err.message
+            : "Falha ao preparar dispensador para remoção",
+      );
+    } finally {
+      setDeleteBusy(false);
+    }
+  }
+
   async function handleDeleteConfirm() {
     if (!dispenserToDelete) return;
+    setDeleteBusy(true);
+    setError(null);
     try {
       await deleteDispenserApi(dispenserToDelete.serial);
       setDispensers((prev) => prev.filter((d) => d.id !== dispenserToDelete.id));
       setDispenserToDelete(null);
+      setDeletionStatus(null);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Falha ao remover dispensador");
+      if (err instanceof ApiError && err.code === "DISPENSER_HAS_CONFIGURATION") {
+        setDeletionStatus({
+          can_delete: false,
+          blockers: {
+            medications_in_slots: err.blockers?.medications_in_slots ?? 0,
+            schedules: err.blockers?.schedules ?? 0,
+          },
+          message: err.message,
+          steps: err.steps,
+        });
+      } else {
+        setError(
+          err instanceof ApiError
+            ? err.message
+            : err instanceof Error
+              ? err.message
+              : "Falha ao remover dispensador",
+        );
+      }
+    } finally {
+      setDeleteBusy(false);
     }
   }
 
@@ -427,14 +499,70 @@ export function DispensersPage() {
         title="Remover dispensador"
         description={
           dispenserToDelete
-            ? `Tem certeza que deseja remover "${dispenserToDelete.serial}"? Esta ação não pode ser desfeita.`
+            ? deletionStatus?.can_delete === false
+              ? deletionStatus.message
+              : `Tem certeza que deseja remover "${dispenserToDelete.serial}"? Compartimentos vazios e o vínculo com o paciente serão apagados. Esta ação não pode ser desfeita.`
             : undefined
         }
         confirmLabel="Remover"
         cancelLabel="Cancelar"
+        loading={deleteBusy}
+        confirmDisabled={deletionStatus?.can_delete === false}
         onConfirm={() => void handleDeleteConfirm()}
-        onCancel={() => setDispenserToDelete(null)}
-      />
+        onCancel={() => {
+          setDispenserToDelete(null);
+          setDeletionStatus(null);
+        }}
+      >
+        {deletionStatus && !deletionStatus.can_delete && (
+          <div style={{ marginTop: "var(--space-4)", textAlign: "left" }}>
+            <p
+              style={{
+                fontSize: "var(--text-sm)",
+                fontWeight: 600,
+                color: "var(--ink)",
+                marginBottom: "var(--space-2)",
+              }}
+            >
+              O que fazer antes de remover
+            </p>
+            <ol
+              style={{
+                margin: "0 0 var(--space-4)",
+                paddingLeft: "var(--space-5)",
+                fontSize: "var(--text-sm)",
+                color: "var(--ink-2)",
+                lineHeight: 1.5,
+              }}
+            >
+              {deletionStatus.steps.map((step) => (
+                <li key={step} style={{ marginBottom: "var(--space-2)" }}>
+                  {step}
+                </li>
+              ))}
+            </ol>
+            <div style={{ display: "flex", flexWrap: "wrap", gap: "var(--space-2)" }}>
+              <Button
+                variant="secondary"
+                size="sm"
+                onClick={() => navigate({ to: "/dashboard" })}
+                disabled={deleteBusy}
+              >
+                Abrir painel do dispensador
+              </Button>
+              <Button
+                variant="primary"
+                size="sm"
+                onClick={() => void handlePrepareRemoval()}
+                loading={deleteBusy}
+                leftIcon="ph-duotone ph-broom"
+              >
+                Preparar para remoção
+              </Button>
+            </div>
+          </div>
+        )}
+      </ConfirmModal>
     </div>
   );
 }

@@ -1,9 +1,9 @@
 """Dispenser-related Pydantic schemas."""
 
 from datetime import datetime
-from typing import Optional
+from typing import List, Optional
 
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 
 class DiscoveredDispenser(BaseModel):
@@ -43,3 +43,21 @@ class DispenserPublic(BaseModel):
     critical_stock: bool
     last_sync: Optional[datetime] = None
     ip_address: Optional[str] = None
+
+
+class DispenserDeletionBlockers(BaseModel):
+    medications_in_slots: int = 0
+    schedules: int = 0
+
+
+class DispenserDeletionStatus(BaseModel):
+    can_delete: bool
+    blockers: DispenserDeletionBlockers
+    message: str
+    steps: List[str] = Field(default_factory=list)
+
+
+class DispenserResetConfigurationResult(BaseModel):
+    removed_medications: int = 0
+    removed_schedules: int = 0
+    message: str

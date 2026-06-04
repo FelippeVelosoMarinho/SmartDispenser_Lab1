@@ -4,14 +4,13 @@ import { listDispensers, getDispenserDetails } from "../lib/api";
 import type { DispenserDetails } from "../lib/api";
 import { TelemetryGrid } from "../components/dashboard/TelemetryGrid";
 import { CompartmentsSection } from "../components/dashboard/CompartmentsSection";
-import { SchedulesPanel } from "../components/dashboard/SchedulesPanel";
+import { DispenserGuideSection } from "../components/dashboard/DispenserGuideSection";
 import { APP_NAME } from "../lib/brand";
 
 export function DashboardPage() {
   const [dispensers, setDispensers] = useState<any[]>([]);
   const [activeDispenser, setActiveDispenser] = useState<DispenserDetails | null>(null);
   const [isLoading, setIsLoading] = useState(true);
-  const [scheduleRefreshToken, setScheduleRefreshToken] = useState(0);
   const navigate = useNavigate();
 
   const fetchDashboardData = async () => {
@@ -47,10 +46,6 @@ export function DashboardPage() {
 
     return () => clearInterval(interval);
   }, []);
-
-  const handleSchedulesChange = () => {
-    setScheduleRefreshToken((value) => value + 1);
-  };
 
   if (isLoading) {
     return (
@@ -228,10 +223,9 @@ export function DashboardPage() {
       <TelemetryGrid dispenser={activeDispenser} />
       <CompartmentsSection
         dispenser={activeDispenser}
-        onSchedulesChange={handleSchedulesChange}
         onDispenserChange={fetchDashboardData}
       />
-      <SchedulesPanel dispenser={activeDispenser} refreshToken={scheduleRefreshToken} />
+      <DispenserGuideSection dispenser={activeDispenser} />
 
     </div>
   );

@@ -3,7 +3,7 @@ from fastapi.testclient import TestClient
 
 from app.main import app
 from app.core.database import SessionLocal
-from app.models.domain import User, Dispenser
+from app.models.domain import User, Dispenser, Patient, Drawer, Slot
 
 client = TestClient(app)
 
@@ -14,7 +14,10 @@ class MockUser:
 @pytest.fixture(autouse=True)
 def clear_db():
     db = SessionLocal()
+    db.query(Slot).delete()
+    db.query(Drawer).delete()
     db.query(Dispenser).delete()
+    db.query(Patient).delete()
     db.query(User).delete()
     db.commit()
     
@@ -24,7 +27,10 @@ def clear_db():
     db.close()
     yield
     db = SessionLocal()
+    db.query(Slot).delete()
+    db.query(Drawer).delete()
     db.query(Dispenser).delete()
+    db.query(Patient).delete()
     db.query(User).delete()
     db.commit()
     db.close()
@@ -64,3 +70,88 @@ def test_get_dispenser_status_updated(mock_get_current_user):
     assert data["battery_level"] == 15.0
     assert data["online"] is False
     assert data["critical_stock"] is True
+
+
+def test_delete_dispenser_with_mac_and_drawers(mock_get_current_user):
+    hardware_id = "8C:D0:B2:A9:17:4B"
+    db = SessionLocal()
+    patient = Patient(full_name="Paciente Teste", caregiver_username="testuser")
+    db.add(patient)
+    db.commit()
+    db.refresh(patient)
+
+    dispenser = Dispenser(hardware_id=hardware_id, patient_id=patient.id)
+    db.add(dispenser)
+    db.commit()
+    db.refresh(dispenser)
+
+    drawer = Drawer(dispenser_id=dispenser.id, label="Principal")
+    db.add(drawer)
+    db.commit()
+    db.refresh(drawer)
+
+    db.add(Slot(drawer_id=drawer.id, position_number=1, max_pill_capacity=30))
+    db.commit()
+    db.close()
+
+    resp = client.delete(f"/api/dispensers/{hardware_id}")
+    assert resp.status_code == 204
+
+    db = SessionLocal()
+    assert db.query(Dispenser).filter(Dispenser.hardware_id == hardware_id).first() is None
+    assert db.query(Drawer).filter(Drawer.dispenser_id == dispenser.id).count() == 0
+    db.close()
+
+
+def test_delete_dispenser_blocked_when_configured(mock_get_current_user):
+    from app.models.domain import SlotMedication, Medication, Schedule
+
+    hardware_id = "AA:BB:CC:DD:EE:FF"
+    db = SessionLocal()
+    patient = Patient(full_name="Paciente Teste", caregiver_username="testuser")
+    db.add(patient)
+    db.commit()
+    db.refresh(patient)
+
+    dispenser = Dispenser(hardware_id=hardware_id, patient_id=patient.id)
+    db.add(dispenser)
+    db.commit()
+    db.refresh(dispenser)
+
+    drawer = Drawer(dispenser_id=dispenser.id, label="Principal")
+    db.add(drawer)
+    db.commit()
+    db.refresh(drawer)
+
+    slot = Slot(drawer_id=drawer.id, position_number=1, max_pill_capacity=30)
+    db.add(slot)
+    db.commit()
+    db.refresh(slot)
+
+    med = Medication(name="Aspirina", dosage="100mg")
+    db.add(med)
+    db.commit()
+    db.refresh(med)
+
+    db.add(SlotMedication(slot_id=slot.id, medication_id=med.id, quantity=5))
+    db.add(Schedule(slot_id=slot.id, dispenser_id=hardware_id, is_active=True))
+    db.commit()
+    db.close()
+
+    status_resp = client.get(f"/api/dispensers/{hardware_id}/deletion-status")
+    assert status_resp.status_code == 200
+    status = status_resp.json()
+    assert status["can_delete"] is False
+    assert status["blockers"]["medications_in_slots"] == 1
+
+    del_resp = client.delete(f"/api/dispensers/{hardware_id}")
+    assert del_resp.status_code == 409
+    detail = del_resp.json()["detail"]
+    assert detail["code"] == "DISPENSER_HAS_CONFIGURATION"
+    assert len(detail["steps"]) > 0
+
+    reset_resp = client.post(f"/api/dispensers/{hardware_id}/reset-configuration")
+    assert reset_resp.status_code == 200
+
+    del_resp2 = client.delete(f"/api/dispensers/{hardware_id}")
+    assert del_resp2.status_code == 204

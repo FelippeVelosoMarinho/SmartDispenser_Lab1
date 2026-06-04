@@ -85,10 +85,45 @@ export function setAuthSession(session: AuthSession | null) {
   writeAuthSession(session);
 }
 
-async function readErrorMessage(response: Response): Promise<string> {
+export class ApiError extends Error {
+  status: number;
+  code?: string;
+  steps: string[];
+  blockers?: Record<string, number>;
+
+  constructor(status: number, message: string, detail?: unknown) {
+    super(message);
+    this.name = "ApiError";
+    this.status = status;
+    this.steps = [];
+    if (detail && typeof detail === "object") {
+      const d = detail as Record<string, unknown>;
+      if (typeof d.code === "string") this.code = d.code;
+      if (Array.isArray(d.steps)) this.steps = d.steps.map(String);
+      if (d.blockers && typeof d.blockers === "object") {
+        this.blockers = d.blockers as Record<string, number>;
+      }
+      if (typeof d.message === "string" && d.message) {
+        this.message = d.message;
+      }
+    }
+  }
+}
+
+async function readApiError(response: Response): Promise<ApiError> {
   try {
     const payload = (await response.json()) as { detail?: unknown };
-    if (typeof payload.detail === "string") return payload.detail;
+    if (typeof payload.detail === "string") {
+      return new ApiError(response.status, payload.detail);
+    }
+    if (payload.detail && typeof payload.detail === "object") {
+      const detail = payload.detail as Record<string, unknown>;
+      const message =
+        typeof detail.message === "string"
+          ? detail.message
+          : "Erro na requisição";
+      return new ApiError(response.status, message, detail);
+    }
     if (Array.isArray(payload.detail)) {
       const messages = payload.detail
         .map((item) => {
@@ -98,14 +133,16 @@ async function readErrorMessage(response: Response): Promise<string> {
           return "";
         })
         .filter(Boolean);
-      if (messages.length > 0) return messages.join("; ");
+      if (messages.length > 0) {
+        return new ApiError(response.status, messages.join("; "));
+      }
     }
   } catch {
     // ignore JSON parse errors and fall back to text
   }
 
   const text = await response.text().catch(() => "");
-  return text || `HTTP ${response.status}`;
+  return new ApiError(response.status, text || `HTTP ${response.status}`);
 }
 
 export async function apiFetch(path: string, init: RequestInit = {}) {
@@ -129,7 +166,7 @@ export async function apiFetch(path: string, init: RequestInit = {}) {
 async function requestJson<T>(path: string, init: RequestInit = {}): Promise<T> {
   const response = await apiFetch(path, init);
   if (!response.ok) {
-    throw new Error(await readErrorMessage(response));
+    throw await readApiError(response);
   }
   if (response.status === 204) {
     return undefined as T;
@@ -192,15 +229,50 @@ export async function discoverDispensers() {
   return requestJson<DiscoveredDispenser[]>("/dispensers/discover");
 }
 
+function dispenserPath(hardwareId: string) {
+  return `/dispensers/${encodeURIComponent(hardwareId)}`;
+}
+
 export async function pairDispenser(hardwareId: string, patientId: string) {
-  return requestJson<Dispenser>(`/dispensers/${hardwareId}/pair`, {
+  return requestJson<Dispenser>(`${dispenserPath(hardwareId)}/pair`, {
     method: "POST",
     body: JSON.stringify({ patient_id: patientId }),
   });
 }
 
+export interface DispenserDeletionBlockers {
+  medications_in_slots: number;
+  schedules: number;
+}
+
+export interface DispenserDeletionStatus {
+  can_delete: boolean;
+  blockers: DispenserDeletionBlockers;
+  message: string;
+  steps: string[];
+}
+
+export interface DispenserResetConfigurationResult {
+  removed_medications: number;
+  removed_schedules: number;
+  message: string;
+}
+
+export async function getDispenserDeletionStatus(hardwareId: string) {
+  return requestJson<DispenserDeletionStatus>(
+    `${dispenserPath(hardwareId)}/deletion-status`,
+  );
+}
+
+export async function resetDispenserConfiguration(hardwareId: string) {
+  return requestJson<DispenserResetConfigurationResult>(
+    `${dispenserPath(hardwareId)}/reset-configuration`,
+    { method: "POST" },
+  );
+}
+
 export async function deleteDispenser(hardwareId: string) {
-  await requestJson<void>(`/dispensers/${hardwareId}`, {
+  await requestJson<void>(dispenserPath(hardwareId), {
     method: "DELETE",
   });
 }

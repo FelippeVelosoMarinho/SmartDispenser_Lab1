@@ -8,13 +8,22 @@ from fastapi import APIRouter, Depends, HTTPException
 from app.core.security import get_current_user
 from app.core.database import get_db
 from sqlalchemy.orm import Session, joinedload
-from app.crud.dispenser import get_dispenser_status, update_dispenser_status
+from app.crud.dispenser import (
+    assert_dispenser_deletable,
+    delete_dispenser,
+    get_deletion_status,
+    get_dispenser_status,
+    reset_dispenser_configuration,
+    update_dispenser_status,
+)
 from app.crud.patient import get_patient, get_patients_by_caregiver
 from app.models.domain import Dispenser, Drawer, Slot, SlotMedication
 from app.schemas.dispenser import (
     DiscoveredDispenser,
+    DispenserDeletionStatus,
     DispenserPairRequest,
     DispenserPublic,
+    DispenserResetConfigurationResult,
     DispenserStatusPublic,
 )
 
@@ -248,22 +257,57 @@ async def pair_dispenser(
     return _format_dispenser(dispenser)
 
 
-@router.delete("/{hardware_id}", status_code=204)
-async def remove_dispenser(
+def _get_dispenser_for_caregiver(
+    db: Session,
     hardware_id: str,
-    current_user = Depends(get_current_user),
-    db: Session = Depends(get_db)
-):
-    """Remove um dispensador do banco."""
+    username: str,
+) -> Dispenser:
     dispenser = db.query(Dispenser).filter(Dispenser.hardware_id == hardware_id).first()
     if not dispenser:
         raise HTTPException(status_code=404, detail="Dispenser not found")
 
     patient = dispenser.patient
-    if patient and patient.caregiver_username != current_user.username:
-        raise HTTPException(status_code=403, detail="Not authorized to delete this dispenser")
+    if patient and patient.caregiver_username != username:
+        raise HTTPException(status_code=403, detail="Not authorized to access this dispenser")
 
-    db.delete(dispenser)
+    return dispenser
+
+
+@router.get("/{hardware_id}/deletion-status", response_model=DispenserDeletionStatus)
+async def dispenser_deletion_status(
+    hardware_id: str,
+    current_user=Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Indica se o dispensador pode ser removido e o que ainda impede a exclusão."""
+    dispenser = _get_dispenser_for_caregiver(db, hardware_id, current_user.username)
+    return get_deletion_status(db, dispenser)
+
+
+@router.post(
+    "/{hardware_id}/reset-configuration",
+    response_model=DispenserResetConfigurationResult,
+)
+async def dispenser_reset_configuration(
+    hardware_id: str,
+    current_user=Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Remove medicamentos e horários para permitir exclusão do dispensador."""
+    dispenser = _get_dispenser_for_caregiver(db, hardware_id, current_user.username)
+    return reset_dispenser_configuration(db, dispenser)
+
+
+@router.delete("/{hardware_id}", status_code=204)
+async def remove_dispenser(
+    hardware_id: str,
+    current_user=Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Remove um dispensador após a configuração (slots/horários) estar limpa."""
+    dispenser = _get_dispenser_for_caregiver(db, hardware_id, current_user.username)
+    assert_dispenser_deletable(db, dispenser)
+    delete_dispenser(db, dispenser)
     db.commit()
     return None
 

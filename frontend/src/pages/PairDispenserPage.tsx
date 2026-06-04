@@ -608,6 +608,9 @@ function BluetoothPairingWizard() {
 
       setStep("wifi");
     } catch (e) {
+      if (e instanceof DOMException && e.name === "NotFoundError") {
+        return;
+      }
       console.error(e);
       alert("Falha ao conectar via Bluetooth: " + (e as Error).message);
     } finally {

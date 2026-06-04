@@ -1,4 +1,4 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, type ReactNode } from "react";
 import { createPortal } from "react-dom";
 import { Button } from "./Button";
 import "./ConfirmModal.css";
@@ -7,9 +7,11 @@ export interface ConfirmModalProps {
   open: boolean;
   title: string;
   description?: string;
+  children?: ReactNode;
   confirmLabel?: string;
   cancelLabel?: string;
   loading?: boolean;
+  confirmDisabled?: boolean;
   onConfirm: () => void;
   onCancel: () => void;
 }
@@ -18,9 +20,11 @@ export function ConfirmModal({
   open,
   title,
   description,
+  children,
   confirmLabel = "Confirmar",
   cancelLabel = "Cancelar",
   loading = false,
+  confirmDisabled = false,
   onConfirm,
   onCancel,
 }: ConfirmModalProps) {
@@ -68,6 +72,7 @@ export function ConfirmModal({
               {description}
             </p>
           )}
+          {children}
         </div>
 
         <div className="pillar-modal__actions">
@@ -83,6 +88,7 @@ export function ConfirmModal({
             variant="danger"
             onClick={onConfirm}
             loading={loading}
+            disabled={confirmDisabled || loading}
             leftIcon={loading ? undefined : "ph-duotone ph-trash"}
           >
             {confirmLabel}
