@@ -65,6 +65,7 @@ void setupApiServer(AsyncWebServer& server) {
     json += "\"awaiting_confirm\":"    + String(isAwaitingConfirmation() ? "true" : "false") + ",";
     json += "\"last_confirmed_slot\":" + String(getLastConfirmedSlot())                    + ",";
     json += "\"wifi_rssi\":"           + String(WiFi.RSSI())                               + ",";
+    json += "\"hardware_id\":\""      + getHardwareId()                                   + "\",";
     json += "\"uptime_s\":"            + String(millis() / 1000);
     json += "}";
     sendJson(request, 200, json);
@@ -159,7 +160,8 @@ void setupApiServer(AsyncWebServer& server) {
   // Apaga credenciais (NVS + flash Wi-Fi) e reinicia em modo BLE para re-provisionamento.
   server.on("/reset-wifi", HTTP_POST, [](AsyncWebServerRequest* request) {
     sendJson(request, 200, "{\"success\":true,\"message\":\"Reiniciando em modo BLE...\"}");
-    performWifiFactoryReset();
+    // Reinicia só depois da resposta TCP (evita curl/Postman pendurados).
+    scheduleWifiFactoryReset(400);
   });
 
   // GET /

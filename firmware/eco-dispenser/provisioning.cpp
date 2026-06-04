@@ -3,6 +3,7 @@
 #include <Preferences.h>
 #include <NimBLEDevice.h>
 #include <WiFi.h>
+#include <esp_mac.h>
 
 static const char* NVS_NS      = "wifi_creds";
 static const char* NVS_SSID    = "ssid";
@@ -35,6 +36,23 @@ static String extractField(const String& body, const String& key) {
     val += c;
   }
   return val;
+}
+
+// ── Hardware ID ───────────────────────────────────────────────────────
+
+String getHardwareId() {
+  WiFi.mode(WIFI_STA);
+  String mac = WiFi.macAddress();
+  if (mac.length() > 0 && mac != "00:00:00:00:00:00") {
+    return mac;
+  }
+
+  uint8_t bytes[6] = {0};
+  esp_read_mac(bytes, ESP_MAC_WIFI_STA);
+  char buf[18];
+  snprintf(buf, sizeof(buf), "%02X:%02X:%02X:%02X:%02X:%02X",
+           bytes[0], bytes[1], bytes[2], bytes[3], bytes[4], bytes[5]);
+  return String(buf);
 }
 
 // ── NVS ───────────────────────────────────────────────────────────────
@@ -79,6 +97,9 @@ void clearStoredCredentials() {
   Serial.println("[Prov] Credenciais WiFi apagadas da NVS.");
 }
 
+static bool     gPendingFactoryReset = false;
+static unsigned long gFactoryResetAt = 0;
+
 void performWifiFactoryReset() {
   Serial.println("[Prov] Reset de Wi-Fi solicitado — apagando credenciais...");
   WiFi.disconnect(true, true);
@@ -87,6 +108,18 @@ void performWifiFactoryReset() {
   resetWifiFailureCount();
   delay(500);
   ESP.restart();
+}
+
+void scheduleWifiFactoryReset(unsigned long delayMs) {
+  gPendingFactoryReset = true;
+  gFactoryResetAt = millis() + delayMs;
+}
+
+void processPendingWifiFactoryReset() {
+  if (gPendingFactoryReset && (long)(millis() - gFactoryResetAt) >= 0) {
+    gPendingFactoryReset = false;
+    performWifiFactoryReset();
+  }
 }
 
 int getWifiFailureCount() {
@@ -147,7 +180,9 @@ void runBleProvisioning() {
   NimBLECharacteristic* pStatusChar = pService->createCharacteristic(
     BLE_STATUS_UUID, NIMBLE_PROPERTY::READ
   );
-  String hwJson = "{\"hw_id\":\"" + WiFi.macAddress() + "\"}";
+  String hwId = getHardwareId();
+  Serial.println("[BLE] hardware_id: " + hwId);
+  String hwJson = "{\"hw_id\":\"" + hwId + "\"}";
   pStatusChar->setValue(hwJson.c_str());
 
   // Característica de config WiFi (write): recebe {"ssid":"...","pass":"..."}

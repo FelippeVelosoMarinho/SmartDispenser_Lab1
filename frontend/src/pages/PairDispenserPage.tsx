@@ -5,7 +5,13 @@ import { Button } from "../components/ui/Button";
 import { Input } from "../components/ui/Input";
 import { Card, CardContent } from "../components/ui/Card";
 import "../components/ui/ConfirmModal.css";
-import { listPatients, pairDispenser, getDispenserStatus, type Patient as ApiPatient } from "../lib/api";
+import {
+  listPatients,
+  pairDispenser,
+  getDispenserStatus,
+  listDispensers,
+  type Patient as ApiPatient,
+} from "../lib/api";
 import { useToast } from "../components/ui";
 import { APP_NAME } from "../lib/brand";
 
@@ -566,6 +572,46 @@ function BluetoothPairingWizard() {
   const BLE_STATUS_CHAR_UUID = "8d268d37-2cd9-4c2f-b4de-c8f2d573d8df";
   const BLE_WIFI_CHAR_UUID = "beb5483e-36e1-4688-b7f5-ea07361b26a8";
 
+  const isInvalidHardwareId = (id: string | null) => {
+    if (!id) return true;
+    const n = id.trim().toUpperCase();
+    return n === "00:00:00:00:00:00" || !n.includes(":");
+  };
+
+  async function waitForDispenserOnline(hardwareId: string): Promise<{ ok: boolean; resolvedId: string }> {
+    const maxRetries = 20;
+    const initialDelayMs = 8000;
+
+    await new Promise((r) => setTimeout(r, initialDelayMs));
+
+    for (let i = 0; i < maxRetries; i++) {
+      if (!isInvalidHardwareId(hardwareId)) {
+        try {
+          const status = await getDispenserStatus(hardwareId);
+          if (status?.online) {
+            return { ok: true, resolvedId: hardwareId };
+          }
+        } catch (err) {
+          console.warn("Aguardando heartbeat para", hardwareId, err);
+        }
+      }
+
+      try {
+        const dispensers = await listDispensers();
+        const online = dispensers.find((d) => d.is_online);
+        if (online?.hardware_id) {
+          return { ok: true, resolvedId: online.hardware_id };
+        }
+      } catch (err) {
+        console.warn("Aguardando qualquer dispensador online...", err);
+      }
+
+      await new Promise((r) => setTimeout(r, 2000));
+    }
+
+    return { ok: false, resolvedId: hardwareId };
+  }
+
   async function handleBleScan() {
     if (!navigator.bluetooth) {
       alert("Seu navegador não suporta Web Bluetooth. Utilize o Chrome/Edge ou a conexão local legada.");
@@ -596,14 +642,19 @@ function BluetoothPairingWizard() {
         const decoder = new TextDecoder("utf-8");
         const jsonStr = decoder.decode(value);
         const data = JSON.parse(jsonStr);
-        if (data.hw_id) {
-          setDeviceId(data.hw_id);
+        const hwId = data.hw_id ? String(data.hw_id) : "";
+        if (!isInvalidHardwareId(hwId)) {
+          setDeviceId(hwId);
         } else {
-          setDeviceId(device.name || "Dispensador Desconhecido");
+          alert(
+            "Não foi possível ler o ID do hardware via Bluetooth. Regrave o firmware atualizado e tente novamente.",
+          );
+          return;
         }
       } catch (err) {
-        // Fallback se não conseguir ler
-        setDeviceId(device.name || "Dispensador Desconhecido");
+        console.error(err);
+        alert("Falha ao ler o ID do dispensador via Bluetooth.");
+        return;
       }
 
       setStep("wifi");
@@ -642,22 +693,19 @@ function BluetoothPairingWizard() {
         // Ignora falhas ao tentar forçar a desconexão manual
       }
 
-      // Aguarda 5 segundos antes do primeiro check para dar tempo do ESP32 subir o Wi-Fi
-      await new Promise(r => setTimeout(r, 5000));
+      const hwId = deviceId || "";
 
-      let connected = false;
-      const maxRetries = 12; // 12 retries * 2s = 24s total polling
-      for (let i = 0; i < maxRetries; i++) {
+      if (selectedPatient && !isInvalidHardwareId(hwId)) {
         try {
-          const status = await getDispenserStatus(deviceId || "") as any;
-          if (status && status.online) {
-            connected = true;
-            break;
-          }
-        } catch (err) {
-          console.warn("Aguardando heartbeat...", err);
+          await pairDispenser(hwId, selectedPatient.id);
+        } catch (pairErr) {
+          console.warn("Pareamento antecipado no servidor:", pairErr);
         }
-        await new Promise(r => setTimeout(r, 2000));
+      }
+
+      const { ok: connected, resolvedId } = await waitForDispenserOnline(hwId);
+      if (connected && resolvedId !== hwId) {
+        setDeviceId(resolvedId);
       }
 
       if (connected) {

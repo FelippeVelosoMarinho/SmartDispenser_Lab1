@@ -54,7 +54,7 @@ static void sendHeartbeat() {
     http.setTimeout(5000);
     http.setReuse(false);
 
-    String mac  = WiFi.macAddress();
+    String mac  = getHardwareId();
     String ip   = WiFi.localIP().toString();
     
     // Payload "Universal": Contém os campos novos E os antigos.
@@ -191,6 +191,7 @@ void setup() {
 }
 
 void loop() {
+  processPendingWifiFactoryReset();
   checkButtons();
 
   wl_status_t currentWifiStatus = WiFi.status();
