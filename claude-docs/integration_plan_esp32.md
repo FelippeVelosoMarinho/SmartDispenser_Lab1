@@ -116,7 +116,7 @@ Para substituir a listagem estática atual por dados reais:
 ### 🟩 Fase 1: Firmware do ESP32 (C++)
 - [ ] Implementar mDNS responder no firmware do ESP32 usando a biblioteca `ESPmDNS.h`.
 - [ ] Registrar o serviço do dispenser como `_pillar-dispenser._tcp`.
-- [ ] Adicionar endpoint `/status` no ESP32 retornando informações em formato JSON (por exemplo, nível de bateria, reservatório de pílulas).
+- [ ] Adicionar endpoint `/status` no ESP32 retornando informações em formato JSON (por exemplo, slot atual, RSSI, reservatório de pílulas).
 
 ### 🟦 Fase 2: Backend (FastAPI)
 - [ ] Adicionar dependência `zeroconf` no `requirements.txt` para detecção de serviços mDNS locais.

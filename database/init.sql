@@ -40,7 +40,6 @@ CREATE TABLE "dispensers" (
   "patient_id" uuid REFERENCES "patients" ("id"),
   "is_online" boolean DEFAULT false,
   "last_sync" timestamp,
-  "battery_level" numeric DEFAULT 100.0,
   "critical_stock" boolean DEFAULT false
 );
 

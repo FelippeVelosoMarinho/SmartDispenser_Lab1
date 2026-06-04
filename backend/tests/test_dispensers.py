@@ -57,7 +57,6 @@ def test_get_dispenser_status_updated(mock_get_current_user):
     # Mock heartbeat
     payload = {
         "dispenser_id": "disp_known",
-        "battery_level": 15.0,
         "online": False,
         "critical_stock": True
     }
@@ -67,7 +66,6 @@ def test_get_dispenser_status_updated(mock_get_current_user):
     assert resp.status_code == 200
     data = resp.json()
     assert data["dispenser_id"] == "disp_known"
-    assert data["battery_level"] == 15.0
     assert data["online"] is False
     assert data["critical_stock"] is True
 

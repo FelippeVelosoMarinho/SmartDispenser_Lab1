@@ -13,7 +13,7 @@ Entender o que o heartbeat periódico faz hoje, se ele está acoplado (ou deveri
 | Camada | Arquivo | Comportamento |
 |--------|---------|---------------|
 | Firmware | `firmware/eco-dispenser/eco-dispenser.ino` | Envia `POST {BACKEND_URL}/iot/heartbeat` a cada **30 s** (`HEARTBEAT_INTERVAL_MS`) e também após reconexão Wi-Fi |
-| Backend | `backend/app/api/endpoints/iot.py` → `process_heartbeat` | Atualiza status do dispenser no banco e dispara e-mails de estoque crítico / bateria baixa |
+| Backend | `backend/app/api/endpoints/iot.py` → `process_heartbeat` | Atualiza status do dispenser no banco e dispara e-mails de estoque crítico |
 | Dashboard | `backend/app/crud/dispenser.py` | Marca dispenser **offline** se `last_sync` > **15 min** sem heartbeat |
 
 ### 2.2 Payload enviado pelo ESP32 (firmware)
@@ -24,18 +24,17 @@ Entender o que o heartbeat periódico faz hoje, se ele está acoplado (ou deveri
   "uptime_s": 1234,
   "current_slot": 3,
   "wifi_rssi": -55,
-  "battery_level": 100.0,
   "online": true,
   "critical_stock": false,
   "ip_address": "192.168.x.x"
 }
 ```
 
-> **Observação:** `battery_level` e `critical_stock` estão **hardcoded** no firmware (`100.0` e `false`). Os alertas de e-mail ligados ao heartbeat **nunca disparam** com o hardware atual.
+> **Observação:** `critical_stock` está **hardcoded** no firmware (`false`). O alerta de estoque crítico via heartbeat **não dispara** com o hardware atual. O dispositivo é alimentado por fonte — telemetria de bateria foi removida do sistema.
 
 ### 2.3 Payload aceito pelo backend (`HeartbeatCreate`)
 
-Campos válidos: `dispenser_id`, `battery_level`, `online`, `critical_stock`, `ip_address`.
+Campos válidos: `dispenser_id`, `online`, `critical_stock`, `ip_address`.
 
 Campos extras do firmware (`uptime_s`, `current_slot`, `wifi_rssi`) são **ignorados** pelo Pydantic — não persistem no banco.
 
@@ -43,7 +42,6 @@ Campos extras do firmware (`uptime_s`, `current_slot`, `wifi_rssi`) são **ignor
 
 Em `crud_dispenser.update_dispenser_status`:
 
-- `battery_level`
 - `is_online` ← sempre `true` enquanto o ESP envia
 - `critical_stock`
 - `ip_address` (se presente)
@@ -80,7 +78,7 @@ Agendamentos existem no backend (`GET /api/sync/{hardware_id}`), mas **o firmwar
 | 2 | O heartbeat avança slot ou libera bandeja? | **Não** — slot só muda via `POST /dispense` |
 | 3 | `current_slot` no heartbeat reflete a roleta real? | Sim no JSON enviado, mas backend **descarta** |
 | 4 | Dashboard mostra "conectado" graças ao heartbeat? | Sim — `last_sync` e `is_online` |
-| 5 | Alertas de bateria/estoque funcionam? | **Não** — valores fixos no firmware |
+| 5 | Alertas de estoque crítico funcionam? | **Não** — valor fixo no firmware |
 | 6 | Horários de liberação estão definidos onde? | Backend (`schedules` table) + endpoint `/sync`; ESP não consome ainda |
 
 ---
@@ -94,7 +92,7 @@ Agendamentos existem no backend (`GET /api/sync/{hardware_id}`), mas **o firmwar
 - [ ] **A3.** Capturar um POST com Wireshark/curl mirror ou log do backend:
   ```bash
   # Consultar status após heartbeat
-  curl -s http://localhost:8000/api/dispensers/<MAC> | jq '.last_sync, .is_online, .battery_level'
+  curl -s http://localhost:8000/api/dispensers/<MAC> | jq '.last_sync, .is_online'
   ```
 - [ ] **A4.** Desligar Wi-Fi do ESP por 20 min → dashboard deve marcar **desconectado** (timeout 15 min).
 - [ ] **A5.** Reconectar Wi-Fi → heartbeat imediato (~1 s após reconexão) e status volta a conectado.
@@ -114,7 +112,7 @@ Agendamentos existem no backend (`GET /api/sync/{hardware_id}`), mas **o firmwar
   ```bash
   curl -X POST http://localhost:8000/iot/heartbeat \
     -H "Content-Type: application/json" \
-    -d '{"dispenser_id":"<MAC>","battery_level":100,"online":true,"critical_stock":false,"ip_address":"192.168.1.10"}'
+    -d '{"dispenser_id":"<MAC>","online":true,"critical_stock":false,"ip_address":"192.168.1.10"}'
   ```
 - [ ] **C2.** Documentar campos "fantasma" (`uptime_s`, `current_slot`, `wifi_rssi`) como candidatos a remoção ou extensão do schema.
 
@@ -128,7 +126,7 @@ Agendamentos existem no backend (`GET /api/sync/{hardware_id}`), mas **o firmwar
 |--------|------------------------|
 | Manter `is_online` / `last_sync` no dashboard | **Sim** — detecção de queda |
 | Atualizar `ip_address` (DHCP) | Sim, eventual |
-| Alertas de bateria / estoque crítico | Sim, mas **requer leitura real no firmware** |
+| Alertas de estoque crítico | Sim, mas **requer leitura real no firmware** |
 | Saber slot atual da roleta | Não — muda só em `/dispense` |
 
 ### O que deveria ser **orientado a evento**
@@ -142,12 +140,12 @@ Agendamentos existem no backend (`GET /api/sync/{hardware_id}`), mas **o firmwar
 
 ### Recomendação arquitetural (pós-verificação)
 
-1. **Manter heartbeat periódico** (intervalo configurável, ex.: 60–120 s) apenas para telemetria de **presença** (`online`, `last_sync`, `ip`, futura bateria/RSSI).
+1. **Manter heartbeat periódico** (intervalo configurável, ex.: 60–120 s) apenas para telemetria de **presença** (`online`, `last_sync`, `ip`, RSSI).
 2. **Não usar heartbeat para slot** — enviar `current_slot` no evento de dispense/confirmação ou estender schema se o dashboard precisar.
 3. **Implementar no firmware** (fase futura):
    - Download de horários via `GET /api/sync/{mac}`
    - Timer local (NTP + cron) para chamar `advanceCarousel()` nos horários
-   - Leitura real de bateria e contagem de slots vazios → `critical_stock`
+   - Contagem de slots vazios → `critical_stock`
 4. **Reduzir frequência** se 30 s for excessivo para lwIP (risco de crash TCP já documentado em `DEPENDENCIES.md`).
 
 ---
@@ -157,7 +155,7 @@ Agendamentos existem no backend (`GET /api/sync/{hardware_id}`), mas **o firmwar
 - [ ] Documento de fluxo heartbeat vs dispense validado com evidências (logs + screenshots dashboard).
 - [ ] Tabela de campos: o que o ESP envia × o que o backend usa × o que o frontend exibe.
 - [ ] Decisão registrada: manter/adjustar intervalo do heartbeat e lista de campos.
-- [ ] Backlog criado para: telemetria real de bateria/estoque, sync de horários no ESP, evento pós-dispense.
+- [ ] Backlog criado para: telemetria real de estoque, sync de horários no ESP, evento pós-dispense.
 
 ---
 

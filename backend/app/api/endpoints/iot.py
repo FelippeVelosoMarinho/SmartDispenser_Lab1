@@ -16,7 +16,6 @@ from app.services.templates import (
     get_dispensation_success_template,
     get_dispensation_failure_template,
     get_critical_stock_template,
-    get_low_battery_template,
 )
 from app.schemas.iot import (
     HealthResponse,
@@ -279,8 +278,7 @@ async def process_heartbeat(
     dispenser = db.query(Dispenser).filter(Dispenser.hardware_id == heartbeat.dispenser_id).first()
     if dispenser:
         prev_critical = dispenser.critical_stock or False
-        prev_battery = float(dispenser.battery_level) if dispenser.battery_level is not None else 100.0
-        
+
         patient = None
         if dispenser.patient_id:
             patient = db.query(Patient).filter(Patient.id == dispenser.patient_id).first()
@@ -302,25 +300,10 @@ async def process_heartbeat(
                         subject=f"📦 Alerta SmartDispenser: Estoque crítico para {patient_name}",
                         html_body=html_body
                     )
-                    
-                # Check for battery level drop (transitioning below 20.0%)
-                if prev_battery >= 20.0 and heartbeat.battery_level < 20.0:
-                    html_body = get_low_battery_template(
-                        patient_name=patient_name,
-                        hardware_id=heartbeat.dispenser_id,
-                        battery_level=heartbeat.battery_level
-                    )
-                    background_tasks.add_task(
-                        send_email_notification,
-                        to_email=caregiver_user.email,
-                        subject=f"🔋 Alerta SmartDispenser: Bateria baixa ({heartbeat.battery_level:.1f}%) para {patient_name}",
-                        html_body=html_body
-                    )
 
     # 2. Update dispenser status in DB
     status_data = {
         "dispenser_id": heartbeat.dispenser_id,
-        "battery_level": heartbeat.battery_level,
         "online": heartbeat.online,
         "critical_stock": heartbeat.critical_stock,
         "ip_address": heartbeat.ip_address,

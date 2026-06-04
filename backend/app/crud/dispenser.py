@@ -27,7 +27,6 @@ def get_dispenser_status(db: Session, hardware_id: str) -> dict:
     if not dispenser:
         return {
             "dispenser_id": hardware_id,
-            "battery_level": 0.0,
             "online": False,
             "critical_stock": False,
             "ip_address": None
@@ -37,7 +36,6 @@ def get_dispenser_status(db: Session, hardware_id: str) -> dict:
 
     return {
         "dispenser_id": dispenser.hardware_id,
-        "battery_level": float(dispenser.battery_level) if dispenser.battery_level is not None else 100.0,
         "online": is_online,
         "critical_stock": dispenser.critical_stock,
         "ip_address": dispenser.ip_address
@@ -52,7 +50,6 @@ def update_dispenser_status(db: Session, hardware_id: str, status: dict) -> dict
     if not dispenser:
         dispenser = Dispenser(
             hardware_id=hardware_id,
-            battery_level=status.get("battery_level", 100.0),
             is_online=status.get("online", True),
             critical_stock=status.get("critical_stock", False),
             ip_address=status.get("ip_address"),
@@ -60,7 +57,6 @@ def update_dispenser_status(db: Session, hardware_id: str, status: dict) -> dict
         )
         db.add(dispenser)
     else:
-        dispenser.battery_level = status.get("battery_level", dispenser.battery_level)
         dispenser.is_online = status.get("online", dispenser.is_online)
         dispenser.critical_stock = status.get("critical_stock", dispenser.critical_stock)
         if "ip_address" in status and status["ip_address"]:

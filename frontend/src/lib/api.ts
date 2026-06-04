@@ -33,14 +33,12 @@ export interface Dispenser {
   patient_id: string | null;
   patient_name: string | null;
   is_online: boolean;
-  battery_level: number;
   critical_stock: boolean;
   last_sync: string | null;
 }
 
 export interface DispenserStatusPublic {
   dispenser_id: string;
-  battery_level: number;
   online: boolean;
   critical_stock: boolean;
   ip_address?: string | null;
@@ -376,7 +374,6 @@ export async function getDispenserDetails(dispenserId: string): Promise<Dispense
       patient_id: null,
       patient_name: null,
       is_online: false,
-      battery_level: 85,
       critical_stock: false,
       last_sync: null,
       drawers: [

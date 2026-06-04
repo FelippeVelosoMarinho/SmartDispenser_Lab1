@@ -33,9 +33,8 @@ class IotEventResponse(BaseModel):
 
 
 class HeartbeatCreate(BaseModel):
-    """Heartbeat sent by the hardware indicating it's online and its battery status."""
+    """Heartbeat sent by the hardware indicating it's online."""
     dispenser_id: str
-    battery_level: float = 100.0
     online: bool = True
     critical_stock: bool = False
     ip_address: Optional[str] = None

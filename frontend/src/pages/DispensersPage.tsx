@@ -34,7 +34,6 @@ interface Dispenser {
   status: DispenserStatus;
   pacienteId: string | null;
   pacienteNome: string | null;
-  batteryLevel: number;
   criticalStock: boolean;
   ultimoContato: string;
 }
@@ -67,7 +66,6 @@ function toDispenserRow(dispenser: ApiDispenser): Dispenser {
     status: dispenser.is_online ? "conectado" : "desconectado",
     pacienteId: dispenser.patient_id,
     pacienteNome: dispenser.patient_name,
-    batteryLevel: dispenser.battery_level,
     criticalStock: dispenser.critical_stock,
     ultimoContato: formatLastSync(dispenser.last_sync),
   };
@@ -366,7 +364,6 @@ export function DispensersPage() {
               <tr>
                 <TableHead>Serial</TableHead>
                 <TableHead>Paciente vinculado</TableHead>
-                <TableHead>Bateria</TableHead>
                 <TableHead>Último contato</TableHead>
                 <TableHead>Status</TableHead>
                 <TableHead align="right">Ações</TableHead>
@@ -376,7 +373,7 @@ export function DispensersPage() {
               {loading ? (
                 <TableRow>
                   <TableCell
-                    colSpan={6}
+                    colSpan={5}
                     style={{ textAlign: "center", padding: "var(--space-10)" }}
                   >
                     <div
@@ -396,7 +393,7 @@ export function DispensersPage() {
               ) : pageItems.length === 0 ? (
                 <TableRow>
                   <TableCell
-                    colSpan={6}
+                    colSpan={5}
                     style={{ textAlign: "center", padding: "var(--space-10)" }}
                   >
                     <div
@@ -432,7 +429,6 @@ export function DispensersPage() {
                         criticalStock={dispenser.criticalStock}
                       />
                     </TableCell>
-                    <TableCell>{dispenser.batteryLevel.toFixed(1)}%</TableCell>
                     <TableCell style={{ color: "var(--ink-3)" }}>
                       {dispenser.ultimoContato}
                     </TableCell>

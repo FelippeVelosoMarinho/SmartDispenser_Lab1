@@ -50,7 +50,7 @@ function Phone({ children, width = 390, height = 810 }) {
         <span>9:41</span>
         <span style={{ display: "flex", gap: 4, alignItems: "center" }}>
           <i className="ph-fill ph-wifi-high" style={{ fontSize: 14 }} />
-          <i className="ph-fill ph-battery-high" style={{ fontSize: 16 }} />
+          <i className="ph-fill ph-wifi-high" style={{ fontSize: 16 }} />
         </span>
       </div>
       <div

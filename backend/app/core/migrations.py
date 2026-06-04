@@ -274,6 +274,20 @@ _MIGRATIONS: list[tuple[str, str]] = [
         "schedules: add scheduled_at",
         "ALTER TABLE schedules ADD COLUMN IF NOT EXISTS scheduled_at TIMESTAMP;",
     ),
+    (
+        "dispensers: drop battery_level",
+        """
+        DO $$
+        BEGIN
+            IF EXISTS (
+                SELECT 1 FROM information_schema.columns
+                WHERE table_name='dispensers' AND column_name='battery_level'
+            ) THEN
+                ALTER TABLE dispensers DROP COLUMN battery_level;
+            END IF;
+        END $$;
+        """,
+    ),
 ]
 
 

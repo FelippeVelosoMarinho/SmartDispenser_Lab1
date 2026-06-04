@@ -134,43 +134,6 @@ def get_critical_stock_template(patient_name: str, hardware_id: str) -> str:
     </html>
     """
 
-def get_low_battery_template(patient_name: str, hardware_id: str, battery_level: float) -> str:
-    """HTML template for low battery alert."""
-    return f"""
-    <!DOCTYPE html>
-    <html>
-    <head>
-        <meta charset="utf-8">
-        <title>Alerta: Bateria Baixa</title>
-    </head>
-    <body style="font-family: Arial, sans-serif; margin: 0; padding: 20px; background-color: #f8fafc; color: #1e293b;">
-        <div style="max-width: 600px; margin: 0 auto; background: #ffffff; border: 1px solid #e2e8f0; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);">
-            <div style="background-color: #ea580c; padding: 24px; text-align: center; color: #ffffff;">
-                <h1 style="margin: 0; font-size: 22px; font-weight: bold;">🔋 Alerta: Bateria Baixa do Dispenser</h1>
-            </div>
-            <div style="padding: 24px;">
-                <p style="font-size: 16px; line-height: 1.5; margin-bottom: 16px;">Atenção Cuidador,</p>
-                <p style="font-size: 16px; line-height: 1.5; margin-bottom: 24px;">
-                    O Smart Dispenser (ID: <strong>{hardware_id}</strong>) de <strong>{patient_name}</strong> reportou bateria fraca.
-                </p>
-                <div style="background-color: #fff7ed; border-left: 4px solid #ea580c; padding: 16px; border-radius: 4px; margin-bottom: 24px;">
-                    <p style="margin: 0; font-size: 14px; color: #c2410c;">
-                        <strong>Nível de Bateria Atual:</strong> {battery_level:.1f}%
-                    </p>
-                </div>
-                <p style="font-size: 15px; color: #475569; margin-bottom: 24px;">
-                    Conecte o Smart Dispenser à fonte de alimentação para evitar interrupções no funcionamento.
-                </p>
-                <p style="font-size: 14px; color: #64748b; margin-top: 32px; border-top: 1px solid #e2e8f0; padding-top: 16px; text-align: center;">
-                    Este é um e-mail automático enviado pelo sistema <strong>Smart Dispenser</strong>.
-                </p>
-            </div>
-        </div>
-    </body>
-    </html>
-    """
-
-
 def get_welcome_email_template(full_name: str, username: str) -> str:
     """HTML template for account registration/welcome email."""
     name_display = full_name if full_name else username
@@ -193,7 +156,7 @@ def get_welcome_email_template(full_name: str, username: str) -> str:
                     Estamos muito felizes em ter você conosco! Sua conta foi criada com sucesso no sistema <strong>Smart Dispenser</strong>.
                 </p>
                 <p style="font-size: 16px; line-height: 1.5; margin-bottom: 24px;">
-                    A partir de agora, você poderá cadastrar seus pacientes, configurar dosagens personalizadas, monitorar o nível de bateria e receber notificações automáticas sobre o status de cada medicação.
+                    A partir de agora, você poderá cadastrar seus pacientes, configurar dosagens personalizadas, monitorar o status do dispenser e receber notificações automáticas sobre o status de cada medicação.
                 </p>
                 
                 <div style="background-color: #f0fdfa; border-left: 4px solid #0f766e; padding: 16px; border-radius: 4px; margin-bottom: 24px;">

@@ -51,7 +51,7 @@ A estrutura de arquivos do backend em `backend/app/` está organizada da seguint
      - **`User`**: Identidade de login do cuidador/usuário.
      - **`Patient`**: Dados do paciente, vinculado aos cuidadores e aos dispensers.
      - **`Caregiver`**: Representação do cuidador (contém o campo `notifications_enabled`).
-     - **`Dispenser`**: Cadastro do hardware físico associado a um paciente (dados de bateria, estoques críticos e IP).
+     - **`Dispenser`**: Cadastro do hardware físico associado a um paciente (estoques críticos e IP).
      - **`Drawer` e `Slot`**: Estrutura física interna (gavetas e posições) que armazena a medicação e quantidade de pílulas.
      - **`Medication`**: Nome, dosagem e descrição das pílulas.
      - **`Schedule`**: Horários programados em que o dispenser ejetará a medicação de determinado slot.
@@ -72,7 +72,6 @@ O objetivo do Notificador é enviar alertas automáticos por e-mail para o cuida
 1. **O Paciente tomar a medicação** (Confirmação de ingestão).
 2. **O Paciente esquecer ou falhar na ingestão** (Alerta de dose não tomada ou erro no hardware).
 3. **O estoque do compartimento estiver crítico** (`critical_stock=True`).
-4. **A bateria do dispensador estiver baixa** (`battery_level < 20%`).
 
 ### ⚙️ Configuração Inicial (.env)
 O arquivo `backend/.env` já possui a credencial necessária:
@@ -141,7 +140,7 @@ Desenhar templates elegantes e de fácil leitura, alinhados com o tom inclusivo 
 
 - **Template de Sucesso (Medicação Ingerida)**: Um design em tons verdes com o horário e nome da medicação.
 - **Template de Alerta (Medicação Não Ingerida)**: Tons vermelhos/laranjas indicando que a dose foi pulada.
-- **Template de Estoque/Bateria Crítica**: Tons de aviso solicitando a intervenção do cuidador.
+- **Template de Estoque Crítico**: Tons de aviso solicitando a intervenção do cuidador.
 
 *Exemplo de estrutura de e-mail:*
 ```html
@@ -213,8 +212,8 @@ async def process_heartbeat(
     db: Session = Depends(get_db)
 ):
     # 1. Registra os dados físicos no banco
-    # 2. Verifica se critical_stock == True ou battery_level < 20.0
-    if heartbeat.critical_stock or heartbeat.battery_level < 20.0:
+    # 2. Verifica se critical_stock == True (transição false→true)
+    if heartbeat.critical_stock:
         # Recupera dados do cuidador e adiciona tarefa em background
         # background_tasks.add_task(send_email_notification, ...)
 ```

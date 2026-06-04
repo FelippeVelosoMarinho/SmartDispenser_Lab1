@@ -330,7 +330,7 @@ docker compose up --build
 
 ### 5.2 Backend — telemetria
 - **Como validar:** `curl -s http://127.0.0.1:8000/api/dispensers/<id>/status -H "Authorization: Bearer $TOKEN"`
-- **Esperado:** 200 com `is_online`, `battery_level`, etc.
+- **Esperado:** 200 com `is_online`, `critical_stock`, etc.
 - **Se falhar:** rota existe mas `get_dispenser_status` pode retornar mock — validar contra registro real no banco
 
 - [ ] **Passou**

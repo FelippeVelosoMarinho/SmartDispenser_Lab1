@@ -63,7 +63,6 @@ static void sendHeartbeat() {
                   "\"uptime_s\":" + String(millis() / 1000) + ","
                   "\"current_slot\":" + String(getCurrentSlot()) + ","
                   "\"wifi_rssi\":" + String(WiFi.RSSI()) + ","
-                  "\"battery_level\":100.0,"
                   "\"online\":true,"
                   "\"critical_stock\":false,"
                   "\"ip_address\":\"" + ip + "\"}";

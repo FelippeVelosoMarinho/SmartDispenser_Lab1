@@ -6,7 +6,6 @@ interface TelemetryGridProps {
 
 export function TelemetryGrid({ dispenser }: TelemetryGridProps) {
   const isOnline = dispenser.is_online;
-  // unused: const battery = dispenser.battery_level;
   const hasCriticalStock = dispenser.critical_stock;
 
   return (

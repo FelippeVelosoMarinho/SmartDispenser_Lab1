@@ -2,7 +2,7 @@
 
 ## 1. Objetivo
 
-Validar ponta a ponta o envio de e-mails do Smart Dispenser — desde a conectividade SMTP até cada gatilho de negócio (cadastro, ingestão, falha, estoque, bateria) — confirmando que as preferências do cuidador são respeitadas.
+Validar ponta a ponta o envio de e-mails do Smart Dispenser — desde a conectividade SMTP até cada gatilho de negócio (cadastro, ingestão, falha, estoque) — confirmando que as preferências do cuidador são respeitadas.
 
 ---
 
@@ -12,7 +12,7 @@ Validar ponta a ponta o envio de e-mails do Smart Dispenser — desde a conectiv
 |------------|---------|--------|
 | Config SMTP | `backend/app/core/config.py` | Gmail via `APP_PASSWORD_GOOGLE` |
 | Serviço de envio | `backend/app/services/notifier.py` | `smtplib` + TLS, roda em `BackgroundTasks` |
-| Templates HTML | `backend/app/services/templates.py` | 5 templates premium |
+| Templates HTML | `backend/app/services/templates.py` | 4 templates premium |
 | Preferência do cuidador | `users.notifications_enabled` | `PATCH /api/auth/profile` |
 | Script CLI de teste | `backend/tests/test_smtp.py` | Envio manual de boas-vindas |
 | Testes unitários | `backend/tests/` | 26 testes (mock SMTP nos unitários) |
@@ -29,7 +29,6 @@ Relatório consolidado: `claude-docs/notifier_verification_report.md`.
 | **E2** | Ingestão confirmada | `POST /api/event` | `success=true` + caregiver com notificações ON | `get_dispensation_success_template` |
 | **E3** | Dose não tomada | `POST /api/event` | `success=false` | `get_dispensation_failure_template` |
 | **E4** | Estoque crítico | `POST /api/heartbeat` | transição `critical_stock: false→true` | `get_critical_stock_template` |
-| **E5** | Bateria baixa | `POST /api/heartbeat` | transição bateria ≥20% → <20% | `get_low_battery_template` |
 
 Todos os gatilhos IoT verificam:
 
@@ -123,35 +122,25 @@ Setup: paciente vinculado ao dispenser; token JWT do cuidador.
 
 ---
 
-### Fase D — Heartbeat alertas (E4, E5)
+### Fase D — Heartbeat alertas (E4)
 
-> **Nota:** O firmware envia `critical_stock=false` e `battery_level=100` fixos. Estes testes usam **curl manual** para simular transições.
+> **Nota:** O firmware envia `critical_stock=false` fixo. Estes testes usam **curl manual** para simular transições.
 
 - [ ] **D1. Estoque crítico (E4)** — duas chamadas sequenciais:
   ```bash
   # Estado inicial: critical_stock=false (default ou heartbeat anterior)
   curl -X POST http://localhost:8000/iot/heartbeat \
     -H "Content-Type: application/json" \
-    -d '{"dispenser_id":"<MAC>","critical_stock":false,"battery_level":100,"online":true}'
+    -d '{"dispenser_id":"<MAC>","critical_stock":false,"online":true}'
 
   # Transição → true (dispara e-mail)
   curl -X POST http://localhost:8000/iot/heartbeat \
     -H "Content-Type: application/json" \
-    -d '{"dispenser_id":"<MAC>","critical_stock":true,"battery_level":100,"online":true}'
+    -d '{"dispenser_id":"<MAC>","critical_stock":true,"online":true}'
   ```
   Assunto: `📦 Alerta SmartDispenser: Estoque crítico...`
 
-- [ ] **D2. Bateria baixa (E5)**:
-  ```bash
-  curl -X POST http://localhost:8000/iot/heartbeat \
-    -d '{"dispenser_id":"<MAC>","battery_level":100,"critical_stock":false,"online":true}'
-
-  curl -X POST http://localhost:8000/iot/heartbeat \
-    -d '{"dispenser_id":"<MAC>","battery_level":15.5,"critical_stock":false,"online":true}'
-  ```
-  Assunto: `🔋 Alerta SmartDispenser: Bateria baixa (15.5%)...`
-
-- [ ] **D3.** Repetir D1/D2 com `battery_level` já baixo → **não** deve reenviar (só transição).
+- [ ] **D2.** Repetir D1 com `critical_stock` já true → **não** deve reenviar (só transição).
 
 ---
 
@@ -189,7 +178,6 @@ Setup: paciente vinculado ao dispenser; token JWT do cuidador.
 | E2 | Ingestão OK | | | | | |
 | E3 | Dose falha | | | | | |
 | E4 | Estoque crítico | | | | | |
-| E5 | Bateria baixa | | | | | |
 | E | Pref. OFF bloqueia | | | | | |
 
 ---
@@ -201,9 +189,9 @@ Setup: paciente vinculado ao dispenser; token JWT do cuidador.
 | `APP_PASSWORD_GOOGLE não configurada` | `.env` ausente ou vazio | Copiar `.env.example`, gerar senha de app Google |
 | `Authentication failed` | Senha de app revogada | Regenerar em myaccount.google.com/apppasswords |
 | E-mail não chega, logs OK | Spam / delay Gmail | Checar spam; aguardar 1–2 min |
-| E4/E5 nunca disparam do ESP real | Valores hardcoded no firmware | Usar curl (Fase D) ou implementar telemetria real |
+| E4 nunca dispara do ESP real | Valor hardcoded no firmware | Usar curl (Fase D) ou implementar telemetria real |
 | E2/E3 sem e-mail | Paciente sem caregiver / notificações OFF | Verificar pareamento e `notifications_enabled` |
-| Duplicatas de alerta | Múltiplas transições | Backend só dispara na **borda** false→true ou ≥20→<20 |
+| Duplicatas de alerta | Múltiplas transições | Backend só dispara na **borda** false→true |
 
 ---
 
@@ -211,7 +199,7 @@ Setup: paciente vinculado ao dispenser; token JWT do cuidador.
 
 - [ ] Fase A (SMTP) passou com e-mail real recebido.
 - [ ] Pelo menos E2 e E3 validados com paciente/cuidador reais no ambiente de lab.
-- [ ] E4 e E5 validados via simulação curl (até firmware reportar valores reais).
+- [ ] E4 validado via simulação curl (até firmware reportar valores reais).
 - [ ] Preferência `notifications_enabled=false` bloqueia envio (Fase E).
 - [ ] `pytest` verde.
 - [ ] Matriz da seção 6 preenchida e anexada ao relatório de lab.
@@ -220,7 +208,7 @@ Setup: paciente vinculado ao dispenser; token JWT do cuidador.
 
 ## 9. Próximos Passos (pós-teste)
 
-1. Implementar leitura real de bateria e `critical_stock` no firmware para E4/E5 funcionarem sem simulação.
+1. Implementar leitura real de `critical_stock` no firmware para E4 funcionar sem simulação.
 2. Garantir que o ESP envia `POST /api/event` após confirmação do paciente (hoje só local em `buttons.cpp`).
 3. Adicionar teste de integração E2E com SMTP de sandbox (Mailhog) no CI, se desejado.
 

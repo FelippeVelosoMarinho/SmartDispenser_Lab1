@@ -19,7 +19,6 @@ class DiscoveredDispenser(BaseModel):
 class DispenserStatusPublic(BaseModel):
     """Schema for dispenser telemetry status."""
     dispenser_id: str
-    battery_level: float
     online: bool
     critical_stock: bool
     ip_address: Optional[str] = None
@@ -39,7 +38,6 @@ class DispenserPublic(BaseModel):
     patient_id: Optional[str] = None
     patient_name: Optional[str] = None
     is_online: bool
-    battery_level: float
     critical_stock: bool
     last_sync: Optional[datetime] = None
     ip_address: Optional[str] = None

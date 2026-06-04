@@ -1,4 +1,4 @@
-from sqlalchemy import Column, String, Boolean, Date, ForeignKey, Table, Integer, Numeric, Time, DateTime, BigInteger, Uuid as UUID
+from sqlalchemy import Column, String, Boolean, Date, ForeignKey, Table, Integer, Time, DateTime, BigInteger, Uuid as UUID
 from sqlalchemy.orm import relationship
 import uuid
 import datetime
@@ -58,7 +58,6 @@ class Dispenser(Base):
     ip_address = Column(String, nullable=True)
     
     # Telemetry fields
-    battery_level = Column(Numeric, default=100.0)
     critical_stock = Column(Boolean, default=False)
 
     patient = relationship('Patient', back_populates='dispensers')

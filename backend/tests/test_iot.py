@@ -131,7 +131,6 @@ def test_process_iot_event():
 def test_process_heartbeat():
     payload = {
         "dispenser_id": "disp_iot",
-        "battery_level": 99.5,
         "online": True,
         "critical_stock": False
     }
@@ -144,5 +143,4 @@ def test_process_heartbeat():
     status = get_dispenser_status(db, "disp_iot")
     db.close()
     
-    assert status["battery_level"] == 99.5
     assert status["online"] is True

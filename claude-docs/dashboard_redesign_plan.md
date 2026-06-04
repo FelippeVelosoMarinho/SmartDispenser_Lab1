@@ -46,7 +46,6 @@ Quando houver um dispenser pareado, a tela se transforma em um dashboard de moni
 #### Seção 1: Cartões de Saúde do Hardware (ESP32)
 Exibição de métricas físicas em formato de grade responsiva (Bento Grid):
 * **Status Conectividade:** Badge pulsante `Conectado` (verde) ou `Indisponível` (vermelho).
-* **Nível de Bateria:** Ícone de bateria dinâmico que muda de cor (verde para carga cheia, amarelo, vermelho piscante para carga baixa < 20%).
 * **Estoque de Pílulas:** Badge de alerta caso o nível esteja crítico em alguma gaveta (`critical_stock: true`).
 * **Telemetria Básica:** Exibição do IP local atribuído ao ESP32 e a data/hora do último sincronismo físico (`last_sync`).
 
@@ -82,7 +81,7 @@ Para tornar todos os dados editáveis e salvar as modificações no banco de dad
 
 ### 1. Dados do Dispenser e Telemetria
 * **Carregar Dispenser Ativo:** `GET /api/patients` (procura no campo `dispensers` do paciente logado).
-* **Status Físico:** `GET /api/dispensers/{hardware_id}/status` (para obter bateria, online e estoque crítico).
+* **Status Físico:** `GET /api/dispensers/{hardware_id}/status` (para obter online e estoque crítico).
 
 ### 2. Edição de Gavetas (Slots)
 * **Buscar Estrutura das Gavetas:** `GET /api/dispensers/{id}` (inclui relacionamentos de `drawers` e seus `slots`).
@@ -120,7 +119,7 @@ Para tornar todos os dados editáveis e salvar as modificações no banco de dad
   - [ ] Implementar verificação se existe dispenser pareado carregado no estado.
   - [ ] Criar componente de **Empty State** visualmente marcante com o botão de redirecionamento para pareamento.
 - [ ] **Criar Componente de Telemetria (`TelemetryGrid.tsx`):**
-  - [ ] Renderizar cartões dinâmicos de Bateria, Sinal Wi-Fi, Conectividade e Estoque Crítico.
+  - [ ] Renderizar cartões dinâmicos de Conectividade e Estoque Crítico.
 - [ ] **Criar Seção de Compartimentos (`CompartmentsSection.tsx`):**
   - [ ] Desenhar o layout das gavetas como cartões de gaveta de remédio.
   - [ ] Implementar Modal para reabastecimento (*Refill*) e troca de medicamentos nas gavetas.

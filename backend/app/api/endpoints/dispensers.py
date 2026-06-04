@@ -72,7 +72,6 @@ def _format_dispenser(dispenser: Dispenser, db: Session) -> dict:
         "patient_id": str(dispenser.patient_id) if dispenser.patient_id else None,
         "patient_name": dispenser.patient.full_name if dispenser.patient else None,
         "is_online": is_online,
-        "battery_level": float(dispenser.battery_level) if dispenser.battery_level is not None else 100.0,
         "critical_stock": bool(dispenser.critical_stock),
         "last_sync": dispenser.last_sync,
         "ip_address": dispenser.ip_address,
@@ -315,5 +314,5 @@ async def get_status(
     current_user = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
-    """Rota de telemetria (check de bateria, nível de estoque crítico e status online)."""
+    """Rota de telemetria (estoque crítico e status online)."""
     return get_dispenser_status(db, id)
