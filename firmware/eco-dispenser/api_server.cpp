@@ -156,21 +156,11 @@ void setupApiServer(AsyncWebServer& server) {
   );
 
   // POST /reset-wifi
-  // Apaga credenciais da NVS e reinicia o ESP em modo BLE para re-provisionamento.
-  server.on("/reset-wifi", HTTP_POST,
-    [](AsyncWebServerRequest* request) {
-      sendJson(request, 200, "{\"success\":true,\"message\":\"Reiniciando em modo BLE...\"}");
-    },
-    NULL,
-    [](AsyncWebServerRequest* request, uint8_t* data, size_t len, size_t index, size_t total) {
-      if (index + len >= total) {
-        sendJson(request, 200, "{\"success\":true,\"message\":\"Reiniciando em modo BLE...\"}");
-        clearStoredCredentials();
-        delay(500);
-        ESP.restart();
-      }
-    }
-  );
+  // Apaga credenciais (NVS + flash Wi-Fi) e reinicia em modo BLE para re-provisionamento.
+  server.on("/reset-wifi", HTTP_POST, [](AsyncWebServerRequest* request) {
+    sendJson(request, 200, "{\"success\":true,\"message\":\"Reiniciando em modo BLE...\"}");
+    performWifiFactoryReset();
+  });
 
   // GET /
   server.on("/", HTTP_GET, [](AsyncWebServerRequest* request) {

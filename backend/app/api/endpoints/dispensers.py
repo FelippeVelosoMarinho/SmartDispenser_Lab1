@@ -1,8 +1,10 @@
 """Dispensers endpoints."""
 
+import logging
 from typing import List
 import datetime
 
+import httpx
 from fastapi import APIRouter, Depends, HTTPException
 
 from app.core.security import get_current_user
@@ -21,6 +23,7 @@ from app.models.domain import Dispenser, Drawer, Slot, SlotMedication
 from app.schemas.dispenser import (
     DiscoveredDispenser,
     DispenserDeletionStatus,
+    DispenserForgetWifiResult,
     DispenserPairRequest,
     DispenserPublic,
     DispenserResetConfigurationResult,
@@ -28,7 +31,11 @@ from app.schemas.dispenser import (
 )
 from app.services.dispenser_online import refresh_dispenser_online_state
 
+logger = logging.getLogger(__name__)
+
 router = APIRouter(prefix="/api/dispensers", tags=["dispensers"])
+
+_ESP_FORGET_TIMEOUT = 8.0
 
 # Mock discovered dispensers for testing/demo
 _MOCK_DISCOVERED = [
@@ -292,6 +299,65 @@ async def dispenser_reset_configuration(
     """Remove medicamentos e horários para permitir exclusão do dispensador."""
     dispenser = _get_dispenser_for_caregiver(db, hardware_id, current_user.username)
     return reset_dispenser_configuration(db, dispenser)
+
+
+@router.post("/{hardware_id}/forget-wifi", response_model=DispenserForgetWifiResult)
+async def forget_dispenser_wifi(
+    hardware_id: str,
+    current_user=Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Apaga credenciais Wi-Fi no ESP (POST /reset-wifi) para voltar ao modo Bluetooth."""
+    dispenser = _get_dispenser_for_caregiver(db, hardware_id, current_user.username)
+    refresh_dispenser_online_state(db, dispenser, persist=True)
+
+    if not dispenser.ip_address:
+        raise HTTPException(
+            status_code=503,
+            detail={
+                "code": "DISPENSER_UNREACHABLE",
+                "message": "Dispensador sem endereço IP — não foi possível enviar reset de Wi-Fi.",
+            },
+        )
+
+    url = f"http://{dispenser.ip_address}/reset-wifi"
+    try:
+        async with httpx.AsyncClient(timeout=_ESP_FORGET_TIMEOUT) as client:
+            resp = await client.post(url)
+    except httpx.ConnectError as exc:
+        logger.warning("[forget-wifi] Cannot reach %s: %s", url, exc)
+        raise HTTPException(
+            status_code=503,
+            detail={
+                "code": "DISPENSER_UNREACHABLE",
+                "message": "Não foi possível contactar o dispensador na rede.",
+            },
+        ) from exc
+    except httpx.TimeoutException as exc:
+        logger.warning("[forget-wifi] Timeout calling %s", url)
+        raise HTTPException(
+            status_code=503,
+            detail={
+                "code": "DISPENSER_UNREACHABLE",
+                "message": "Tempo esgotado ao contactar o dispensador.",
+            },
+        ) from exc
+
+    if resp.status_code != 200:
+        logger.warning("[forget-wifi] ESP returned HTTP %s", resp.status_code)
+        raise HTTPException(
+            status_code=502,
+            detail={
+                "code": "ESP_RESET_WIFI_FAILED",
+                "message": f"O dispensador respondeu com HTTP {resp.status_code}.",
+            },
+        )
+
+    return DispenserForgetWifiResult(
+        success=True,
+        message="Wi-Fi apagado no dispositivo. Ele reiniciará em modo Bluetooth.",
+        hardware_id=hardware_id,
+    )
 
 
 @router.delete("/{hardware_id}", status_code=204)

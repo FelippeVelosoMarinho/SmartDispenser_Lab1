@@ -79,6 +79,16 @@ void clearStoredCredentials() {
   Serial.println("[Prov] Credenciais WiFi apagadas da NVS.");
 }
 
+void performWifiFactoryReset() {
+  Serial.println("[Prov] Reset de Wi-Fi solicitado — apagando credenciais...");
+  WiFi.disconnect(true, true);
+  WiFi.persistent(false);
+  clearStoredCredentials();
+  resetWifiFailureCount();
+  delay(500);
+  ESP.restart();
+}
+
 int getWifiFailureCount() {
   Preferences prefs;
   prefs.begin(NVS_NS, false);

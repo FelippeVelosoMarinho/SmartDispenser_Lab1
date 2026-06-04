@@ -277,6 +277,19 @@ export async function resetDispenserConfiguration(hardwareId: string) {
   );
 }
 
+export interface DispenserForgetWifiResult {
+  success: boolean;
+  message: string;
+  hardware_id: string;
+}
+
+export async function forgetDispenserWifi(hardwareId: string) {
+  return requestJson<DispenserForgetWifiResult>(
+    `${dispenserPath(hardwareId)}/forget-wifi`,
+    { method: "POST" },
+  );
+}
+
 export async function deleteDispenser(hardwareId: string) {
   await requestJson<void>(dispenserPath(hardwareId), {
     method: "DELETE",

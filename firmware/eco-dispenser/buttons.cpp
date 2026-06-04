@@ -2,6 +2,10 @@
 #include "config.h"
 #include "alerts.h"
 #include "carousel.h"
+#include "provisioning.h"
+
+static const unsigned long FACTORY_RESET_HOLD_MS = 5000;
+static unsigned long factoryResetHoldStart = 0;
 
 static int lastConfirmedSlot = -1; // -1 = nenhuma confirmação pendente
 
@@ -56,8 +60,26 @@ void buttonsSetup() {
   pinMode(BTN_CONFIRM,  INPUT_PULLUP);
 }
 
+static void checkFactoryResetHold() {
+  bool volUpHeld   = (digitalRead(BTN_VOL_UP) == LOW);
+  bool volDownHeld = (digitalRead(BTN_VOL_DOWN) == LOW);
+
+  if (volUpHeld && volDownHeld) {
+    if (factoryResetHoldStart == 0) {
+      factoryResetHoldStart = millis();
+    } else if (millis() - factoryResetHoldStart >= FACTORY_RESET_HOLD_MS) {
+      Serial.println("[BTN] Volume + e - por 5s — reset de Wi-Fi.");
+      performWifiFactoryReset();
+    }
+    return;
+  }
+  factoryResetHoldStart = 0;
+}
+
 // Deve ser chamado a cada iteração do loop().
 void checkButtons() {
+  checkFactoryResetHold();
+
   if (justPressed(0)) {
     volumeUp();
   }

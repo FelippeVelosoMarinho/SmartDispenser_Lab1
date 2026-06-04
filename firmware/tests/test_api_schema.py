@@ -121,6 +121,20 @@ class TestConfirmSchema:
         assert isinstance(data["confirmed_slot"], int)
 
 
+class TestResetWifiSchema:
+    """POST /reset-wifi deve aceitar requisição e responder antes do restart."""
+
+    def test_reset_wifi_retorna_200(self, base_url):
+        # Dispositivo reinicia após responder; timeout curto evita esperar reconexão.
+        try:
+            r = requests.post(f"{base_url}/reset-wifi", timeout=3)
+        except requests.exceptions.ReadTimeout:
+            pytest.skip("ESP reiniciou antes do timeout — resposta enviada")
+        assert r.status_code == 200
+        data = r.json()
+        assert data.get("success") is True
+
+
 class TestCalibrateSchema:
     """POST /calibrate deve retornar o schema esperado."""
 

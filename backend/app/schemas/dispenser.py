@@ -59,3 +59,9 @@ class DispenserResetConfigurationResult(BaseModel):
     removed_medications: int = 0
     removed_schedules: int = 0
     message: str
+
+
+class DispenserForgetWifiResult(BaseModel):
+    success: bool
+    message: str
+    hardware_id: str

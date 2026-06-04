@@ -15,6 +15,9 @@ void saveCredentials(const String& ssid, const String& pass);
 // Erases stored credentials — triggers BLE provisioning on next boot.
 void clearStoredCredentials();
 
+// Disconnects Wi-Fi, clears NVS credentials, and restarts (BLE provisioning on next boot).
+void performWifiFactoryReset();
+
 // Tracks consecutive WiFi connection failures across reboots.
 int  getWifiFailureCount();
 int  incrementWifiFailureCount();

@@ -130,6 +130,18 @@ export function DispenserGuideSection({ dispenser }: DispenserGuideSectionProps)
           </ul>
         </InfoCard>
 
+        <InfoCard icon="ph-bluetooth" title="Remover ou trocar de rede">
+          <p style={{ margin: "0 0 var(--space-3)" }}>
+            Ao remover o dispensador no menu <strong>Dispensadores</strong>, o sistema tenta apagar o Wi-Fi
+            no aparelho para ele voltar ao modo Bluetooth (<code>Eco-Dispenser</code>).
+          </p>
+          <ul style={{ margin: 0, paddingLeft: "1.25rem" }}>
+            <li>Se o aparelho estiver na rede, o reset é automático antes de apagar o registro.</li>
+            <li>Sem rede: segure volume + e - por 5 segundos, ou use{" "}
+              <code>POST http://&lt;IP&gt;/reset-wifi</code> com o dispensador ligado.</li>
+          </ul>
+        </InfoCard>
+
         <InfoCard icon="ph-gear-six" title="Como configurar">
           <ol style={{ margin: 0, paddingLeft: "1.25rem" }}>
             <li style={{ marginBottom: "var(--space-2)" }}>

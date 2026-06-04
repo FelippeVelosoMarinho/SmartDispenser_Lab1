@@ -17,6 +17,7 @@ import { ConfirmModal } from "../components/ui/ConfirmModal";
 import {
   ApiError,
   deleteDispenser as deleteDispenserApi,
+  forgetDispenserWifi,
   getDispenserDeletionStatus,
   listDispensers,
   resetDispenserConfiguration,
@@ -141,6 +142,7 @@ export function DispensersPage() {
   const [dispenserToDelete, setDispenserToDelete] = useState<Dispenser | null>(
     null,
   );
+  const [deleteWifiFailed, setDeleteWifiFailed] = useState(false);
   const [deletionStatus, setDeletionStatus] =
     useState<DispenserDeletionStatus | null>(null);
   const [deleteBusy, setDeleteBusy] = useState(false);
@@ -226,15 +228,33 @@ export function DispensersPage() {
     }
   }
 
+  async function performDeleteFromServer() {
+    if (!dispenserToDelete) return;
+    await deleteDispenserApi(dispenserToDelete.serial);
+    setDispensers((prev) => prev.filter((d) => d.id !== dispenserToDelete.id));
+    setDispenserToDelete(null);
+    setDeletionStatus(null);
+    setDeleteWifiFailed(false);
+  }
+
   async function handleDeleteConfirm() {
     if (!dispenserToDelete) return;
     setDeleteBusy(true);
     setError(null);
     try {
-      await deleteDispenserApi(dispenserToDelete.serial);
-      setDispensers((prev) => prev.filter((d) => d.id !== dispenserToDelete.id));
-      setDispenserToDelete(null);
-      setDeletionStatus(null);
+      if (deleteWifiFailed) {
+        await performDeleteFromServer();
+        return;
+      }
+
+      try {
+        await forgetDispenserWifi(dispenserToDelete.serial);
+      } catch {
+        setDeleteWifiFailed(true);
+        return;
+      }
+
+      await performDeleteFromServer();
     } catch (err) {
       if (err instanceof ApiError && err.code === "DISPENSER_HAS_CONFIGURATION") {
         setDeletionStatus({
@@ -454,7 +474,10 @@ export function DispensersPage() {
                           size="small"
                           leftIcon="ph-duotone ph-trash"
                           aria-label={`Remover ${dispenser.serial}`}
-                          onClick={() => setDispenserToDelete(dispenser)}
+                          onClick={() => {
+                            setDeleteWifiFailed(false);
+                            setDispenserToDelete(dispenser);
+                          }}
                         />
                       </div>
                     </TableCell>
@@ -492,25 +515,53 @@ export function DispensersPage() {
 
       <ConfirmModal
         open={dispenserToDelete !== null}
-        title="Remover dispensador"
+        title={deleteWifiFailed ? "Dispensador não respondeu" : "Remover dispensador"}
         description={
           dispenserToDelete
-            ? deletionStatus?.can_delete === false
-              ? deletionStatus.message
-              : `Tem certeza que deseja remover "${dispenserToDelete.serial}"? Compartimentos vazios e o vínculo com o paciente serão apagados. Esta ação não pode ser desfeita.`
+            ? deleteWifiFailed
+              ? `Não foi possível apagar o Wi-Fi em "${dispenserToDelete.serial}" (desligado ou fora da rede). Você pode remover só do sistema e configurar o aparelho depois em modo Bluetooth.`
+              : deletionStatus?.can_delete === false
+                ? deletionStatus.message
+                : `Tem certeza que deseja remover "${dispenserToDelete.serial}"? O Wi-Fi será apagado no aparelho (se estiver na rede) e o registro será removido. Esta ação não pode ser desfeita.`
             : undefined
         }
-        confirmLabel="Remover"
+        confirmLabel={deleteWifiFailed ? "Remover só do sistema" : "Remover"}
         cancelLabel="Cancelar"
         loading={deleteBusy}
-        confirmDisabled={deletionStatus?.can_delete === false}
+        confirmDisabled={deletionStatus?.can_delete === false && !deleteWifiFailed}
         onConfirm={() => void handleDeleteConfirm()}
         onCancel={() => {
           setDispenserToDelete(null);
           setDeletionStatus(null);
+          setDeleteWifiFailed(false);
         }}
       >
-        {deletionStatus && !deletionStatus.can_delete && (
+        {deleteWifiFailed && (
+          <div style={{ marginTop: "var(--space-4)", textAlign: "left" }}>
+            <p style={{ fontSize: "var(--text-sm)", fontWeight: 600, color: "var(--ink)", marginBottom: "var(--space-2)" }}>
+              Para parear de novo
+            </p>
+            <ol
+              style={{
+                margin: 0,
+                paddingLeft: "var(--space-5)",
+                fontSize: "var(--text-sm)",
+                color: "var(--ink-2)",
+                lineHeight: 1.5,
+              }}
+            >
+              <li style={{ marginBottom: "var(--space-2)" }}>
+                Ligue o dispensador na mesma rede e execute:{" "}
+                <code style={{ fontSize: "var(--text-xs)" }}>curl -X POST http://&lt;IP&gt;/reset-wifi</code>
+              </li>
+              <li style={{ marginBottom: "var(--space-2)" }}>
+                Ou segure os botões de volume + e - juntos por 5 segundos até reiniciar.
+              </li>
+              <li>Depois use Parear dispensador com Bluetooth no menu.</li>
+            </ol>
+          </div>
+        )}
+        {deletionStatus && !deletionStatus.can_delete && !deleteWifiFailed && (
           <div style={{ marginTop: "var(--space-4)", textAlign: "left" }}>
             <p
               style={{
