@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import type { DispenserDetails, HardwareStatus, PeriodSchedule } from "../../lib/api";
 import {
   getHardwareStatus,
@@ -6,19 +6,11 @@ import {
   savePeriodSchedule,
   startDispenserCycle,
 } from "../../lib/api";
-import {
-  computeNextDispense,
-  formatCountdown,
-  nextPeriodLabel,
-  toTimeInputValue,
-} from "../../lib/periodSchedule";
+import { nextPeriodLabel, toTimeInputValue } from "../../lib/periodSchedule";
 
 interface PeriodScheduleSectionProps {
   dispenser: DispenserDetails;
 }
-
-const HEARTBEAT_LATENCY_NOTE =
-  "O servo pode ativar até ~30 s após o horário (entrega via heartbeat do ESP).";
 
 export function PeriodScheduleSection({ dispenser }: PeriodScheduleSectionProps) {
   const [morning, setMorning] = useState("21:00");
@@ -82,11 +74,6 @@ export function PeriodScheduleSection({ dispenser }: PeriodScheduleSectionProps)
     const id = setInterval(() => setNow(new Date()), 1000);
     return () => clearInterval(id);
   }, []);
-
-  const nextDispense = useMemo(
-    () => computeNextDispense(scheduleMeta, now),
-    [scheduleMeta, now],
-  );
 
   async function handleSave(e: React.FormEvent) {
     e.preventDefault();
@@ -158,56 +145,6 @@ export function PeriodScheduleSection({ dispenser }: PeriodScheduleSectionProps)
         Cada horário avança a roleta uma posição na sequência. Após reabastecer os compartimentos 1–21,
         use <strong>Iniciar ciclo</strong> para calibrar automaticamente.
       </p>
-
-      {nextDispense && dispenser.is_online && (
-        <div
-          role="timer"
-          aria-live="polite"
-          aria-label={`Próxima dispensação em ${formatCountdown(nextDispense.secondsRemaining)}`}
-          style={{
-            marginBottom: "var(--space-4)",
-            padding: "var(--space-4)",
-            borderRadius: "var(--radius-md)",
-            border: "1px solid var(--primary)",
-            background: "linear-gradient(135deg, rgba(16, 185, 129, 0.08) 0%, var(--canvas) 100%)",
-            textAlign: "center",
-          }}
-        >
-          <span style={{ fontSize: "var(--text-xs)", color: "var(--ink-3)", textTransform: "uppercase", letterSpacing: "0.06em" }}>
-            Próxima dispensação
-          </span>
-          <p
-            style={{
-              margin: "var(--space-2) 0",
-              fontSize: "clamp(2rem, 5vw, 2.75rem)",
-              fontWeight: 700,
-              color: "var(--primary)",
-              fontVariantNumeric: "tabular-nums",
-              lineHeight: 1.1,
-            }}
-          >
-            {formatCountdown(nextDispense.secondsRemaining)}
-          </p>
-          <p style={{ margin: 0, fontSize: "var(--text-sm)", color: "var(--ink-2)" }}>
-            {nextDispense.periodLabel} às {nextDispense.timeLabel}
-            {scheduleMeta?.source === "defaults" ? " (padrão — salve para confirmar)" : ""}
-          </p>
-          <p style={{ margin: "var(--space-2) 0 0", fontSize: "var(--text-xs)", color: "var(--ink-3)" }}>
-            {HEARTBEAT_LATENCY_NOTE}
-          </p>
-          {hwStatus?.awaiting_confirm && (
-            <p style={{ margin: "var(--space-2) 0 0", fontSize: "var(--text-xs)", color: "var(--warning)" }}>
-              Confirmação pendente — o próximo horário pode ser ignorado até o paciente confirmar.
-            </p>
-          )}
-        </div>
-      )}
-
-      {!dispenser.is_online && scheduleMeta?.is_active && (
-        <p style={{ color: "var(--warning)", fontSize: "var(--text-sm)", marginBottom: "var(--space-3)" }}>
-          Dispensador offline — contador pausado até o ESP reconectar e receber comandos.
-        </p>
-      )}
 
       {hwStatus && (
         <div

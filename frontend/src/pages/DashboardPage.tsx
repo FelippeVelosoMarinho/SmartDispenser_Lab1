@@ -3,6 +3,7 @@ import { useNavigate } from "@tanstack/react-router";
 import { listDispensers, getDispenserDetails } from "../lib/api";
 import type { DispenserDetails } from "../lib/api";
 import { TelemetryGrid } from "../components/dashboard/TelemetryGrid";
+import { NextDispenseCountdown } from "../components/dashboard/NextDispenseCountdown";
 import { CompartmentsSection } from "../components/dashboard/CompartmentsSection";
 import { PeriodScheduleSection } from "../components/dashboard/PeriodScheduleSection";
 import { DispenserGuideSection } from "../components/dashboard/DispenserGuideSection";
@@ -221,6 +222,10 @@ export function DashboardPage() {
         </div>
       </div>
 
+      <NextDispenseCountdown
+        hardwareId={activeDispenser.hardware_id}
+        isOnline={activeDispenser.is_online}
+      />
       <TelemetryGrid dispenser={activeDispenser} />
       <PeriodScheduleSection dispenser={activeDispenser} />
       <CompartmentsSection
