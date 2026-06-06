@@ -38,16 +38,18 @@ static wl_status_t lastWifiStatus = WL_IDLE_STATUS;
 
 #include <WiFiClientSecure.h>
 
+String globalBackendUrl = "";
+
 static void sendHeartbeat() {
   if (WiFi.status() != WL_CONNECTED) return;
-  if (strlen(BACKEND_URL) == 0) {
+  if (globalBackendUrl.length() == 0) {
     Serial.println("[Heartbeat] BACKEND_URL não configurado — pulando.");
     return;
   }
 
   // A conexão deve ser limpa a cada requisição para evitar que pcb (TCP blocks)
   // fiquem presos (stale) na memória. Variáveis static aqui burlam o lock do lwIP!
-  String url = String(BACKEND_URL) + "/api/heartbeat";
+  String url = globalBackendUrl + "/api/heartbeat";
   bool isHttps = url.startsWith("https://");
   
   WiFiClient* client = nullptr;
@@ -135,13 +137,15 @@ void setup() {
   if (hasStoredCredentials()) {
     ssid = getStoredSsid();
     pass = getStoredPassword();
+    globalBackendUrl = getStoredBackendUrl();
     Serial.println("📁 Credenciais carregadas da NVS. SSID: " + ssid);
 
   } else if (strlen(WIFI_SSID) > 0) {
     // Primeira vez com secrets.h preenchido: salva na NVS para boots futuros
     ssid = String(WIFI_SSID);
     pass = String(WIFI_PASSWORD);
-    saveCredentials(ssid, pass);
+    globalBackendUrl = String(BACKEND_URL);
+    saveCredentials(ssid, pass, globalBackendUrl);
     Serial.println("📄 Credenciais de secrets.h migradas para NVS. SSID: " + ssid);
 
   } else {
@@ -150,6 +154,13 @@ void setup() {
     runBleProvisioning();
     ssid = getStoredSsid();
     pass = getStoredPassword();
+    globalBackendUrl = getStoredBackendUrl();
+  }
+
+  // Fallback seguro caso NVS não tenha URL (p.ex. ESP atualizado sem apagar credenciais)
+  if (globalBackendUrl.length() == 0 && strlen(BACKEND_URL) > 0) {
+    globalBackendUrl = String(BACKEND_URL);
+    saveCredentials(ssid, pass, globalBackendUrl);
   }
 
   // ── Conectar ao WiFi ──────────────────────────────────────────────────

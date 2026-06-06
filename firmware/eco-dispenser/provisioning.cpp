@@ -8,6 +8,7 @@
 static const char* NVS_NS      = "wifi_creds";
 static const char* NVS_SSID    = "ssid";
 static const char* NVS_PASS    = "pass";
+static const char* NVS_BURL    = "burl";
 static const char* NVS_FAILS   = "wifi_fail_count";
 
 // UUIDs definidos em firmware/BLE_PROVISIONING_SPEC.md
@@ -81,11 +82,22 @@ String getStoredPassword() {
   return s;
 }
 
-void saveCredentials(const String& ssid, const String& pass) {
+String getStoredBackendUrl() {
+  Preferences prefs;
+  prefs.begin(NVS_NS, true);
+  String s = prefs.getString(NVS_BURL, "");
+  prefs.end();
+  return s;
+}
+
+void saveCredentials(const String& ssid, const String& pass, const String& burl) {
   Preferences prefs;
   prefs.begin(NVS_NS, false);
   prefs.putString(NVS_SSID, ssid);
   prefs.putString(NVS_PASS, pass);
+  if (burl.length() > 0) {
+    prefs.putString(NVS_BURL, burl);
+  }
   prefs.end();
 }
 
@@ -156,14 +168,15 @@ class WifiCfgCallbacks : public NimBLECharacteristicCallbacks {
 
     String ssid = extractField(payload, "ssid");
     String pass = extractField(payload, "pass");
+    String burl = extractField(payload, "backend_url");
 
     if (ssid.length() == 0) {
       Serial.println("[BLE] SSID ausente — payload ignorado.");
       return;
     }
 
-    saveCredentials(ssid, pass);
-    Serial.println("[BLE] Credenciais salvas. SSID: " + ssid);
+    saveCredentials(ssid, pass, burl);
+    Serial.println("[BLE] Credenciais salvas. SSID: " + ssid + (burl.length() > 0 ? " BURL: " + burl : ""));
     gProvisioningDone = true;
   }
 };
