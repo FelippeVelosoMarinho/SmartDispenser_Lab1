@@ -298,7 +298,11 @@ export function PeriodScheduleSection({ dispenser }: PeriodScheduleSectionProps)
   );
 }
 
-export function useHardwareStatus(hardwareId: string, isOnline: boolean) {
+export function useHardwareStatus(
+  hardwareId: string,
+  isOnline: boolean,
+  ipAddress?: string | null,
+) {
   const [status, setStatus] = useState<HardwareStatus | null>(null);
 
   useEffect(() => {
@@ -308,7 +312,7 @@ export function useHardwareStatus(hardwareId: string, isOnline: boolean) {
     }
     let cancelled = false;
     const load = () =>
-      getHardwareStatus(hardwareId)
+      getHardwareStatus(hardwareId, ipAddress)
         .then((s) => {
           if (!cancelled) setStatus(s);
         })
@@ -321,7 +325,7 @@ export function useHardwareStatus(hardwareId: string, isOnline: boolean) {
       cancelled = true;
       clearInterval(id);
     };
-  }, [hardwareId, isOnline]);
+  }, [hardwareId, isOnline, ipAddress]);
 
   return status;
 }

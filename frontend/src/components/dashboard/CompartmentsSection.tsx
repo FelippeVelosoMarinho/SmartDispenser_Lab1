@@ -68,7 +68,11 @@ function AnnularSlice({
 export function CompartmentsSection({ dispenser, onDispenserChange }: CompartmentsSectionProps) {
   const [editingSlotId, setEditingSlotId] = useState<string | null>(null);
   const [hoveredSlotId, setHoveredSlotId] = useState<string | null>(null);
-  const hwStatus = useHardwareStatus(dispenser.hardware_id, dispenser.is_online);
+  const hwStatus = useHardwareStatus(
+    dispenser.hardware_id,
+    dispenser.is_online,
+    dispenser.ip_address,
+  );
   const nextDoseNumber =
     hwStatus != null
       ? Math.min(hwStatus.current_slot + 1, Math.min(hwStatus.total_slots, 21))

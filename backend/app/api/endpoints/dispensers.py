@@ -21,7 +21,9 @@ from app.crud.dispenser import (
 )
 from app.crud.patient import get_patient, get_patients_by_caregiver
 from app.models.domain import Dispenser, Drawer, Slot, SlotMedication
+from app.crud import command_queue as crud_command_queue
 from app.crud.schedule import get_period_schedules, upsert_period_schedules
+from app.core.config import TOTAL_CAROUSEL_SLOTS
 from app.schemas.dispenser import (
     DiscoveredDispenser,
     DispenserDeletionStatus,
@@ -405,11 +407,19 @@ async def read_hardware_status(
     current_user=Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
-    """Proxy ESP GET /status (carousel position, awaiting_confirm)."""
+    """ESP GET /status when reachable; otherwise telemetry from last heartbeat."""
     dispenser = _get_dispenser_for_caregiver(db, hardware_id, current_user.username)
     ip = _require_dispenser_ip(dispenser)
     status = await get_hardware_status(ip)
     if status is None:
+        if dispenser.current_slot is not None:
+            return HardwareStatusPublic(
+                current_slot=dispenser.current_slot,
+                total_slots=TOTAL_CAROUSEL_SLOTS,
+                awaiting_confirm=bool(dispenser.awaiting_confirm),
+                last_confirmed_slot=-1,
+                hardware_id=dispenser.hardware_id,
+            )
         raise HTTPException(
             status_code=503,
             detail=_unreachable_detail(ip, reason="hardware_status"),
@@ -431,9 +441,21 @@ async def start_dispenser_cycle(
     current_user=Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
-    """Calibrate carousel (slot 0) after refill — integrated Fase B."""
+    """Calibrate carousel (slot 0) after refill — LAN direct or heartbeat queue."""
     dispenser = _get_dispenser_for_caregiver(db, hardware_id, current_user.username)
     ip = _require_dispenser_ip(dispenser)
+
+    if _is_private_lan_ip(ip):
+        crud_command_queue.enqueue_calibrate(db, hardware_id)
+        return StartCycleResult(
+            success=True,
+            message=(
+                "Calibração enfileirada — o dispensador executará no próximo "
+                "heartbeat (~30s)."
+            ),
+            current_slot=dispenser.current_slot or 0,
+            hardware_id=hardware_id,
+        )
 
     status = await get_hardware_status(ip)
     if status and status.get("awaiting_confirm") in (True, "true"):
@@ -441,11 +463,6 @@ async def start_dispenser_cycle(
 
     ok, _ = await post_calibrate(ip)
     if not ok:
-        if _is_private_lan_ip(ip):
-            raise HTTPException(
-                status_code=503,
-                detail=_unreachable_detail(ip, reason="start_cycle_calibrate"),
-            )
         raise HTTPException(
             status_code=502,
             detail={

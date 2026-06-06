@@ -73,7 +73,22 @@ def test_start_cycle_no_ip(mock_user):
     assert resp.status_code == 503
 
 
-def test_start_cycle_success(mock_user):
+def test_start_cycle_private_ip_enqueues(mock_user):
+    """Private LAN IP uses heartbeat queue instead of direct HTTP."""
+    resp = client.post("/api/dispensers/8C:D0:B2:A9:17:4B/start-cycle")
+    assert resp.status_code == 200
+    data = resp.json()
+    assert data["success"] is True
+    assert "enfileirada" in data["message"].lower()
+
+
+def test_start_cycle_public_ip_success(mock_user):
+    db = SessionLocal()
+    d = db.query(Dispenser).filter(Dispenser.hardware_id == "8C:D0:B2:A9:17:4B").first()
+    d.ip_address = "203.0.113.50"
+    db.commit()
+    db.close()
+
     status_before = {"current_slot": 2, "awaiting_confirm": True, "total_slots": 21}
     status_after = {"current_slot": 0, "awaiting_confirm": False, "total_slots": 21}
 
@@ -117,3 +132,24 @@ def test_hardware_status_success(mock_user):
     data = resp.json()
     assert data["current_slot"] == 3
     assert data["awaiting_confirm"] is False
+
+
+def test_hardware_status_heartbeat_cache_fallback(mock_user):
+    db = SessionLocal()
+    d = db.query(Dispenser).filter(Dispenser.hardware_id == "8C:D0:B2:A9:17:4B").first()
+    d.current_slot = 7
+    d.awaiting_confirm = True
+    db.commit()
+    db.close()
+
+    with patch(
+        "app.api.endpoints.dispensers.get_hardware_status",
+        new_callable=AsyncMock,
+        return_value=None,
+    ):
+        resp = client.get("/api/dispensers/8C:D0:B2:A9:17:4B/hardware-status")
+
+    assert resp.status_code == 200
+    data = resp.json()
+    assert data["current_slot"] == 7
+    assert data["awaiting_confirm"] is True

@@ -6,6 +6,8 @@
 #include "dispense_command.h"
 #include "json_utils.h"
 
+#include "carousel.h"
+
 #include <WiFi.h>
 #include <HTTPClient.h>
 #include <WiFiClientSecure.h>
@@ -71,7 +73,8 @@ static void processHeartbeatCommand(const String& responseBody, const String& ma
 
   String cmdId = extractJsonField(responseBody, "id");
   String cmdType = extractJsonField(responseBody, "type");
-  if (cmdId.length() == 0 || cmdType != "dispense") return;
+  if (cmdId.length() == 0) return;
+  if (cmdType != "dispense" && cmdType != "calibrate") return;
 
   if (cmdId == lastExecutedCommandId) {
     Serial.println("[Heartbeat] command already executed — re-ACK " + cmdId);
@@ -79,29 +82,40 @@ static void processHeartbeatCommand(const String& responseBody, const String& ma
     return;
   }
 
-  String period = extractJsonField(responseBody, "period");
-  String silentStr = extractJsonField(responseBody, "silent_mode");
-  String expectedStr = extractJsonField(responseBody, "expected_slot");
-  bool silentMode = (silentStr == "true");
-  bool hasExpected = (expectedStr.length() > 0);
-  int expectedSlot = hasExpected ? expectedStr.toInt() : 0;
+  bool success = false;
+  String errMsg = "";
 
-  Serial.println("[Heartbeat] command received: dispense " + period +
-                 " expected=" + expectedStr);
+  if (cmdType == "calibrate") {
+    Serial.println("[Heartbeat] command received: calibrate");
+    calibrateCarousel();
+    clearAlerts();
+    success = true;
+  } else {
+    String period = extractJsonField(responseBody, "period");
+    String silentStr = extractJsonField(responseBody, "silent_mode");
+    String expectedStr = extractJsonField(responseBody, "expected_slot");
+    bool silentMode = (silentStr == "true");
+    bool hasExpected = (expectedStr.length() > 0);
+    int expectedSlot = hasExpected ? expectedStr.toInt() : 0;
 
-  DispenseResult result = executeDispense(period, silentMode, expectedSlot, hasExpected);
-  lastExecutedCommandId = cmdId;
+    Serial.println("[Heartbeat] command received: dispense " + period +
+                   " expected=" + expectedStr);
 
-  String errMsg = result.error ? String(result.error) : "";
-  lastAckSuccess = result.success;
-  lastAckError = errMsg;
-  queueCommandAck(cmdId, result.success, errMsg);
-  if (!result.success) {
-    sendIotEvent(mac, false, errMsg);
+    DispenseResult result = executeDispense(period, silentMode, expectedSlot, hasExpected);
+    success = result.success;
+    errMsg = result.error ? String(result.error) : "";
+    if (!success) {
+      sendIotEvent(mac, false, errMsg);
+    }
   }
 
+  lastExecutedCommandId = cmdId;
+  lastAckSuccess = success;
+  lastAckError = errMsg;
+  queueCommandAck(cmdId, success, errMsg);
+
   Serial.println("[Heartbeat] command ack queued: " + cmdId +
-                 " success=" + String(result.success ? "true" : "false"));
+                 " success=" + String(success ? "true" : "false"));
 }
 
 void sendHeartbeat() {

@@ -23,6 +23,33 @@ def _existing_for_schedule(db: Session, schedule_id: uuid.UUID) -> Optional[Pend
     )
 
 
+def _existing_active_calibrate(db: Session, hardware_id: str) -> Optional[PendingCommand]:
+    return (
+        db.query(PendingCommand)
+        .filter(PendingCommand.hardware_id == hardware_id)
+        .filter(PendingCommand.command_type == "calibrate")
+        .filter(PendingCommand.status.in_(ACTIVE_STATUSES))
+        .first()
+    )
+
+
+def enqueue_calibrate(db: Session, hardware_id: str) -> PendingCommand:
+    """Enqueue carousel calibration (start-cycle) for heartbeat delivery."""
+    existing = _existing_active_calibrate(db, hardware_id)
+    if existing:
+        return existing
+
+    command = PendingCommand(
+        hardware_id=hardware_id,
+        command_type="calibrate",
+        status="pending",
+    )
+    db.add(command)
+    db.commit()
+    db.refresh(command)
+    return command
+
+
 def enqueue_dispense(
     db: Session,
     hardware_id: str,
