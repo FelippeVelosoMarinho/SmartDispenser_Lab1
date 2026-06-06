@@ -2,5 +2,5 @@ pill.josoesantos.dev {
     tls {
         dns cloudflare {env.CLOUDFLARE_API_TOKEN}
     }
-    reverse_proxy frontend:8082
+    reverse_proxy frontend:80
 }
