@@ -14,7 +14,7 @@
 #define SERVO_NEEDS_PWM_TIMER 0
 
 // ── Servo (roleta) ────────────────────────────────────────────────────
-const int SERVO_PIN      = 18;
+const int SERVO_PIN      = 26; // era 18
 const int SERVO_REST     = 0;
 const int SERVO_ADVANCE  = 90;
 const int SERVO_DELAY_MS = 400;
