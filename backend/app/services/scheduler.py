@@ -17,6 +17,7 @@ from app.core.config import (
     SCHEDULER_DUE_WINDOW_SECONDS,
     SCHEDULER_MODE,
     SCHEDULER_POLL_SECONDS,
+    SCHEDULER_TIMEZONE,
     TOTAL_CAROUSEL_SLOTS,
     COMMAND_ACK_TIMEOUT_SECONDS,
 )
@@ -24,6 +25,7 @@ from app.core.database import SessionLocal
 from app.crud import command_queue as crud_command_queue
 from app.models.domain import DispensationLog, Dispenser, Schedule
 from app.services.schedule_utils import carousel_slot_after_sequential
+from app.services.scheduler_clock import scheduler_now
 
 logger = logging.getLogger(__name__)
 
@@ -33,7 +35,7 @@ _PERIOD_ORDER = {"morning": 0, "afternoon": 1, "night": 2}
 
 
 def _effective_scheduled_at(schedule: Schedule) -> datetime.datetime | None:
-    now = datetime.datetime.now()
+    now = scheduler_now()
 
     # Period schedules (HH:MM) fire daily — use time_legacy, not stale scheduled_at from save day.
     if (
@@ -61,12 +63,12 @@ def _effective_scheduled_at(schedule: Schedule) -> datetime.datetime | None:
     if schedule.time_legacy and len(schedule.time_legacy) == 5:
         try:
             hour, minute = int(schedule.time_legacy[:2]), int(schedule.time_legacy[3:5])
-            now = datetime.datetime.now()
+            now = scheduler_now()
             return now.replace(hour=hour, minute=minute, second=0, microsecond=0)
         except ValueError:
             return None
     if schedule.scheduled_time:
-        now = datetime.datetime.now()
+        now = scheduler_now()
         return now.replace(
             hour=schedule.scheduled_time.hour,
             minute=schedule.scheduled_time.minute,
@@ -290,14 +292,15 @@ async def _process_period_schedule(
 async def run_dispense_scheduler() -> None:
     """Async background task: poll DB and fire due period schedules."""
     logger.info(
-        "[Scheduler] Started — mode=%s polling every %d s (period-based)",
+        "[Scheduler] Started — mode=%s tz=%s polling every %d s (period-based)",
         SCHEDULER_MODE,
+        SCHEDULER_TIMEZONE,
         SCHEDULER_POLL_SECONDS,
     )
 
     while True:
         try:
-            now = datetime.datetime.now()
+            now = scheduler_now()
             dedup_cutoff = now - datetime.timedelta(seconds=SCHEDULER_DEDUP_SECONDS)
 
             db: Session = SessionLocal()

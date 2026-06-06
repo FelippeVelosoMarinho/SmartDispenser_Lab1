@@ -68,8 +68,14 @@ static void queueCommandAck(const String& commandId, bool success, const String&
 }
 
 static void processHeartbeatCommand(const String& responseBody, const String& mac) {
-  if (responseBody.indexOf("\"command\":null") >= 0) return;
-  if (responseBody.indexOf("\"command\":{") < 0) return;
+  if (responseBody.indexOf("\"command\":null") >= 0) {
+    Serial.println("[Heartbeat] OK — nenhum comando na fila (command: null)");
+    return;
+  }
+  if (responseBody.indexOf("\"command\":{") < 0) {
+    Serial.println("[Heartbeat] OK — resposta sem campo command reconhecível");
+    return;
+  }
 
   String cmdId = extractJsonField(responseBody, "id");
   String cmdType = extractJsonField(responseBody, "type");
@@ -86,7 +92,7 @@ static void processHeartbeatCommand(const String& responseBody, const String& ma
   String errMsg = "";
 
   if (cmdType == "calibrate") {
-    Serial.println("[Heartbeat] command received: calibrate");
+    Serial.println("[Heartbeat] ▶ comando recebido: CALIBRAR roleta");
     calibrateCarousel();
     clearAlerts();
     success = true;
@@ -98,8 +104,8 @@ static void processHeartbeatCommand(const String& responseBody, const String& ma
     bool hasExpected = (expectedStr.length() > 0);
     int expectedSlot = hasExpected ? expectedStr.toInt() : 0;
 
-    Serial.println("[Heartbeat] command received: dispense " + period +
-                   " expected=" + expectedStr);
+    Serial.println("[Heartbeat] ▶ comando recebido: DISPENSAR periodo=" + period +
+                   " expected_slot=" + expectedStr);
 
     DispenseResult result = executeDispense(period, silentMode, expectedSlot, hasExpected);
     success = result.success;
@@ -114,7 +120,7 @@ static void processHeartbeatCommand(const String& responseBody, const String& ma
   lastAckError = errMsg;
   queueCommandAck(cmdId, success, errMsg);
 
-  Serial.println("[Heartbeat] command ack queued: " + cmdId +
+  Serial.println("[Heartbeat] ACK enfileirado: " + cmdId +
                  " success=" + String(success ? "true" : "false"));
 }
 

@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { getPeriodSchedule, type PeriodSchedule } from "../../lib/api";
 import { computeNextDispense, formatCountdown } from "../../lib/periodSchedule";
+import { UnsavedScheduleBanner } from "./UnsavedScheduleBanner";
 
 interface NextDispenseCountdownProps {
   hardwareId: string;
@@ -58,19 +59,27 @@ export function NextDispenseCountdown({
 
   if (!nextDispense) return null;
 
+  const usesDefaults = effectiveSchedule.source === "defaults";
+
   return (
-    <div
-      role="timer"
+    <>
+      {usesDefaults && <UnsavedScheduleBanner />}
+      <div
+        role="timer"
       aria-live="polite"
       aria-label={`Próxima dispensação em ${formatCountdown(nextDispense.secondsRemaining)}`}
       style={{
         marginBottom: "var(--space-6)",
         padding: "var(--space-5) var(--space-6)",
         borderRadius: "var(--radius-lg)",
-        border: `2px solid ${isOnline ? "var(--primary)" : "var(--border)"}`,
-        background: isOnline
-          ? "linear-gradient(135deg, rgba(16, 185, 129, 0.12) 0%, var(--surface) 55%)"
-          : "var(--surface)",
+        border: `2px solid ${
+          usesDefaults ? "var(--warning)" : isOnline ? "var(--primary)" : "var(--border)"
+        }`,
+        background: usesDefaults
+          ? "var(--warning-soft, rgba(245, 158, 11, 0.08))"
+          : isOnline
+            ? "linear-gradient(135deg, rgba(16, 185, 129, 0.12) 0%, var(--surface) 55%)"
+            : "var(--surface)",
         textAlign: "center",
         boxShadow: "0 2px 8px rgba(0,0,0,0.06)",
       }}
@@ -119,15 +128,11 @@ export function NextDispenseCountdown({
         {nextDispense.periodLabel} às {nextDispense.timeLabel}
       </p>
 
-      {effectiveSchedule.source === "defaults" && (
+      {!usesDefaults && (
         <p style={{ margin: "var(--space-2) 0 0", fontSize: "var(--text-xs)", color: "var(--ink-3)" }}>
-          Horários padrão — salve em &quot;Horários de dispensação&quot; para confirmar.
+          O servo pode ativar até ~30 s após o horário (heartbeat do ESP).
         </p>
       )}
-
-      <p style={{ margin: "var(--space-2) 0 0", fontSize: "var(--text-xs)", color: "var(--ink-3)" }}>
-        O servo pode ativar até ~30 s após o horário (heartbeat do ESP).
-      </p>
 
       {!isOnline && (
         <p style={{ margin: "var(--space-2) 0 0", fontSize: "var(--text-sm)", color: "var(--warning)" }}>
@@ -140,6 +145,7 @@ export function NextDispenseCountdown({
           Confirmação pendente — o próximo horário pode ser adiado até o paciente confirmar.
         </p>
       )}
-    </div>
+      </div>
+    </>
   );
 }

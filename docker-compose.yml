@@ -28,6 +28,7 @@ services:
     environment:
       - DATABASE_URL=postgresql://user:password@db:5432/smart_dispenser
       - ESP32_IP=192.168.109.25 # Altere para o IP real se necessário
+      - SCHEDULER_TIMEZONE=America/Sao_Paulo
     ports:
       - "8001:8000"
     volumes:

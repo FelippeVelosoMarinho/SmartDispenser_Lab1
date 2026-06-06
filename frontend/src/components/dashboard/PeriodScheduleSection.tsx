@@ -7,6 +7,7 @@ import {
   startDispenserCycle,
 } from "../../lib/api";
 import { nextPeriodLabel, toTimeInputValue } from "../../lib/periodSchedule";
+import { UnsavedScheduleBanner } from "./UnsavedScheduleBanner";
 
 interface PeriodScheduleSectionProps {
   dispenser: DispenserDetails;
@@ -146,6 +147,8 @@ export function PeriodScheduleSection({ dispenser }: PeriodScheduleSectionProps)
         use <strong>Iniciar ciclo</strong> para calibrar automaticamente.
       </p>
 
+      {scheduleMeta?.source === "defaults" && !loading && <UnsavedScheduleBanner />}
+
       {hwStatus && (
         <div
           style={{
@@ -253,9 +256,9 @@ export function PeriodScheduleSection({ dispenser }: PeriodScheduleSectionProps)
         </form>
       )}
 
-      {scheduleMeta?.source === "defaults" && !loading && (
-        <p style={{ marginTop: "var(--space-3)", fontSize: "var(--text-xs)", color: "var(--ink-3)" }}>
-          Usando horários padrão do servidor até você salvar.
+      {scheduleMeta?.source === "database" && !loading && (
+        <p style={{ marginTop: "var(--space-3)", fontSize: "var(--text-xs)", color: "var(--success-ink, var(--primary))" }}>
+          Horários salvos — o servidor disparará a dispensação automaticamente nos horários configurados.
         </p>
       )}
 

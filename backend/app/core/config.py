@@ -28,6 +28,8 @@ SCHEDULER_DEDUP_SECONDS = int(os.getenv("SCHEDULER_DEDUP_SECONDS", "90"))
 TOTAL_CAROUSEL_SLOTS = 21
 SCHEDULER_MODE = os.getenv("SCHEDULER_MODE", "queue")  # queue | push
 COMMAND_ACK_TIMEOUT_SECONDS = int(os.getenv("COMMAND_ACK_TIMEOUT_SECONDS", "900"))
+# IANA timezone for period schedules (HH:MM wall clock). Default: Brazil.
+SCHEDULER_TIMEZONE = os.getenv("SCHEDULER_TIMEZONE", "America/Sao_Paulo")
 
 # ─── CORS Configuration ───────────────────────────────────────────────
 CORS_ORIGINS = [

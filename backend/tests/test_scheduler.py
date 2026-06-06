@@ -11,6 +11,7 @@ from app.services.scheduler import (
     _is_due,
     _process_period_schedule,
 )
+from app.services.scheduler_clock import scheduler_now
 
 
 def test_effective_scheduled_at_from_hhmm_legacy():
@@ -33,7 +34,7 @@ def test_effective_scheduled_at_period_ignores_stale_scheduled_at():
     assert result is not None
     assert result.hour == 8
     assert result.minute == 0
-    assert result.date() == datetime.datetime.now().date()
+    assert result.date() == scheduler_now().date()
 
 
 def test_is_due_requires_period():
