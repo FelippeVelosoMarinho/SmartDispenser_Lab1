@@ -674,7 +674,8 @@ function BluetoothPairingWizard() {
     setStep("sync");
     
     try {
-      const payload = JSON.stringify({ ssid, pass: password });
+      const backendUrl = window.location.origin;
+      const payload = JSON.stringify({ ssid, pass: password, backend_url: backendUrl });
       const encoder = new TextEncoder();
       const data = encoder.encode(payload);
       

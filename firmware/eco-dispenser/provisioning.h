@@ -11,9 +11,10 @@ bool hasStoredCredentials();
 
 String getStoredSsid();
 String getStoredPassword();
+String getStoredBackendUrl();
 
 // Saves credentials to NVS (overwrites existing).
-void saveCredentials(const String& ssid, const String& pass);
+void saveCredentials(const String& ssid, const String& pass, const String& burl = "");
 
 // Erases stored credentials — triggers BLE provisioning on next boot.
 void clearStoredCredentials();

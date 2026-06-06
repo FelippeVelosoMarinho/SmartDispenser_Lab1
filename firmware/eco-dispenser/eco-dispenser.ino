@@ -36,21 +36,37 @@ static bool pendingInitialHeartbeat = true;
 static unsigned long initialHeartbeatAt = 0;
 static wl_status_t lastWifiStatus = WL_IDLE_STATUS;
 
+#include <WiFiClientSecure.h>
+
+String globalBackendUrl = "";
+
 static void sendHeartbeat() {
   if (WiFi.status() != WL_CONNECTED) return;
-  if (strlen(BACKEND_URL) == 0) {
+  if (globalBackendUrl.length() == 0) {
     Serial.println("[Heartbeat] BACKEND_URL não configurado — pulando.");
     return;
   }
 
   // A conexão deve ser limpa a cada requisição para evitar que pcb (TCP blocks)
   // fiquem presos (stale) na memória. Variáveis static aqui burlam o lock do lwIP!
-  WiFiClient client;
-  HTTPClient http;
-  String url = String(BACKEND_URL) + "/api/heartbeat";
+  String url = globalBackendUrl + "/api/heartbeat";
+  bool isHttps = url.startsWith("https://");
   
-  if (http.begin(client, url)) {
+  WiFiClient* client = nullptr;
+  if (isHttps) {
+    WiFiClientSecure* secureClient = new WiFiClientSecure();
+    secureClient->setInsecure(); // Não valida certificado do ngrok
+    client = secureClient;
+  } else {
+    client = new WiFiClient();
+  }
+
+  HTTPClient http;
+  
+  if (http.begin(*client, url)) {
     http.addHeader("Content-Type", "application/json");
+    // Header necessário para ngrok free tier bypassar a tela de aviso no HTTP/HTTPS
+    http.addHeader("ngrok-skip-browser-warning", "true");
     http.setTimeout(5000);
     http.setReuse(false);
 
@@ -88,11 +104,12 @@ static void sendHeartbeat() {
       Serial.println("[Heartbeat] Falha ao contactar backend: " + http.errorToString(code));
     }
     http.end();
-    client.stop();
+    client->stop();
     delay(100);
   } else {
     Serial.println("[Heartbeat] Falha ao inicializar conexão HTTP");
   }
+  delete client;
 }
 
 void setup() {
@@ -120,13 +137,15 @@ void setup() {
   if (hasStoredCredentials()) {
     ssid = getStoredSsid();
     pass = getStoredPassword();
+    globalBackendUrl = getStoredBackendUrl();
     Serial.println("📁 Credenciais carregadas da NVS. SSID: " + ssid);
 
   } else if (strlen(WIFI_SSID) > 0) {
     // Primeira vez com secrets.h preenchido: salva na NVS para boots futuros
     ssid = String(WIFI_SSID);
     pass = String(WIFI_PASSWORD);
-    saveCredentials(ssid, pass);
+    globalBackendUrl = String(BACKEND_URL);
+    saveCredentials(ssid, pass, globalBackendUrl);
     Serial.println("📄 Credenciais de secrets.h migradas para NVS. SSID: " + ssid);
 
   } else {
@@ -135,6 +154,13 @@ void setup() {
     runBleProvisioning();
     ssid = getStoredSsid();
     pass = getStoredPassword();
+    globalBackendUrl = getStoredBackendUrl();
+  }
+
+  // Fallback seguro caso NVS não tenha URL (p.ex. ESP atualizado sem apagar credenciais)
+  if (globalBackendUrl.length() == 0 && strlen(BACKEND_URL) > 0) {
+    globalBackendUrl = String(BACKEND_URL);
+    saveCredentials(ssid, pass, globalBackendUrl);
   }
 
   // ── Conectar ao WiFi ──────────────────────────────────────────────────
