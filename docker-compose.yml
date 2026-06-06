@@ -40,18 +40,27 @@ services:
       context: ./caddy
       dockerfile: Dockerfile
     restart: unless-stopped
+    profiles:
+      - prod
     ports:
       - "443:443"
     environment:
       - CLOUDFLARE_API_TOKEN=${CLOUDFLARE_API_TOKEN}
+    env_file:
+      - .env
     volumes:
       - ./Caddyfile:/etc/caddy/Caddyfile:ro
       - caddy_data:/data
       - caddy_config:/config
+    depends_on:
+      - frontend
+
   frontend:
     build:
       context: .
       dockerfile: frontend/Dockerfile
+      args:
+        VITE_ESP_BACKEND_URL: ${VITE_ESP_BACKEND_URL:-https://pill.josoesantos.dev}
     container_name: smart_dispenser_frontend
     restart: always
     ports:
@@ -80,8 +89,8 @@ services:
       - CHOKIDAR_USEPOLLING=true
       - VITE_API_URL=http://smart_dispenser_backend:8000
       - VITE_HMR_CLIENT_PORT=8081
-      # ESP recebe esta URL no BLE; navegador continua via ngrok/proxy
-      - VITE_ESP_BACKEND_URL=http://2.24.216.183:8001
+      # ESP: domínio público (prod) ou API direta :8001 — ver .env.example
+      - VITE_ESP_BACKEND_URL=${VITE_ESP_BACKEND_URL:-https://pill.josoesantos.dev}
     depends_on:
       - backend
     profiles:

@@ -16,6 +16,8 @@ COPY frontend ./frontend
 
 # Build the application
 WORKDIR /app/frontend
+ARG VITE_ESP_BACKEND_URL=https://pill.josoesantos.dev
+ENV VITE_ESP_BACKEND_URL=$VITE_ESP_BACKEND_URL
 # Run Vite build directly in Bun runtime to skip the separate TypeScript check
 # (the project runs `tsc -b` in `build:types`, which can fail Storybook stories during CI builds).
 RUN bun --bun vite build
@@ -30,7 +32,7 @@ COPY --from=build /app/frontend/dist /usr/share/nginx/html
 RUN echo 'server { \
     listen 80; \
     location /api { \
-        proxy_pass http://smart_dispenser_backend:8000; \
+        proxy_pass http://backend:8000; \
         proxy_set_header Host $host; \
         proxy_set_header X-Real-IP $remote_addr; \
         proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for; \

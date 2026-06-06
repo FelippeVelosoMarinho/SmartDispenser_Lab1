@@ -93,17 +93,21 @@ docker compose up --build -d
 
 Credenciais do banco (Compose): usuário `user`, senha `password`, banco `smart_dispenser`.
 
-### Perfil **prod** — frontend estático (Nginx) + API + banco
+### Perfil **prod** — frontend estático (Nginx) + API + banco + **HTTPS (Caddy)**
 
-Interface web compilada e servida por Nginx; `/api` é enviado ao backend na rede interna.
+Interface web em **https://pill.josoesantos.dev** (Caddy + Let's Encrypt via Cloudflare DNS).
 
 ```bash
+cp .env.example .env   # CLOUDFLARE_API_TOKEN + VITE_ESP_BACKEND_URL
 docker compose --profile prod up --build -d
 ```
 
 | Serviço extra | Container | Porta no host | URL típica |
 |---------------|-----------|---------------|------------|
 | `frontend` | `smart_dispenser_frontend` | **8082** → 80 | `http://localhost:8082` |
+| `caddy` | `smartdispenser_lab1-caddy-1` | **443** | **https://pill.josoesantos.dev** |
+
+Guia completo: [`docs/DEPLOY_PILL.md`](docs/DEPLOY_PILL.md)
 
 - **Backend / OpenAPI**: `http://localhost:8001` — documentação em `http://localhost:8001/docs`
 - **Postgres (host)**: `localhost:5433`

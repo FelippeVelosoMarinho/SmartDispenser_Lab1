@@ -1,11 +1,11 @@
 /**
  * URL do backend enviada ao ESP32 no pareamento BLE.
  *
- * O navegador pode usar ngrok (HTTPS) para Web Bluetooth; o ESP deve falar
- * direto com a API (HTTP, porta 8001), pois TLS/ngrok no firmware é frágil.
+ * O navegador usa https://pill.josoesantos.dev (HTTPS + Web Bluetooth).
+ * O ESP pode usar o mesmo domínio (HTTPS com setInsecure no firmware) ou
+ * HTTP direto na porta 8001 — configure via VITE_ESP_BACKEND_URL.
  *
- * Defina VITE_ESP_BACKEND_URL no deploy (ex.: http://2.24.216.183:8001).
- * Sem essa variável, usa window.location.origin (OK em dev local).
+ * Sem variável definida, usa window.location.origin (dev local).
  */
 export function getEspBackendUrl(): string {
   const configured = import.meta.env.VITE_ESP_BACKEND_URL?.trim();

@@ -1,6 +1,16 @@
+# Produção — HTTPS via Cloudflare DNS (Let's Encrypt)
+# Requer CLOUDFLARE_API_TOKEN no .env da raiz do projeto.
 pill.josoesantos.dev {
-    tls {
-        dns cloudflare {env.CLOUDFLARE_API_TOKEN}
-    }
-    reverse_proxy frontend:80
+	tls {
+		dns cloudflare {env.CLOUDFLARE_API_TOKEN}
+	}
+
+	encode gzip
+
+	reverse_proxy frontend:80 {
+		header_up Host {host}
+		header_up X-Real-IP {remote_host}
+		header_up X-Forwarded-For {remote_host}
+		header_up X-Forwarded-Proto {scheme}
+	}
 }

@@ -32,7 +32,16 @@ CORS_ORIGINS = [
     "http://localhost:5173",
     "http://127.0.0.1:5173",
     "http://localhost:3000",
+    "http://localhost:8081",
+    "http://localhost:8082",
+    "https://pill.josoesantos.dev",
+    "http://pill.josoesantos.dev",
 ]
+_extra_cors = os.getenv("CORS_ORIGINS", "")
+if _extra_cors:
+    CORS_ORIGINS.extend(
+        origin.strip() for origin in _extra_cors.split(",") if origin.strip()
+    )
 
 # ─── SMTP / Notification Configuration ──────────────────────────────────
 SMTP_SERVER = os.getenv("SMTP_SERVER", "smtp.gmail.com")
