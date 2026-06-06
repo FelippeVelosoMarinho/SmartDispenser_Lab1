@@ -147,14 +147,19 @@ def _record_log(
     db.add(log)
 
 
+def _mark_schedule_triggered(db: Session, schedule: Schedule, now: datetime.datetime) -> None:
+    schedule.last_triggered_at = now
+    db.commit()
+
+
 async def _process_period_schedule_push(
     db: Session,
     schedule: Schedule,
     dispenser: Dispenser,
     period: str,
     now: datetime.datetime,
-) -> None:
-    """Legacy LAN push mode — POST /dispense directly to ESP IP."""
+) -> bool:
+    """Legacy LAN push mode — POST /dispense directly to ESP IP. Returns True if dispensed."""
     if not dispenser.ip_address:
         logger.warning(
             "[Scheduler] Dispenser %s has no IP yet (no heartbeat) — skipped",
@@ -162,13 +167,13 @@ async def _process_period_schedule_push(
         )
         _record_log(db, schedule, False, "no ip_address — heartbeat not received")
         db.commit()
-        return
+        return False
 
     status = await _get_status(dispenser.ip_address)
     if status is None:
         _record_log(db, schedule, False, "could not read ESP /status")
         db.commit()
-        return
+        return False
 
     if status.get("awaiting_confirm") in (True, "true"):
         logger.warning(
@@ -178,7 +183,7 @@ async def _process_period_schedule_push(
         )
         _record_log(db, schedule, False, "awaiting_confirm on dispenser")
         db.commit()
-        return
+        return False
 
     current_slot = int(status.get("current_slot", -1))
     expected_after = carousel_slot_after_sequential(current_slot, TOTAL_CAROUSEL_SLOTS)
@@ -207,6 +212,7 @@ async def _process_period_schedule_push(
         )
     else:
         logger.error("[Scheduler] Dispense failed — dispenser %s", dispenser.hardware_id)
+    return success
 
 
 async def _process_period_schedule_queue(
@@ -214,7 +220,7 @@ async def _process_period_schedule_queue(
     schedule: Schedule,
     dispenser: Dispenser,
     period: str,
-) -> None:
+) -> bool:
     """Queue mode — enqueue command for delivery via heartbeat response."""
     if dispenser.awaiting_confirm:
         logger.warning(
@@ -222,7 +228,7 @@ async def _process_period_schedule_queue(
             dispenser.hardware_id,
             period,
         )
-        return
+        return False
 
     if dispenser.current_slot is None:
         logger.warning(
@@ -230,7 +236,7 @@ async def _process_period_schedule_queue(
             dispenser.hardware_id,
             period,
         )
-        return
+        return False
 
     expected_after = carousel_slot_after_sequential(
         dispenser.current_slot, TOTAL_CAROUSEL_SLOTS
@@ -252,6 +258,7 @@ async def _process_period_schedule_queue(
         expected_after,
         command.id,
     )
+    return True
 
 
 async def _process_period_schedule(
@@ -269,9 +276,6 @@ async def _process_period_schedule(
             .first()
         )
 
-    schedule.last_triggered_at = now
-    db.commit()
-
     if not dispenser:
         logger.warning(
             "[Scheduler] Schedule %s: dispenser '%s' not in DB — skipped",
@@ -283,10 +287,14 @@ async def _process_period_schedule(
             db.commit()
         return
 
+    triggered = False
     if SCHEDULER_MODE == "push":
-        await _process_period_schedule_push(db, schedule, dispenser, period, now)
+        triggered = await _process_period_schedule_push(db, schedule, dispenser, period, now)
     else:
-        await _process_period_schedule_queue(db, schedule, dispenser, period)
+        triggered = await _process_period_schedule_queue(db, schedule, dispenser, period)
+
+    if triggered:
+        _mark_schedule_triggered(db, schedule, now)
 
 
 async def run_dispense_scheduler() -> None:

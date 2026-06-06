@@ -120,6 +120,8 @@ static void processHeartbeatCommand(const String& responseBody, const String& ma
   lastAckError = errMsg;
   queueCommandAck(cmdId, success, errMsg);
 
+  Serial.printf("[Heartbeat] Slot após comando: %d\n", getCurrentSlot());
+
   Serial.println("[Heartbeat] ACK enfileirado: " + cmdId +
                  " success=" + String(success ? "true" : "false"));
 }

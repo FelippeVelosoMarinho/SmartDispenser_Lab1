@@ -232,3 +232,75 @@ def test_heartbeat_command_ack_persists_telemetry_and_log():
     assert len(logs) == 1
     assert logs[0].success is True
     db.close()
+
+
+def test_heartbeat_ack_updates_current_slot_from_expected_not_stale_payload():
+    """ACK success must persist post-dispense slot, not pre-command heartbeat value."""
+    create_schedule_dependencies()
+    db = SessionLocal()
+    schedule = Schedule(
+        dispenser_id="disp_iot",
+        period="morning",
+        is_active=True,
+        time_legacy="08:00",
+    )
+    db.add(schedule)
+    db.commit()
+    db.refresh(schedule)
+    cmd = crud_command_queue.enqueue_dispense(db, "disp_iot", "morning", 2, schedule.id)
+    crud_command_queue.mark_delivered(db, cmd)
+    command_id = str(cmd.id)
+    db.close()
+
+    resp = client.post(
+        "/api/heartbeat",
+        json={
+            "dispenser_id": "disp_iot",
+            "online": True,
+            "current_slot": 1,
+            "awaiting_confirm": True,
+            "command_ack": {
+                "command_id": command_id,
+                "success": True,
+            },
+        },
+    )
+    assert resp.status_code == 200
+
+    db = SessionLocal()
+    refreshed = db.query(Dispenser).filter(Dispenser.hardware_id == "disp_iot").first()
+    assert refreshed.current_slot == 2
+    db.close()
+
+
+def test_heartbeat_ack_calibrate_resets_current_slot():
+    create_schedule_dependencies()
+    db = SessionLocal()
+    cmd = crud_command_queue.enqueue_calibrate(db, "disp_iot")
+    crud_command_queue.mark_delivered(db, cmd)
+    command_id = str(cmd.id)
+    db.query(Dispenser).filter(Dispenser.hardware_id == "disp_iot").update(
+        {"current_slot": 5}
+    )
+    db.commit()
+    db.close()
+
+    resp = client.post(
+        "/api/heartbeat",
+        json={
+            "dispenser_id": "disp_iot",
+            "online": True,
+            "current_slot": 5,
+            "awaiting_confirm": False,
+            "command_ack": {
+                "command_id": command_id,
+                "success": True,
+            },
+        },
+    )
+    assert resp.status_code == 200
+
+    db = SessionLocal()
+    refreshed = db.query(Dispenser).filter(Dispenser.hardware_id == "disp_iot").first()
+    assert refreshed.current_slot == 0
+    db.close()

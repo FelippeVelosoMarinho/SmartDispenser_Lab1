@@ -77,6 +77,10 @@ export function CompartmentsSection({ dispenser, onDispenserChange }: Compartmen
     hwStatus != null
       ? Math.min(hwStatus.current_slot + 1, Math.min(hwStatus.total_slots, 21))
       : null;
+  const currentCompartment =
+    hwStatus != null
+      ? Math.min(hwStatus.current_slot + 1, Math.min(hwStatus.total_slots, 21))
+      : null;
 
   const dbSlots = dispenser.drawers.flatMap(d => d.slots);
 
@@ -166,10 +170,12 @@ export function CompartmentsSection({ dispenser, onDispenserChange }: Compartmen
       }}>
         Slots / Posições (Visão Circular)
       </h2>
-      {nextDoseNumber != null && (
-        <p style={{ margin: "0 0 var(--space-3)", fontSize: "var(--text-sm)", color: "var(--primary)" }}>
-          Próxima dose: compartimento <strong>{nextDoseNumber}</strong>
-          {hwStatus?.awaiting_confirm ? " (aguardando confirmação no aparelho)" : ""}
+      {hwStatus != null && (
+        <p style={{ margin: "0 0 var(--space-3)", fontSize: "var(--text-sm)", color: "var(--ink-2)" }}>
+          Compartimento atual: <strong>{currentCompartment}</strong>
+          {" · "}
+          Próxima dose: <strong style={{ color: "var(--primary)" }}>{nextDoseNumber}</strong>
+          {hwStatus.awaiting_confirm ? " (aguardando confirmação no aparelho)" : ""}
         </p>
       )}
 

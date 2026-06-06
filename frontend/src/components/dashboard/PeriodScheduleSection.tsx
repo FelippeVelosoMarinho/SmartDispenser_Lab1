@@ -3,11 +3,14 @@ import type { DispenserDetails, HardwareStatus, PeriodSchedule } from "../../lib
 import {
   getHardwareStatus,
   getPeriodSchedule,
+  resetDispenserWifi,
   savePeriodSchedule,
   startDispenserCycle,
 } from "../../lib/api";
 import { nextPeriodLabel, toTimeInputValue } from "../../lib/periodSchedule";
 import { UnsavedScheduleBanner } from "./UnsavedScheduleBanner";
+import { ConfirmModal } from "../ui/ConfirmModal";
+import "../ui/ConfirmModal.css";
 
 interface PeriodScheduleSectionProps {
   dispenser: DispenserDetails;
@@ -21,6 +24,8 @@ export function PeriodScheduleSection({ dispenser }: PeriodScheduleSectionProps)
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [starting, setStarting] = useState(false);
+  const [resettingWifi, setResettingWifi] = useState(false);
+  const [resetWifiModalOpen, setResetWifiModalOpen] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [scheduleMeta, setScheduleMeta] = useState<PeriodSchedule | null>(null);
@@ -67,7 +72,7 @@ export function PeriodScheduleSection({ dispenser }: PeriodScheduleSectionProps)
 
   useEffect(() => {
     refreshHardware();
-    const id = setInterval(refreshHardware, 5000);
+    const id = setInterval(refreshHardware, 3000);
     return () => clearInterval(id);
   }, [refreshHardware]);
 
@@ -107,16 +112,31 @@ export function PeriodScheduleSection({ dispenser }: PeriodScheduleSectionProps)
     setError(null);
     setMessage(null);
     try {
-      const result = await startDispenserCycle(hardwareId, dispenser.ip_address);
-      setMessage(result.message);
-      await refreshHardware();
+      await startDispenserCycle(hardwareId, dispenser.ip_address);
+      window.location.reload();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Falha ao iniciar ciclo");
-    } finally {
       setStarting(false);
     }
   }
 
+  async function handleResetWifi() {
+    setResettingWifi(true);
+    setError(null);
+    setMessage(null);
+    try {
+      const result = await resetDispenserWifi(hardwareId, dispenser.ip_address);
+      setResetWifiModalOpen(false);
+      setMessage(result.message);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Falha ao resetar Wi-Fi do ESP");
+    } finally {
+      setResettingWifi(false);
+    }
+  }
+
+  const currentCompartment =
+    hwStatus != null ? Math.min(hwStatus.current_slot + 1, Math.min(hwStatus.total_slots, 21)) : null;
   const nextCompartment =
     hwStatus != null ? Math.min(hwStatus.current_slot + 1, hwStatus.total_slots) : null;
 
@@ -162,9 +182,15 @@ export function PeriodScheduleSection({ dispenser }: PeriodScheduleSectionProps)
           }}
         >
           <div>
-            <span style={{ fontSize: "var(--text-xs)", color: "var(--ink-3)" }}>Roleta</span>
+            <span style={{ fontSize: "var(--text-xs)", color: "var(--ink-3)" }}>Compartimento atual</span>
             <p style={{ margin: 0, fontWeight: 600, color: "var(--ink)" }}>
-              Posição {hwStatus.current_slot}/{hwStatus.total_slots}
+              {currentCompartment ?? "—"}
+            </p>
+          </div>
+          <div>
+            <span style={{ fontSize: "var(--text-xs)", color: "var(--ink-3)" }}>Índice roleta (0–{hwStatus.total_slots - 1})</span>
+            <p style={{ margin: 0, fontWeight: 600, color: "var(--ink-2)", fontSize: "var(--text-sm)" }}>
+              {hwStatus.current_slot}
             </p>
           </div>
           <div>
@@ -194,24 +220,59 @@ export function PeriodScheduleSection({ dispenser }: PeriodScheduleSectionProps)
         </p>
       )}
 
-      <button
-        type="button"
-        onClick={handleStartCycle}
-        disabled={starting || !dispenser.is_online}
-        style={{
-          marginBottom: "var(--space-4)",
-          background: "var(--primary)",
-          color: "var(--primary-on)",
-          border: "none",
-          borderRadius: "var(--radius-md)",
-          padding: "12px 20px",
-          fontWeight: 600,
-          cursor: dispenser.is_online && !starting ? "pointer" : "not-allowed",
-          opacity: dispenser.is_online ? 1 : 0.6,
+      <div style={{ display: "flex", flexWrap: "wrap", gap: "var(--space-3)", marginBottom: "var(--space-4)" }}>
+        <button
+          type="button"
+          onClick={handleStartCycle}
+          disabled={starting || !dispenser.is_online}
+          style={{
+            background: "var(--primary)",
+            color: "var(--primary-on)",
+            border: "none",
+            borderRadius: "var(--radius-md)",
+            padding: "12px 20px",
+            fontWeight: 600,
+            cursor: dispenser.is_online && !starting ? "pointer" : "not-allowed",
+            opacity: dispenser.is_online ? 1 : 0.6,
+          }}
+        >
+          {starting ? "Calibrando…" : "Concluir reabastecimento e iniciar ciclo"}
+        </button>
+
+        <button
+          type="button"
+          onClick={() => setResetWifiModalOpen(true)}
+          disabled={resettingWifi || !dispenser.is_online || !dispenser.ip_address}
+          style={{
+            background: "var(--surface)",
+            color: "var(--danger, #ef4444)",
+            border: "1px solid rgba(239, 68, 68, 0.35)",
+            borderRadius: "var(--radius-md)",
+            padding: "12px 20px",
+            fontWeight: 600,
+            cursor:
+              dispenser.is_online && dispenser.ip_address && !resettingWifi
+                ? "pointer"
+                : "not-allowed",
+            opacity: dispenser.is_online && dispenser.ip_address ? 1 : 0.6,
+          }}
+        >
+          Resetar Wi-Fi do ESP
+        </button>
+      </div>
+
+      <ConfirmModal
+        open={resetWifiModalOpen}
+        title="Resetar Wi-Fi do dispensador?"
+        description="O ESP apagará as credenciais Wi-Fi e reiniciará em modo Bluetooth para novo pareamento. Use na mesma rede local do aparelho."
+        confirmLabel="Resetar Wi-Fi"
+        cancelLabel="Cancelar"
+        loading={resettingWifi}
+        onConfirm={() => void handleResetWifi()}
+        onCancel={() => {
+          if (!resettingWifi) setResetWifiModalOpen(false);
         }}
-      >
-        {starting ? "Calibrando…" : "Concluir reabastecimento e iniciar ciclo"}
-      </button>
+      />
 
       {loading ? (
         <p style={{ color: "var(--ink-3)" }}>Carregando horários…</p>
@@ -294,7 +355,7 @@ export function useHardwareStatus(
           if (!cancelled) setStatus(null);
         });
     load();
-    const id = setInterval(load, 5000);
+    const id = setInterval(load, 3000);
     return () => {
       cancelled = true;
       clearInterval(id);

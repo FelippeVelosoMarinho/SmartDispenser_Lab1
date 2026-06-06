@@ -124,6 +124,7 @@ def test_process_period_schedule_enqueues_in_queue_mode():
                 )
 
     asyncio.run(run())
+    assert schedule.last_triggered_at is not None
     assert db.commit.called
 
 
@@ -160,6 +161,7 @@ def test_process_period_schedule_skips_awaiting_confirm_queue_mode():
                 mock_enqueue.assert_not_called()
 
     asyncio.run(run())
+    assert schedule.last_triggered_at is None
 
 
 def test_process_period_schedule_push_mode_dispenses():
@@ -193,4 +195,5 @@ def test_process_period_schedule_push_mode_dispenses():
                     )
 
     asyncio.run(run())
+    assert schedule.last_triggered_at is not None
     assert db.commit.called

@@ -291,6 +291,27 @@ export async function forgetDispenserWifi(hardwareId: string) {
   );
 }
 
+export async function resetDispenserWifi(hardwareId: string, ipAddress?: string | null) {
+  if (ipAddress) {
+    const { resetWifiLocal } = await import("./espLocal");
+    try {
+      const result = await resetWifiLocal(ipAddress);
+      return {
+        success: result.success,
+        message: result.message,
+        hardware_id: hardwareId,
+      } satisfies DispenserForgetWifiResult;
+    } catch (localErr) {
+      try {
+        return await forgetDispenserWifi(hardwareId);
+      } catch {
+        throw localErr;
+      }
+    }
+  }
+  return forgetDispenserWifi(hardwareId);
+}
+
 export async function deleteDispenser(hardwareId: string) {
   await requestJson<void>(dispenserPath(hardwareId), {
     method: "DELETE",

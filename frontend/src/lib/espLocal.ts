@@ -1,6 +1,7 @@
 import type { HardwareStatus, StartCycleResult } from "./api";
 
 const ESP_TIMEOUT_MS = 8000;
+const ESP_RESET_TIMEOUT_MS = 5000;
 
 function lanUnreachableError(): Error {
   return new Error(
@@ -20,9 +21,14 @@ function mapEspStatus(data: Record<string, unknown>): HardwareStatus {
   };
 }
 
-async function espFetch(ip: string, path: string, init?: RequestInit): Promise<Response> {
+async function espFetch(
+  ip: string,
+  path: string,
+  init?: RequestInit,
+  timeoutMs: number = ESP_TIMEOUT_MS,
+): Promise<Response> {
   const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), ESP_TIMEOUT_MS);
+  const timer = setTimeout(() => controller.abort(), timeoutMs);
   try {
     return await fetch(`http://${ip}${path}`, {
       ...init,
@@ -81,4 +87,24 @@ export async function startDispenserCycleLocal(
     current_slot: currentSlot,
     hardware_id: hardwareId,
   };
+}
+
+export interface ResetWifiLocalResult {
+  success: boolean;
+  message: string;
+}
+
+export async function resetWifiLocal(ip: string): Promise<ResetWifiLocalResult> {
+  const res = await espFetch(ip, "/reset-wifi", { method: "POST" }, ESP_RESET_TIMEOUT_MS);
+  if (!res.ok) {
+    throw new Error("Falha ao enviar reset de Wi-Fi ao dispensador.");
+  }
+  let message = "Reset de Wi-Fi enviado — o ESP reiniciará em modo Bluetooth.";
+  try {
+    const data = (await res.json()) as { message?: string };
+    if (data.message) message = data.message;
+  } catch {
+    /* response may be empty before ESP reboots */
+  }
+  return { success: true, message };
 }

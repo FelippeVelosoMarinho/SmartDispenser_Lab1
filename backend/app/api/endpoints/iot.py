@@ -308,31 +308,42 @@ async def process_heartbeat(
 
     crud_command_queue.expire_stale_delivered(db, COMMAND_ACK_TIMEOUT_SECONDS)
 
+    ack_command = None
     if heartbeat.command_ack:
         try:
             ack_id = uuid.UUID(heartbeat.command_ack.command_id)
-            command = crud_command_queue.process_command_ack(
+            ack_command = crud_command_queue.process_command_ack(
                 db,
                 ack_id,
                 heartbeat.command_ack.success,
                 heartbeat.command_ack.error,
             )
-            if command:
+            if ack_command:
                 record_schedule_dispensation_log(
                     db,
-                    command,
+                    ack_command,
                     heartbeat.command_ack.success,
                     heartbeat.command_ack.error,
                 )
         except ValueError:
             pass
 
+    current_slot = heartbeat.current_slot
+    if ack_command and heartbeat.command_ack:
+        if heartbeat.command_ack.success:
+            if ack_command.command_type == "dispense" and ack_command.expected_slot is not None:
+                current_slot = ack_command.expected_slot
+            elif ack_command.command_type == "calibrate":
+                current_slot = 0
+        elif heartbeat.command_ack.error == "slot_mismatch" and heartbeat.current_slot is not None:
+            current_slot = heartbeat.current_slot
+
     status_data = {
         "dispenser_id": heartbeat.dispenser_id,
         "online": heartbeat.online,
         "critical_stock": heartbeat.critical_stock,
         "ip_address": heartbeat.ip_address,
-        "current_slot": heartbeat.current_slot,
+        "current_slot": current_slot,
         "awaiting_confirm": heartbeat.awaiting_confirm,
     }
 
