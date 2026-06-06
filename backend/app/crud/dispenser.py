@@ -74,7 +74,14 @@ def update_dispenser_status(db: Session, hardware_id: str, status: dict) -> dict
     return status
 
 
-def _slot_ids_for_dispenser(db: Session, dispenser: Dispenser) -> List[int]:
+def mark_dispenser_disconnected_after_wifi_reset(db: Session, dispenser: Dispenser) -> Dispenser:
+    """Mark dispenser offline immediately after Wi-Fi factory reset (no heartbeat expected)."""
+    dispenser.is_online = False
+    dispenser.ip_address = None
+    dispenser.awaiting_confirm = False
+    db.commit()
+    db.refresh(dispenser)
+    return dispenser
     drawer_ids = [
         row[0]
         for row in db.query(Drawer.id).filter(Drawer.dispenser_id == dispenser.id).all()

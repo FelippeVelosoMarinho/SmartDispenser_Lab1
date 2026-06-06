@@ -91,3 +91,22 @@ def test_forget_wifi_success(mock_user):
     data = resp.json()
     assert data["success"] is True
     assert data["hardware_id"] == "disp_wifi"
+
+    db = SessionLocal()
+    refreshed = db.query(Dispenser).filter(Dispenser.hardware_id == "disp_wifi").first()
+    assert refreshed.is_online is False
+    assert refreshed.ip_address is None
+    db.close()
+
+
+def test_sync_wifi_reset_marks_offline(mock_user):
+    resp = client.post("/api/dispensers/disp_wifi/sync-wifi-reset")
+    assert resp.status_code == 200
+    data = resp.json()
+    assert data["success"] is True
+
+    db = SessionLocal()
+    refreshed = db.query(Dispenser).filter(Dispenser.hardware_id == "disp_wifi").first()
+    assert refreshed.is_online is False
+    assert refreshed.ip_address is None
+    db.close()

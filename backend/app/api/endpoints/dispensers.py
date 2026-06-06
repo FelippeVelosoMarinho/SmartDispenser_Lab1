@@ -16,6 +16,7 @@ from app.crud.dispenser import (
     delete_dispenser,
     get_deletion_status,
     get_dispenser_status,
+    mark_dispenser_disconnected_after_wifi_reset,
     reset_dispenser_configuration,
     update_dispenser_status,
 )
@@ -559,9 +560,27 @@ async def forget_dispenser_wifi(
             },
         )
 
+    mark_dispenser_disconnected_after_wifi_reset(db, dispenser)
+
     return DispenserForgetWifiResult(
         success=True,
-        message="Wi-Fi apagado no dispositivo. Ele reiniciará em modo Bluetooth.",
+        message="Wi-Fi apagado no dispositivo. Ele reiniciará em modo Bluetooth — use Parear dispensador para reconectar.",
+        hardware_id=hardware_id,
+    )
+
+
+@router.post("/{hardware_id}/sync-wifi-reset", response_model=DispenserForgetWifiResult)
+async def sync_wifi_reset_dispenser(
+    hardware_id: str,
+    current_user=Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Mark dispenser offline after a LAN-side POST /reset-wifi (backend cannot reach private IP)."""
+    dispenser = _get_dispenser_for_caregiver(db, hardware_id, current_user.username)
+    mark_dispenser_disconnected_after_wifi_reset(db, dispenser)
+    return DispenserForgetWifiResult(
+        success=True,
+        message="Dispensador marcado como desconectado. Use Parear dispensador para reconectar via Bluetooth.",
         hardware_id=hardware_id,
     )
 

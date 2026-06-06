@@ -291,14 +291,22 @@ export async function forgetDispenserWifi(hardwareId: string) {
   );
 }
 
+export async function syncWifiResetDispenser(hardwareId: string) {
+  return requestJson<DispenserForgetWifiResult>(
+    `${dispenserPath(hardwareId)}/sync-wifi-reset`,
+    { method: "POST" },
+  );
+}
+
 export async function resetDispenserWifi(hardwareId: string, ipAddress?: string | null) {
   if (ipAddress) {
     const { resetWifiLocal } = await import("./espLocal");
     try {
       const result = await resetWifiLocal(ipAddress);
+      const synced = await syncWifiResetDispenser(hardwareId);
       return {
-        success: result.success,
-        message: result.message,
+        success: result.success && synced.success,
+        message: synced.message,
         hardware_id: hardwareId,
       } satisfies DispenserForgetWifiResult;
     } catch (localErr) {

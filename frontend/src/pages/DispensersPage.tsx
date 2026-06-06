@@ -24,6 +24,7 @@ import {
   type Dispenser as ApiDispenser,
   type DispenserDeletionStatus,
 } from "../lib/api";
+import { DispenserWifiResetPanel } from "../components/dispensers/DispenserWifiResetPanel";
 import { APP_NAME } from "../lib/brand";
 import "../App.css";
 
@@ -138,7 +139,8 @@ export function DispensersPage() {
   const navigate = useNavigate();
   const [search, setSearch] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
-  const [dispensers, setDispensers] = useState<Dispenser[]>([]);
+  const [apiDispensers, setApiDispensers] = useState<ApiDispenser[]>([]);
+  const dispensers = useMemo(() => apiDispensers.map(toDispenserRow), [apiDispensers]);
   const [dispenserToDelete, setDispenserToDelete] = useState<Dispenser | null>(
     null,
   );
@@ -160,7 +162,7 @@ export function DispensersPage() {
       try {
         const data = await listDispensers();
         if (!mounted) return;
-        setDispensers(data.map(toDispenserRow));
+        setApiDispensers(data);
       } catch (err) {
         if (!mounted) return;
         if (!quiet) {
@@ -231,7 +233,7 @@ export function DispensersPage() {
   async function performDeleteFromServer() {
     if (!dispenserToDelete) return;
     await deleteDispenserApi(dispenserToDelete.serial);
-    setDispensers((prev) => prev.filter((d) => d.id !== dispenserToDelete.id));
+    setApiDispensers((prev) => prev.filter((d) => d.id !== dispenserToDelete.id));
     setDispenserToDelete(null);
     setDeletionStatus(null);
     setDeleteWifiFailed(false);
@@ -297,6 +299,16 @@ export function DispensersPage() {
   function handleSearch(e: React.ChangeEvent<HTMLInputElement>) {
     setSearch(e.target.value);
     setCurrentPage(1);
+  }
+
+  function handleWifiResetComplete(hardwareId: string) {
+    setApiDispensers((prev) =>
+      prev.map((d) =>
+        d.hardware_id === hardwareId
+          ? { ...d, is_online: false, ip_address: null }
+          : d,
+      ),
+    );
   }
 
   return (
@@ -375,6 +387,11 @@ export function DispensersPage() {
           {error}
         </div>
       )}
+
+      <DispenserWifiResetPanel
+        dispensers={apiDispensers}
+        onResetComplete={handleWifiResetComplete}
+      />
 
       {/* Table card */}
       <Card>
