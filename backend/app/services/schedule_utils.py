@@ -84,12 +84,20 @@ def format_schedule_response(schedule: Schedule) -> dict:
     time_val = schedule.time_legacy or ""
     if schedule.scheduled_at and not time_val:
         time_val = schedule.scheduled_at.strftime("%Y-%m-%dT%H:%M")
+    elif schedule.scheduled_time and not time_val:
+        time_val = schedule.scheduled_time.strftime("%H:%M")
     return {
         "id": str(schedule.id),
         "patient_id": str(schedule.patient_id) if schedule.patient_id else "",
         "dispenser_id": schedule.dispenser_id or "",
         "slot_id": schedule.slot_id or 0,
+        "period": schedule.period,
         "time": time_val,
         "scheduled_at": schedule.scheduled_at.isoformat() if schedule.scheduled_at else None,
         "is_active": schedule.is_active if schedule.is_active is not None else True,
     }
+
+
+def carousel_slot_after_sequential(current_slot: int, total: int = MAX_SCHEDULE_POSITION) -> int:
+    """Next firmware slot index after one sequential advance."""
+    return (current_slot + 1) % total

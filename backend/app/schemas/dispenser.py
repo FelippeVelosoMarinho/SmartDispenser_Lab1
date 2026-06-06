@@ -65,3 +65,21 @@ class DispenserForgetWifiResult(BaseModel):
     success: bool
     message: str
     hardware_id: str
+
+
+class HardwareStatusPublic(BaseModel):
+    """Live carousel state from ESP32 GET /status."""
+    current_slot: int
+    total_slots: int = 21
+    awaiting_confirm: bool
+    last_confirmed_slot: int = -1
+    wifi_rssi: Optional[int] = None
+    hardware_id: Optional[str] = None
+    uptime_s: Optional[int] = None
+
+
+class StartCycleResult(BaseModel):
+    success: bool
+    message: str
+    current_slot: int = 0
+    hardware_id: str

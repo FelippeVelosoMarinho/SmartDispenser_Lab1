@@ -111,3 +111,77 @@ def delete_schedule(db: Session, schedule_id: str) -> bool:
         db.commit()
         return True
     return False
+
+
+def get_period_schedules(db: Session, hardware_id: str) -> List[Schedule]:
+    """Return period-based schedules (morning/afternoon/night) for a dispenser."""
+    resolved = resolve_hardware_id(db, hardware_id) or hardware_id
+    return (
+        db.query(Schedule)
+        .filter(Schedule.dispenser_id == resolved)
+        .filter(Schedule.period.isnot(None))
+        .all()
+    )
+
+
+def upsert_period_schedules(
+    db: Session,
+    hardware_id: str,
+    patient_id: str,
+    morning_time: str,
+    afternoon_time: str,
+    night_time: str,
+    is_active: bool = True,
+) -> List[Schedule]:
+    """Create or update the three period schedules for a dispenser."""
+    resolved = resolve_hardware_id(db, hardware_id)
+    if not resolved:
+        raise ValueError(f"dispenser not found: {hardware_id}")
+
+    try:
+        pid = uuid.UUID(patient_id)
+    except (ValueError, TypeError):
+        raise ValueError("invalid patient_id")
+
+    period_times = {
+        "morning": morning_time,
+        "afternoon": afternoon_time,
+        "night": night_time,
+    }
+
+    results: List[Schedule] = []
+    for period, time_str in period_times.items():
+        scheduled_at, time_legacy, scheduled_time = parse_schedule_time(time_str)
+        existing = (
+            db.query(Schedule)
+            .filter(Schedule.dispenser_id == resolved)
+            .filter(Schedule.period == period)
+            .first()
+        )
+        if existing:
+            existing.patient_id = pid
+            existing.scheduled_at = scheduled_at
+            existing.time_legacy = time_legacy
+            existing.scheduled_time = scheduled_time
+            existing.is_active = is_active
+            existing.slot_id = None
+            db.commit()
+            db.refresh(existing)
+            results.append(existing)
+        else:
+            row = Schedule(
+                patient_id=pid,
+                dispenser_id=resolved,
+                period=period,
+                slot_id=None,
+                scheduled_at=scheduled_at,
+                scheduled_time=scheduled_time,
+                time_legacy=time_legacy,
+                is_active=is_active,
+            )
+            db.add(row)
+            db.commit()
+            db.refresh(row)
+            results.append(row)
+
+    return results

@@ -18,6 +18,15 @@ ESP32_IP = os.getenv("ESP32_IP", "192.168.109.25")
 ESP32_BASE_URL = f"http://{ESP32_IP}"
 REQUEST_TIMEOUT = 5.0  # seconds
 
+# ─── Period dispense schedule (defaults for testing) ─────────────────
+DISPENSE_PERIOD_MORNING = os.getenv("DISPENSE_PERIOD_MORNING", "21:00")
+DISPENSE_PERIOD_AFTERNOON = os.getenv("DISPENSE_PERIOD_AFTERNOON", "21:01")
+DISPENSE_PERIOD_NIGHT = os.getenv("DISPENSE_PERIOD_NIGHT", "21:02")
+SCHEDULER_POLL_SECONDS = int(os.getenv("SCHEDULER_POLL_SECONDS", "10"))
+SCHEDULER_DUE_WINDOW_SECONDS = int(os.getenv("SCHEDULER_DUE_WINDOW_SECONDS", "30"))
+SCHEDULER_DEDUP_SECONDS = int(os.getenv("SCHEDULER_DEDUP_SECONDS", "90"))
+TOTAL_CAROUSEL_SLOTS = 21
+
 # ─── CORS Configuration ───────────────────────────────────────────────
 CORS_ORIGINS = [
     "http://localhost:5173",

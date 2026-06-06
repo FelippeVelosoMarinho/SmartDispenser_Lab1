@@ -4,6 +4,7 @@ import { listDispensers, getDispenserDetails } from "../lib/api";
 import type { DispenserDetails } from "../lib/api";
 import { TelemetryGrid } from "../components/dashboard/TelemetryGrid";
 import { CompartmentsSection } from "../components/dashboard/CompartmentsSection";
+import { PeriodScheduleSection } from "../components/dashboard/PeriodScheduleSection";
 import { DispenserGuideSection } from "../components/dashboard/DispenserGuideSection";
 import { APP_NAME } from "../lib/brand";
 
@@ -221,6 +222,7 @@ export function DashboardPage() {
       </div>
 
       <TelemetryGrid dispenser={activeDispenser} />
+      <PeriodScheduleSection dispenser={activeDispenser} />
       <CompartmentsSection
         dispenser={activeDispenser}
         onDispenserChange={fetchDashboardData}

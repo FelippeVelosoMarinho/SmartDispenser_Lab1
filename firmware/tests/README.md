@@ -3,6 +3,8 @@
 Testes HTTP que rodam direto contra o ESP32 pela rede.
 Cada arquivo testa um módulo do firmware.
 
+> Guia completo (Fases 0–6, hardware + integração): [`../GUIA_TESTES_ESP32_C3.md`](../GUIA_TESTES_ESP32_C3.md)
+
 ## Estrutura
 
 ```

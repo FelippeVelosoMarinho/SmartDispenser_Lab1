@@ -118,6 +118,7 @@ class Schedule(Base):
     dispenser_id = Column(String, nullable=True)  # hardware_id do dispenser
     time_legacy = Column(String, nullable=True)   # ISO datetime ou HH:MM
     last_triggered_at = Column(DateTime, nullable=True)
+    period = Column(String, nullable=True)  # morning | afternoon | night
 
     slot = relationship('Slot', back_populates='schedules', foreign_keys=[slot_id])
 

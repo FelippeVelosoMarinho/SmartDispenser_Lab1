@@ -1,0 +1,17 @@
+{
+  "backend_url": "http://localhost:8001",
+  "credentials": {
+    "username": "caregiver@example.com",
+    "password": "changeme"
+  },
+  "dispenser_mac": "8C:D0:B2:A9:17:4B",
+  "patient_id": "00000000-0000-0000-0000-000000000001",
+  "period_times": {
+    "morning": "21:00",
+    "afternoon": "21:01",
+    "night": "21:02"
+  },
+  "auto_start_cycle": true,
+  "monitor_timeout_seconds": 600,
+  "expected_dispenses": 3
+}

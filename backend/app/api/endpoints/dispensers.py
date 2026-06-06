@@ -20,6 +20,7 @@ from app.crud.dispenser import (
 )
 from app.crud.patient import get_patient, get_patients_by_caregiver
 from app.models.domain import Dispenser, Drawer, Slot, SlotMedication
+from app.crud.schedule import get_period_schedules, upsert_period_schedules
 from app.schemas.dispenser import (
     DiscoveredDispenser,
     DispenserDeletionStatus,
@@ -28,8 +29,13 @@ from app.schemas.dispenser import (
     DispenserPublic,
     DispenserResetConfigurationResult,
     DispenserStatusPublic,
+    HardwareStatusPublic,
+    StartCycleResult,
 )
+from app.schemas.schedule import PeriodSchedulePublic, PeriodSchedulePut
 from app.services.dispenser_online import refresh_dispenser_online_state
+from app.services.esp_proxy import get_hardware_status, post_calibrate, post_confirm
+from app.services.period_config import default_period_times
 
 logger = logging.getLogger(__name__)
 
@@ -274,6 +280,161 @@ def _get_dispenser_for_caregiver(
         raise HTTPException(status_code=403, detail="Not authorized to access this dispenser")
 
     return dispenser
+
+
+def _require_dispenser_ip(dispenser: Dispenser) -> str:
+    if not dispenser.ip_address:
+        raise HTTPException(
+            status_code=503,
+            detail={
+                "code": "DISPENSER_UNREACHABLE",
+                "message": "Dispensador sem endereço IP — aguardando heartbeat.",
+            },
+        )
+    return dispenser.ip_address
+
+
+def _period_schedule_response(
+    hardware_id: str,
+    patient_id: str,
+    rows: list,
+    source: str,
+) -> PeriodSchedulePublic:
+    defaults = default_period_times()
+    times = dict(defaults)
+    is_active = True
+    for row in rows:
+        if row.period and row.time_legacy:
+            times[row.period] = row.time_legacy
+        if row.is_active is not None:
+            is_active = row.is_active
+    return PeriodSchedulePublic(
+        dispenser_id=hardware_id,
+        patient_id=patient_id,
+        morning_time=times["morning"],
+        afternoon_time=times["afternoon"],
+        night_time=times["night"],
+        is_active=is_active,
+        source=source,
+    )
+
+
+@router.get("/{hardware_id}/period-schedule", response_model=PeriodSchedulePublic)
+async def get_period_schedule(
+    hardware_id: str,
+    current_user=Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Return morning/afternoon/night times for a dispenser (DB or env defaults)."""
+    dispenser = _get_dispenser_for_caregiver(db, hardware_id, current_user.username)
+    rows = get_period_schedules(db, hardware_id)
+    patient_id = str(dispenser.patient_id) if dispenser.patient_id else ""
+    if rows:
+        pid = str(rows[0].patient_id) if rows[0].patient_id else patient_id
+        return _period_schedule_response(hardware_id, pid, rows, "database")
+    defaults = default_period_times()
+    return PeriodSchedulePublic(
+        dispenser_id=hardware_id,
+        patient_id=patient_id,
+        morning_time=defaults["morning"],
+        afternoon_time=defaults["afternoon"],
+        night_time=defaults["night"],
+        is_active=True,
+        source="defaults",
+    )
+
+
+@router.put("/{hardware_id}/period-schedule", response_model=PeriodSchedulePublic)
+async def put_period_schedule(
+    hardware_id: str,
+    body: PeriodSchedulePut,
+    current_user=Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Upsert the three period schedules (manhã/tarde/noite) for sequential dispensing."""
+    _get_dispenser_for_caregiver(db, hardware_id, current_user.username)
+    patient = get_patient(db, body.patient_id)
+    if not patient or patient.caregiver_username != current_user.username:
+        raise HTTPException(status_code=403, detail="Not authorized for this patient")
+
+    try:
+        rows = upsert_period_schedules(
+            db,
+            hardware_id,
+            body.patient_id,
+            body.morning_time,
+            body.afternoon_time,
+            body.night_time,
+            body.is_active,
+        )
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+    return _period_schedule_response(hardware_id, body.patient_id, rows, "database")
+
+
+@router.get("/{hardware_id}/hardware-status", response_model=HardwareStatusPublic)
+async def read_hardware_status(
+    hardware_id: str,
+    current_user=Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Proxy ESP GET /status (carousel position, awaiting_confirm)."""
+    dispenser = _get_dispenser_for_caregiver(db, hardware_id, current_user.username)
+    ip = _require_dispenser_ip(dispenser)
+    status = await get_hardware_status(ip)
+    if status is None:
+        raise HTTPException(
+            status_code=503,
+            detail={
+                "code": "DISPENSER_UNREACHABLE",
+                "message": "Não foi possível ler o status do hardware.",
+            },
+        )
+    return HardwareStatusPublic(
+        current_slot=int(status.get("current_slot", 0)),
+        total_slots=int(status.get("total_slots", 21)),
+        awaiting_confirm=status.get("awaiting_confirm") in (True, "true"),
+        last_confirmed_slot=int(status.get("last_confirmed_slot", -1)),
+        wifi_rssi=status.get("wifi_rssi"),
+        hardware_id=status.get("hardware_id"),
+        uptime_s=status.get("uptime_s"),
+    )
+
+
+@router.post("/{hardware_id}/start-cycle", response_model=StartCycleResult)
+async def start_dispenser_cycle(
+    hardware_id: str,
+    current_user=Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Calibrate carousel (slot 0) after refill — integrated Fase B."""
+    dispenser = _get_dispenser_for_caregiver(db, hardware_id, current_user.username)
+    ip = _require_dispenser_ip(dispenser)
+
+    status = await get_hardware_status(ip)
+    if status and status.get("awaiting_confirm") in (True, "true"):
+        await post_confirm(ip)
+
+    ok, _ = await post_calibrate(ip)
+    if not ok:
+        raise HTTPException(
+            status_code=502,
+            detail={
+                "code": "ESP_CALIBRATE_FAILED",
+                "message": "Falha ao calibrar o dispensador.",
+            },
+        )
+
+    after = await get_hardware_status(ip)
+    current_slot = int(after.get("current_slot", 0)) if after else 0
+
+    return StartCycleResult(
+        success=True,
+        message="Ciclo iniciado — roleta calibrada na posição inicial.",
+        current_slot=current_slot,
+        hardware_id=hardware_id,
+    )
 
 
 @router.get("/{hardware_id}/deletion-status", response_model=DispenserDeletionStatus)

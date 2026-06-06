@@ -1,7 +1,7 @@
-"""Dispensation scheduler — fires POST /dispense on the ESP at scheduled times.
+"""Dispensation scheduler — fires POST /dispense on the ESP at configured period times.
 
-Matches schedules by full scheduled_at (±30 s). Validates carousel position via
-GET /status before dispensing. Processes due schedules in position_number order.
+Period schedules (morning/afternoon/night) advance the carousel sequentially (+1 per
+dispense). Legacy position-based schedules (no period field) are ignored.
 """
 
 import asyncio
@@ -10,31 +10,23 @@ import logging
 from typing import Any
 
 import httpx
-from sqlalchemy import or_
 from sqlalchemy.orm import Session
 
-from app.core.database import SessionLocal
-from app.models.domain import DispensationLog, Dispenser, Schedule, Slot
-from app.services.schedule_utils import (
-    carousel_slot_after_dispense,
-    carousel_slot_before_dispense,
+from app.core.config import (
+    SCHEDULER_DEDUP_SECONDS,
+    SCHEDULER_DUE_WINDOW_SECONDS,
+    SCHEDULER_POLL_SECONDS,
+    TOTAL_CAROUSEL_SLOTS,
 )
+from app.core.database import SessionLocal
+from app.models.domain import DispensationLog, Dispenser, Schedule
+from app.services.schedule_utils import carousel_slot_after_sequential
 
 logger = logging.getLogger(__name__)
 
 _DISPENSE_TIMEOUT = 8.0
 _STATUS_TIMEOUT = 5.0
-_POLL_INTERVAL = 30
-_DUE_WINDOW_SECONDS = 30
-_DEDUP_SECONDS = 90
-
-
-def _map_period(hour: int) -> str:
-    if 6 <= hour < 12:
-        return "morning"
-    if 12 <= hour < 18:
-        return "afternoon"
-    return "night"
+_PERIOD_ORDER = {"morning": 0, "afternoon": 1, "night": 2}
 
 
 def _effective_scheduled_at(schedule: Schedule) -> datetime.datetime | None:
@@ -55,11 +47,21 @@ def _effective_scheduled_at(schedule: Schedule) -> datetime.datetime | None:
             return now.replace(hour=hour, minute=minute, second=0, microsecond=0)
         except ValueError:
             return None
+    if schedule.scheduled_time:
+        now = datetime.datetime.now()
+        return now.replace(
+            hour=schedule.scheduled_time.hour,
+            minute=schedule.scheduled_time.minute,
+            second=0,
+            microsecond=0,
+        )
     return None
 
 
 def _is_due(schedule: Schedule, now: datetime.datetime, dedup_cutoff: datetime.datetime) -> bool:
     if not schedule.is_active:
+        return False
+    if not schedule.period:
         return False
     if schedule.last_triggered_at and schedule.last_triggered_at >= dedup_cutoff:
         return False
@@ -69,7 +71,7 @@ def _is_due(schedule: Schedule, now: datetime.datetime, dedup_cutoff: datetime.d
         return False
 
     delta = abs((now - scheduled_at).total_seconds())
-    return delta <= _DUE_WINDOW_SECONDS
+    return delta <= SCHEDULER_DUE_WINDOW_SECONDS
 
 
 async def _get_status(ip: str) -> dict[str, Any] | None:
@@ -112,13 +114,12 @@ def _record_log(
     schedule: Schedule,
     success: bool,
     error: str | None,
-    slot_id: int | None = None,
 ) -> None:
     log = DispensationLog(
         schedule_id_legacy=str(schedule.id),
         patient_id_legacy=str(schedule.patient_id) if schedule.patient_id else None,
         dispenser_id_legacy=schedule.dispenser_id,
-        slot_id=slot_id,
+        slot_id=None,
         actual_execution_time=datetime.datetime.utcnow(),
         success=success,
         error_message=error,
@@ -126,16 +127,12 @@ def _record_log(
     db.add(log)
 
 
-def _position_for_schedule(db: Session, schedule: Schedule) -> int | None:
-    if not schedule.slot_id:
-        return None
-    slot = db.query(Slot).filter(Slot.id == schedule.slot_id).first()
-    return slot.position_number if slot else None
-
-
-async def _process_schedule(db: Session, schedule: Schedule, now: datetime.datetime) -> None:
-    position = _position_for_schedule(db, schedule)
-    period = _map_period(now.hour)
+async def _process_period_schedule(
+    db: Session, schedule: Schedule, now: datetime.datetime
+) -> None:
+    period = schedule.period
+    if period not in _PERIOD_ORDER:
+        return
 
     dispenser: Dispenser | None = None
     if schedule.dispenser_id:
@@ -154,7 +151,7 @@ async def _process_schedule(db: Session, schedule: Schedule, now: datetime.datet
             schedule.id,
             schedule.dispenser_id,
         )
-        _record_log(db, schedule, False, "dispenser not found in DB", schedule.slot_id)
+        _record_log(db, schedule, False, "dispenser not found in DB")
         db.commit()
         return
 
@@ -163,96 +160,87 @@ async def _process_schedule(db: Session, schedule: Schedule, now: datetime.datet
             "[Scheduler] Dispenser %s has no IP yet (no heartbeat) — skipped",
             dispenser.hardware_id,
         )
-        _record_log(db, schedule, False, "no ip_address — heartbeat not received", schedule.slot_id)
-        db.commit()
-        return
-
-    if position is None:
-        _record_log(db, schedule, False, "slot not found for schedule", schedule.slot_id)
+        _record_log(db, schedule, False, "no ip_address — heartbeat not received")
         db.commit()
         return
 
     status = await _get_status(dispenser.ip_address)
     if status is None:
-        _record_log(db, schedule, False, "could not read ESP /status", schedule.slot_id)
+        _record_log(db, schedule, False, "could not read ESP /status")
         db.commit()
         return
 
     if status.get("awaiting_confirm") in (True, "true"):
         logger.warning(
-            "[Scheduler] Dispenser %s awaiting confirmation — skipped schedule %s",
+            "[Scheduler] Dispenser %s awaiting confirmation — skipped %s",
             dispenser.hardware_id,
-            schedule.id,
+            period,
         )
-        _record_log(db, schedule, False, "awaiting_confirm on dispenser", schedule.slot_id)
+        _record_log(db, schedule, False, "awaiting_confirm on dispenser")
         db.commit()
         return
 
     current_slot = int(status.get("current_slot", -1))
-    expected_before = carousel_slot_before_dispense(position)
-    if current_slot != expected_before:
-        msg = (
-            f"carousel mismatch: current_slot={current_slot}, "
-            f"expected_before_dispense={expected_before} for position {position}"
-        )
-        logger.error("[Scheduler] %s — schedule %s", msg, schedule.id)
-        _record_log(db, schedule, False, msg, schedule.slot_id)
-        db.commit()
-        return
+    expected_after = carousel_slot_after_sequential(current_slot, TOTAL_CAROUSEL_SLOTS)
 
-    expected_after = carousel_slot_after_dispense(position)
     logger.info(
-        "[Scheduler] → %s @ %s  schedule=%s  position=%s  period=%s",
+        "[Scheduler] → %s @ %s  period=%s  current_slot=%s  expected_after=%s",
         dispenser.hardware_id,
         dispenser.ip_address,
-        schedule.id,
-        position,
         period,
+        current_slot,
+        expected_after,
     )
 
     success, err_detail = await _call_dispense(
         dispenser.ip_address, period, expected_after
     )
     error = None if success else (err_detail or "ESP /dispense failed")
-    _record_log(db, schedule, success, error, schedule.slot_id)
+    _record_log(db, schedule, success, error)
     db.commit()
 
     if success:
-        logger.info("[Scheduler] ✅ Dispensed — dispenser %s position %s", dispenser.hardware_id, position)
+        logger.info(
+            "[Scheduler] Dispensed — dispenser %s period %s",
+            dispenser.hardware_id,
+            period,
+        )
     else:
-        logger.error("[Scheduler] ❌ Dispense failed — dispenser %s", dispenser.hardware_id)
+        logger.error("[Scheduler] Dispense failed — dispenser %s", dispenser.hardware_id)
 
 
 async def run_dispense_scheduler() -> None:
-    """Async background task: poll DB every 30 s and fire due schedules."""
-    logger.info("[Scheduler] Started — polling every %d s", _POLL_INTERVAL)
+    """Async background task: poll DB and fire due period schedules."""
+    logger.info(
+        "[Scheduler] Started — polling every %d s (period-based)",
+        SCHEDULER_POLL_SECONDS,
+    )
 
     while True:
         try:
             now = datetime.datetime.now()
-            dedup_cutoff = now - datetime.timedelta(seconds=_DEDUP_SECONDS)
+            dedup_cutoff = now - datetime.timedelta(seconds=SCHEDULER_DEDUP_SECONDS)
 
             db: Session = SessionLocal()
             try:
                 candidates = (
                     db.query(Schedule)
                     .filter(Schedule.is_active == True)  # noqa: E712
+                    .filter(Schedule.period.isnot(None))
                     .all()
                 )
                 due = [s for s in candidates if _is_due(s, now, dedup_cutoff)]
-                due.sort(
-                    key=lambda s: _position_for_schedule(db, s) or 999
-                )
+                due.sort(key=lambda s: (_PERIOD_ORDER.get(s.period or "", 99), s.dispenser_id or ""))
 
                 if due:
-                    logger.info("[Scheduler] %d schedule(s) due at %s", len(due), now.isoformat())
+                    logger.info("[Scheduler] %d period schedule(s) due at %s", len(due), now.isoformat())
 
                 for schedule in due:
-                    await _process_schedule(db, schedule, now)
+                    await _process_period_schedule(db, schedule, now)
             finally:
                 db.close()
 
         except Exception:
             logger.exception("[Scheduler] Unexpected error — loop continues")
 
-        await asyncio.sleep(_POLL_INTERVAL)
+        await asyncio.sleep(SCHEDULER_POLL_SECONDS)

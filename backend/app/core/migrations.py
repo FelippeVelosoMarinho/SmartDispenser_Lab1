@@ -275,6 +275,10 @@ _MIGRATIONS: list[tuple[str, str]] = [
         "ALTER TABLE schedules ADD COLUMN IF NOT EXISTS scheduled_at TIMESTAMP;",
     ),
     (
+        "schedules: add period",
+        "ALTER TABLE schedules ADD COLUMN IF NOT EXISTS period TEXT;",
+    ),
+    (
         "dispensers: drop battery_level",
         """
         DO $$

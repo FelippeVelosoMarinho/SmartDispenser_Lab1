@@ -79,4 +79,24 @@ Em ambos os casos:
 ```bash
 # Ver status direto no ESP
 curl http://[IP_DO_ESP]/status
+
+# Guia completo de testes (ESP32-C3, hardware + integração)
+# Ver GUIA_TESTES_ESP32_C3.md
+./scripts/verificar-status.sh [IP_DO_ESP]
 ```
+
+## 🧪 Guia de testes (ESP32-C3 Mini)
+
+Para validar firmware, hardware e dispensação sequencial (posições 1–21), siga o guia passo a passo:
+
+**[GUIA_TESTES_ESP32_C3.md](GUIA_TESTES_ESP32_C3.md)**
+
+Scripts auxiliares em `scripts/`:
+
+| Script | Fase | Descrição |
+|--------|------|-----------|
+| `verificar-status.sh` | 0 | Boot + GET /status |
+| `test-sequencia-manual.sh` | 4 | Sequência manual posições 1→2→3 |
+| `criar-schedule-teste.sh` | 5 | Criar schedule via API para teste do scheduler |
+
+Testes automatizados: [`tests/README.md`](tests/README.md)

@@ -296,6 +296,62 @@ export async function deleteDispenser(hardwareId: string) {
   });
 }
 
+export interface PeriodSchedule {
+  dispenser_id: string;
+  patient_id: string;
+  morning_time: string;
+  afternoon_time: string;
+  night_time: string;
+  is_active: boolean;
+  source: string;
+}
+
+export interface PeriodScheduleInput {
+  patient_id: string;
+  morning_time: string;
+  afternoon_time: string;
+  night_time: string;
+  is_active?: boolean;
+}
+
+export interface HardwareStatus {
+  current_slot: number;
+  total_slots: number;
+  awaiting_confirm: boolean;
+  last_confirmed_slot: number;
+  wifi_rssi?: number;
+  hardware_id?: string;
+  uptime_s?: number;
+}
+
+export interface StartCycleResult {
+  success: boolean;
+  message: string;
+  current_slot: number;
+  hardware_id: string;
+}
+
+export async function getPeriodSchedule(hardwareId: string) {
+  return requestJson<PeriodSchedule>(`${dispenserPath(hardwareId)}/period-schedule`);
+}
+
+export async function savePeriodSchedule(hardwareId: string, input: PeriodScheduleInput) {
+  return requestJson<PeriodSchedule>(`${dispenserPath(hardwareId)}/period-schedule`, {
+    method: "PUT",
+    body: JSON.stringify(input),
+  });
+}
+
+export async function getHardwareStatus(hardwareId: string) {
+  return requestJson<HardwareStatus>(`${dispenserPath(hardwareId)}/hardware-status`);
+}
+
+export async function startDispenserCycle(hardwareId: string) {
+  return requestJson<StartCycleResult>(`${dispenserPath(hardwareId)}/start-cycle`, {
+    method: "POST",
+  });
+}
+
 export function mapPatientStatus(patient: Patient) {
   return patient.dispensers.length > 0 ? "ativo" : "inativo";
 }

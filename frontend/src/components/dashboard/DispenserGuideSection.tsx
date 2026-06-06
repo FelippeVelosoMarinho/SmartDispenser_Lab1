@@ -94,8 +94,8 @@ export function DispenserGuideSection({ dispenser }: DispenserGuideSectionProps)
         Como usar o dispensador
       </h2>
       <p style={{ margin: "0 0 var(--space-5)", color: "var(--ink-2)", fontSize: "var(--text-sm)", maxWidth: "640px" }}>
-        Este painel mostra o estado do dispositivo e os compartimentos. A dispensação automática segue a
-        sequência física da roleta e os horários definidos para cada posição.
+        Três horários por dia (manhã, tarde, noite) avançam a roleta uma posição por vez. Configure os horários
+        acima e use <strong>Iniciar ciclo</strong> após reabastecer — a calibração é automática.
       </p>
 
       <div
@@ -108,25 +108,23 @@ export function DispenserGuideSection({ dispenser }: DispenserGuideSectionProps)
       >
         <InfoCard icon="ph-pill" title="Como funciona">
           <p style={{ margin: "0 0 var(--space-3)" }}>
-            O dispensador possui <strong>21 posições</strong> na roleta — uma semana de tratamento com até
-            três doses por dia (manhã, tarde e noite).
+            O dispensador possui <strong>21 compartimentos</strong> na roleta (7 dias × 3 períodos).
           </p>
           <p style={{ margin: 0 }}>
-            A cada horário programado, a roleta avança <strong>uma posição</strong> e libera os comprimidos
-            daquela gaveta. Alertas visuais, sonoros ou por vibração permanecem ativos até {patientLabel}{" "}
-            confirmar a retirada no botão do aparelho.
+            A cada horário (manhã → tarde → noite), a roleta avança <strong>uma posição</strong>. O LED indica
+            o período e o alerta permanece até {patientLabel} confirmar no botão do aparelho.
           </p>
         </InfoCard>
 
-        <InfoCard icon="ph-clock" title="Quando as pílulas são dispensadas">
+        <InfoCard icon="ph-clock" title="Horários configuráveis">
           <p style={{ margin: "0 0 var(--space-3)" }}>
-            A dispensação ocorre <strong>automaticamente</strong> na data e hora vinculadas a cada posição
-            (1 a 21), enquanto o aparelho estiver conectado à rede.
+            Defina três horários no painel: <strong>manhã</strong>, <strong>tarde</strong> e <strong>noite</strong>.
+            Para testes, use horários próximos (ex.: 21:00, 21:01, 21:02).
           </p>
           <ul style={{ margin: 0, paddingLeft: "1.25rem" }}>
-            <li>Posição 1 é a primeira dose da sequência; posição 2, a segunda; e assim por diante.</li>
-            <li>Cada horário deve respeitar a ordem: posições maiores vêm depois no tempo.</li>
-            <li>Se houver dose pendente de confirmação, uma nova dispensação não é iniciada.</li>
+            <li>O servidor dispara a dispensação automaticamente nos horários salvos.</li>
+            <li>Se houver dose pendente de confirmação, a próxima não inicia.</li>
+            <li>A sequência física segue: compartimento 1, 2, 3… até 21.</li>
           </ul>
         </InfoCard>
 
@@ -137,29 +135,23 @@ export function DispenserGuideSection({ dispenser }: DispenserGuideSectionProps)
           </p>
           <ul style={{ margin: 0, paddingLeft: "1.25rem" }}>
             <li>Se o aparelho estiver na rede, o reset é automático antes de apagar o registro.</li>
-            <li>Sem rede: segure volume + e - por 5 segundos, ou use{" "}
-              <code>POST http://&lt;IP&gt;/reset-wifi</code> com o dispensador ligado.</li>
+            <li>Sem rede: segure volume + e - por 5 segundos no aparelho.</li>
           </ul>
         </InfoCard>
 
         <InfoCard icon="ph-gear-six" title="Como configurar">
           <ol style={{ margin: 0, paddingLeft: "1.25rem" }}>
             <li style={{ marginBottom: "var(--space-2)" }}>
-              <strong>Parear o aparelho</strong> na rede Wi-Fi e vinculá-lo a {patientLabel}.
+              <strong>Parear</strong> o aparelho e vinculá-lo a {patientLabel}.
             </li>
             <li style={{ marginBottom: "var(--space-2)" }}>
-              <strong>Reabastecer em ordem</strong>: coloque os medicamentos da posição 1 à 21, na sequência
-              em que serão tomados.
+              <strong>Reabastecer</strong> compartimentos 1→21 e cadastrar medicamentos no mapa.
             </li>
             <li style={{ marginBottom: "var(--space-2)" }}>
-              <strong>Cadastrar medicamentos</strong> no mapa de compartimentos acima (clique em cada posição).
-            </li>
-            <li style={{ marginBottom: "var(--space-2)" }}>
-              <strong>Calibrar a roleta</strong> após cada reabastecimento completo (zera no início da sequência).
+              <strong>Iniciar ciclo</strong> — calibra a roleta automaticamente (posição inicial).
             </li>
             <li>
-              <strong>Definir horários</strong> de cada posição no sistema — a equipe de cuidado associa data,
-              hora e número da posição para o servidor disparar no momento certo.
+              <strong>Salvar horários</strong> de manhã, tarde e noite.
             </li>
           </ol>
         </InfoCard>
@@ -188,20 +180,17 @@ export function DispenserGuideSection({ dispenser }: DispenserGuideSectionProps)
           Fluxo resumido
         </h3>
         <ol style={{ margin: 0, padding: 0, listStyle: "none", display: "flex", flexDirection: "column", gap: "var(--space-4)" }}>
-          <GuideStep number={1} title="Reabastecimento semanal">
-            Preencha as posições 1 a 21 na ordem dos dias e períodos (manhã, tarde, noite). Use o mapa
-            circular para registrar o que há em cada compartimento.
+          <GuideStep number={1} title="Reabastecimento">
+            Preencha compartimentos 1–21 e registre medicamentos no mapa circular.
           </GuideStep>
-          <GuideStep number={2} title="Calibração">
-            Após fechar o dispensador, execute a calibração para que a roleta comece na posição inicial.
+          <GuideStep number={2} title="Iniciar ciclo">
+            Clique em <strong>Concluir reabastecimento e iniciar ciclo</strong> — calibração automática.
           </GuideStep>
-          <GuideStep number={3} title="Horário programado">
-            No momento configurado, o servidor aciona o aparelho: a roleta avança, os LEDs indicam o período
-            (sol / sol com nuvem / lua) e o alerta chama a atenção de {patientLabel}.
+          <GuideStep number={3} title="Horários">
+            Salve manhã, tarde e noite. O servidor aciona o ESP nos horários configurados.
           </GuideStep>
           <GuideStep number={4} title="Confirmação">
-            {patientLabel} retira os comprimidos e pressiona o botão de confirmação. O sistema registra a
-            adesão para acompanhamento no painel.
+            {patientLabel} retira os comprimidos e pressiona o botão de confirmação no aparelho.
           </GuideStep>
         </ol>
       </div>

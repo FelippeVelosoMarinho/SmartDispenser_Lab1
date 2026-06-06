@@ -10,6 +10,7 @@ import {
   removeSlotMedication,
   updateSlotMedicationQuantity,
 } from "../../lib/api";
+import { useHardwareStatus } from "./PeriodScheduleSection";
 
 interface CompartmentsSectionProps {
   dispenser: DispenserDetails;
@@ -67,6 +68,11 @@ function AnnularSlice({
 export function CompartmentsSection({ dispenser, onDispenserChange }: CompartmentsSectionProps) {
   const [editingSlotId, setEditingSlotId] = useState<string | null>(null);
   const [hoveredSlotId, setHoveredSlotId] = useState<string | null>(null);
+  const hwStatus = useHardwareStatus(dispenser.hardware_id, dispenser.is_online);
+  const nextDoseNumber =
+    hwStatus != null
+      ? Math.min(hwStatus.current_slot + 1, Math.min(hwStatus.total_slots, 21))
+      : null;
 
   const dbSlots = dispenser.drawers.flatMap(d => d.slots);
 
@@ -118,7 +124,12 @@ export function CompartmentsSection({ dispenser, onDispenserChange }: Compartmen
       else fill = "var(--success, #10b981)";
     }
 
-    const isActive = hoveredSlotId === slot.id || editingSlotId === slot.id;
+    const isNextDose =
+      nextDoseNumber != null &&
+      slot.display_number === nextDoseNumber &&
+      slot.display_number <= 21;
+
+    const isActive = hoveredSlotId === slot.id || editingSlotId === slot.id || isNextDose;
 
     return (
       <AnnularSlice
@@ -151,6 +162,12 @@ export function CompartmentsSection({ dispenser, onDispenserChange }: Compartmen
       }}>
         Slots / Posições (Visão Circular)
       </h2>
+      {nextDoseNumber != null && (
+        <p style={{ margin: "0 0 var(--space-3)", fontSize: "var(--text-sm)", color: "var(--primary)" }}>
+          Próxima dose: compartimento <strong>{nextDoseNumber}</strong>
+          {hwStatus?.awaiting_confirm ? " (aguardando confirmação no aparelho)" : ""}
+        </p>
+      )}
 
       <div style={{
         background: "var(--surface)",
