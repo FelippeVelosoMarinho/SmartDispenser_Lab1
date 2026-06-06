@@ -68,12 +68,12 @@ export function PeriodScheduleSection({ dispenser }: PeriodScheduleSectionProps)
       return;
     }
     try {
-      const status = await getHardwareStatus(hardwareId);
+      const status = await getHardwareStatus(hardwareId, dispenser.ip_address);
       setHwStatus(status);
     } catch {
       setHwStatus(null);
     }
-  }, [hardwareId, dispenser.is_online]);
+  }, [hardwareId, dispenser.is_online, dispenser.ip_address]);
 
   useEffect(() => {
     let cancelled = false;
@@ -135,7 +135,7 @@ export function PeriodScheduleSection({ dispenser }: PeriodScheduleSectionProps)
     setError(null);
     setMessage(null);
     try {
-      const result = await startDispenserCycle(hardwareId);
+      const result = await startDispenserCycle(hardwareId, dispenser.ip_address);
       setMessage(result.message);
       await refreshHardware();
     } catch (err) {

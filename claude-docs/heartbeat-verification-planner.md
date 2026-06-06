@@ -66,7 +66,7 @@ Backend (ou teste manual)
     lastConfirmedSlot atualizado (local no ESP)
 ```
 
-Agendamentos existem no backend (`GET /api/sync/{hardware_id}`), mas **o firmware ainda não baixa nem executa horários offline** — não há cron/RTC no ESP que dispare `/dispense` sozinho.
+**Atualização (fila via heartbeat):** o scheduler enfileira comandos `dispense` em `pending_commands`. O ESP recebe o comando na resposta de `POST /api/heartbeat`, executa localmente e confirma com `command_ack` + `POST /api/event`. Latência máxima ≈ `HEARTBEAT_INTERVAL_MS` (30 s). O endpoint `GET /api/sync/{hardware_id}` permanece legado (horários por slot), não usado pelo scheduler de períodos.
 
 ---
 
@@ -75,11 +75,11 @@ Agendamentos existem no backend (`GET /api/sync/{hardware_id}`), mas **o firmwar
 | # | Pergunta | Resposta esperada após testes |
 |---|----------|-------------------------------|
 | 1 | O heartbeat dispara a cada 30 s com Wi-Fi estável? | Serial: `[Heartbeat] 200 ← ...` |
-| 2 | O heartbeat avança slot ou libera bandeja? | **Não** — slot só muda via `POST /dispense` |
-| 3 | `current_slot` no heartbeat reflete a roleta real? | Sim no JSON enviado, mas backend **descarta** |
+| 2 | O heartbeat avança slot ou libera bandeja? | **Não diretamente** — pode **entregar** comando `dispense` na resposta; execução é local |
+| 3 | `current_slot` no heartbeat reflete a roleta real? | Sim — backend **persiste** em `dispensers.current_slot` para o scheduler |
 | 4 | Dashboard mostra "conectado" graças ao heartbeat? | Sim — `last_sync` e `is_online` |
 | 5 | Alertas de estoque crítico funcionam? | **Não** — valor fixo no firmware |
-| 6 | Horários de liberação estão definidos onde? | Backend (`schedules` table) + endpoint `/sync`; ESP não consome ainda |
+| 6 | Horários de liberação estão definidos onde? | Backend (`schedules.period`) → fila `pending_commands` → entrega no heartbeat |
 
 ---
 
@@ -138,15 +138,18 @@ Agendamentos existem no backend (`GET /api/sync/{hardware_id}`), mas **o firmwar
 | Dose não confirmada (timeout) | `POST /api/event` success=false | já mapeado |
 | Slot avançou | opcional, junto com dispense | `current_slot` |
 
-### Recomendação arquitetural (pós-verificação)
+### Arquitetura implementada (fila via heartbeat)
 
-1. **Manter heartbeat periódico** (intervalo configurável, ex.: 60–120 s) apenas para telemetria de **presença** (`online`, `last_sync`, `ip`, RSSI).
-2. **Não usar heartbeat para slot** — enviar `current_slot` no evento de dispense/confirmação ou estender schema se o dashboard precisar.
-3. **Implementar no firmware** (fase futura):
-   - Download de horários via `GET /api/sync/{mac}`
-   - Timer local (NTP + cron) para chamar `advanceCarousel()` nos horários
-   - Contagem de slots vazios → `critical_stock`
-4. **Reduzir frequência** se 30 s for excessivo para lwIP (risco de crash TCP já documentado em `DEPENDENCIES.md`).
+1. **Heartbeat** (30 s): telemetria (`online`, `last_sync`, `ip`, `current_slot`, `awaiting_confirm`) + entrega de comandos pendentes.
+2. **Scheduler** (`SCHEDULER_MODE=queue`): enfileira `dispense` — não faz push HTTP para IP privado.
+3. **ESP**: `heartbeat_client.cpp` executa comando, envia `POST /api/event` e `command_ack` no heartbeat seguinte.
+4. **Config**: `COMMAND_ACK_TIMEOUT_SECONDS=900` — comandos `delivered` sem ACK expiram como `failed`.
+
+### Backlog opcional
+
+- `poll_fast` quando há comando pendente (reduzir intervalo para 15 s)
+- Telemetria real de estoque → `critical_stock`
+- Sync offline via NTP (alternativa à fila)
 
 ---
 
@@ -161,9 +164,11 @@ Agendamentos existem no backend (`GET /api/sync/{hardware_id}`), mas **o firmwar
 
 ## 7. Referências no Repositório
 
-- `firmware/eco-dispenser/eco-dispenser.ino` — `sendHeartbeat()`, loop 30 s
+- `firmware/eco-dispenser/heartbeat_client.cpp` — heartbeat + pull de comandos
+- `firmware/eco-dispenser/dispense_command.cpp` — `executeDispense()`
 - `firmware/eco-dispenser/config.h` — `HEARTBEAT_INTERVAL_MS`
-- `firmware/eco-dispenser/api_server.cpp` — `POST /dispense`
+- `firmware/eco-dispenser/api_server.cpp` — `POST /dispense` (LAN / testes)
+- `backend/app/crud/command_queue.py` — fila `pending_commands`
 - `firmware/eco-dispenser/carousel.cpp` — avanço da roleta
 - `backend/app/api/endpoints/iot.py` — heartbeat, sync, event
 - `backend/app/schemas/iot.py` — `HeartbeatCreate`

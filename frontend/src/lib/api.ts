@@ -35,6 +35,7 @@ export interface Dispenser {
   is_online: boolean;
   critical_stock: boolean;
   last_sync: string | null;
+  ip_address?: string | null;
 }
 
 export interface DispenserStatusPublic {
@@ -342,11 +343,46 @@ export async function savePeriodSchedule(hardwareId: string, input: PeriodSchedu
   });
 }
 
-export async function getHardwareStatus(hardwareId: string) {
+export async function getHardwareStatus(
+  hardwareId: string,
+  ipAddress?: string | null,
+) {
+  if (ipAddress) {
+    const { getHardwareStatusLocal } = await import("./espLocal");
+    try {
+      return await getHardwareStatusLocal(ipAddress);
+    } catch (localErr) {
+      try {
+        return await requestJson<HardwareStatus>(
+          `${dispenserPath(hardwareId)}/hardware-status`,
+        );
+      } catch {
+        throw localErr;
+      }
+    }
+  }
   return requestJson<HardwareStatus>(`${dispenserPath(hardwareId)}/hardware-status`);
 }
 
-export async function startDispenserCycle(hardwareId: string) {
+export async function startDispenserCycle(
+  hardwareId: string,
+  ipAddress?: string | null,
+) {
+  if (ipAddress) {
+    const { startDispenserCycleLocal } = await import("./espLocal");
+    try {
+      return await startDispenserCycleLocal(ipAddress, hardwareId);
+    } catch (localErr) {
+      try {
+        return await requestJson<StartCycleResult>(
+          `${dispenserPath(hardwareId)}/start-cycle`,
+          { method: "POST" },
+        );
+      } catch {
+        throw localErr;
+      }
+    }
+  }
   return requestJson<StartCycleResult>(`${dispenserPath(hardwareId)}/start-cycle`, {
     method: "POST",
   });

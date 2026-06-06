@@ -1,0 +1,187 @@
+#include "heartbeat_client.h"
+#include "config.h"
+#include "provisioning.h"
+#include "carousel.h"
+#include "alerts.h"
+#include "dispense_command.h"
+#include "json_utils.h"
+
+#include <WiFi.h>
+#include <HTTPClient.h>
+#include <WiFiClientSecure.h>
+
+static String sBackendUrl = "";
+static String pendingAckCommandId = "";
+static bool pendingAckSuccess = false;
+static String pendingAckError = "";
+static String lastExecutedCommandId = "";
+static bool lastAckSuccess = false;
+static String lastAckError = "";
+
+void setBackendUrl(const String& url) {
+  sBackendUrl = url;
+}
+
+static void sendIotEvent(const String& mac, bool success, const String& errorMsg) {
+  if (sBackendUrl.length() == 0 || WiFi.status() != WL_CONNECTED) return;
+
+  String url = sBackendUrl + "/api/event";
+  bool isHttps = url.startsWith("https://");
+
+  WiFiClient* client = nullptr;
+  if (isHttps) {
+    WiFiClientSecure* secureClient = new WiFiClientSecure();
+    secureClient->setInsecure();
+    client = secureClient;
+  } else {
+    client = new WiFiClient();
+  }
+
+  HTTPClient http;
+  if (http.begin(*client, url)) {
+    http.addHeader("Content-Type", "application/json");
+    http.addHeader("ngrok-skip-browser-warning", "true");
+    http.setTimeout(5000);
+    http.setReuse(false);
+
+    String body = "{\"dispenser_id\":\"" + mac + "\","
+                  "\"event_type\":\"dispensed\","
+                  "\"success\":" + String(success ? "true" : "false");
+    if (errorMsg.length() > 0) {
+      body += ",\"error_message\":\"" + errorMsg + "\"";
+    }
+    body += "}";
+
+    int code = http.POST(body);
+    Serial.println("[Event] POST /api/event " + String(code));
+    http.end();
+  }
+  delete client;
+}
+
+static void queueCommandAck(const String& commandId, bool success, const String& error) {
+  pendingAckCommandId = commandId;
+  pendingAckSuccess = success;
+  pendingAckError = error;
+}
+
+static void processHeartbeatCommand(const String& responseBody, const String& mac) {
+  if (responseBody.indexOf("\"command\":null") >= 0) return;
+  if (responseBody.indexOf("\"command\":{") < 0) return;
+
+  String cmdId = extractJsonField(responseBody, "id");
+  String cmdType = extractJsonField(responseBody, "type");
+  if (cmdId.length() == 0 || cmdType != "dispense") return;
+
+  if (cmdId == lastExecutedCommandId) {
+    Serial.println("[Heartbeat] command already executed — re-ACK " + cmdId);
+    queueCommandAck(cmdId, lastAckSuccess, lastAckError);
+    return;
+  }
+
+  String period = extractJsonField(responseBody, "period");
+  String silentStr = extractJsonField(responseBody, "silent_mode");
+  String expectedStr = extractJsonField(responseBody, "expected_slot");
+  bool silentMode = (silentStr == "true");
+  bool hasExpected = (expectedStr.length() > 0);
+  int expectedSlot = hasExpected ? expectedStr.toInt() : 0;
+
+  Serial.println("[Heartbeat] command received: dispense " + period +
+                 " expected=" + expectedStr);
+
+  DispenseResult result = executeDispense(period, silentMode, expectedSlot, hasExpected);
+  lastExecutedCommandId = cmdId;
+
+  String errMsg = result.error ? String(result.error) : "";
+  lastAckSuccess = result.success;
+  lastAckError = errMsg;
+  queueCommandAck(cmdId, result.success, errMsg);
+  if (!result.success) {
+    sendIotEvent(mac, false, errMsg);
+  }
+
+  Serial.println("[Heartbeat] command ack queued: " + cmdId +
+                 " success=" + String(result.success ? "true" : "false"));
+}
+
+void sendHeartbeat() {
+  if (WiFi.status() != WL_CONNECTED) return;
+  if (sBackendUrl.length() == 0) {
+    Serial.println("[Heartbeat] BACKEND_URL não configurado — pulando.");
+    return;
+  }
+
+  String url = sBackendUrl + "/api/heartbeat";
+  bool isHttps = url.startsWith("https://");
+
+  WiFiClient* client = nullptr;
+  if (isHttps) {
+    WiFiClientSecure* secureClient = new WiFiClientSecure();
+    secureClient->setInsecure();
+    client = secureClient;
+  } else {
+    client = new WiFiClient();
+  }
+
+  HTTPClient http;
+
+  if (http.begin(*client, url)) {
+    http.addHeader("Content-Type", "application/json");
+    http.addHeader("ngrok-skip-browser-warning", "true");
+    http.setTimeout(5000);
+    http.setReuse(false);
+
+    String mac = getHardwareId();
+    String ip = WiFi.localIP().toString();
+
+    String body = "{\"dispenser_id\":\"" + mac + "\","
+                  "\"uptime_s\":" + String(millis() / 1000) + ","
+                  "\"current_slot\":" + String(getCurrentSlot()) + ","
+                  "\"wifi_rssi\":" + String(WiFi.RSSI()) + ","
+                  "\"online\":true,"
+                  "\"critical_stock\":false,"
+                  "\"awaiting_confirm\":" + String(isAwaitingConfirmation() ? "true" : "false") + ","
+                  "\"ip_address\":\"" + ip + "\"";
+
+    if (pendingAckCommandId.length() > 0) {
+      body += ",\"command_ack\":{\"command_id\":\"" + pendingAckCommandId + "\","
+              "\"success\":" + String(pendingAckSuccess ? "true" : "false");
+      if (pendingAckError.length() > 0) {
+        body += ",\"error\":\"" + pendingAckError + "\"";
+      }
+      body += "}";
+      pendingAckCommandId = "";
+      pendingAckError = "";
+    }
+
+    body += "}";
+
+    int code = http.POST(body);
+    String response = "";
+    if (code > 0) {
+      Serial.println("[Heartbeat] " + String(code) + " ← " + url);
+      WiFiClient* stream = http.getStreamPtr();
+      if (stream) {
+        while (stream->available()) {
+          response += (char)stream->read();
+        }
+      } else {
+        response = http.getString();
+      }
+      if (code == 200 && response.length() > 0) {
+        processHeartbeatCommand(response, mac);
+      } else if (code != 200) {
+        if (response.length() == 0) response = http.getString();
+        Serial.println("[Heartbeat] Resposta Erro: " + response);
+      }
+    } else {
+      Serial.println("[Heartbeat] Falha ao contactar backend: " + http.errorToString(code));
+    }
+    http.end();
+    client->stop();
+    delay(100);
+  } else {
+    Serial.println("[Heartbeat] Falha ao inicializar conexão HTTP");
+  }
+  delete client;
+}

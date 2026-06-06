@@ -1,15 +1,19 @@
 """IoT/Hardware endpoints."""
 
 import time
+import uuid
+
 import httpx
 from fastapi import APIRouter, HTTPException, Request, Depends, BackgroundTasks
 from sqlalchemy.orm import Session
 from app.core.database import get_db
 
-from app.core.config import ESP32_BASE_URL
+from app.core.config import COMMAND_ACK_TIMEOUT_SECONDS, ESP32_BASE_URL
+from app.crud import command_queue as crud_command_queue
 from app.crud import schedule as crud_schedule
 from app.crud import log as crud_log
 from app.crud import dispenser as crud_dispenser
+from app.services.dispensation_log import record_schedule_dispensation_log
 from app.models.domain import User, Patient, Dispenser, Medication
 from app.services.notifier import send_email_notification
 from app.services.templates import (
@@ -28,6 +32,7 @@ from app.schemas.iot import (
     IotEventResponse,
     HeartbeatCreate,
     HeartbeatResponse,
+    PendingCommandPublic,
 )
 
 router = APIRouter(prefix="/api", tags=["iot"])
@@ -301,18 +306,54 @@ async def process_heartbeat(
                         html_body=html_body
                     )
 
-    # 2. Update dispenser status in DB
+    crud_command_queue.expire_stale_delivered(db, COMMAND_ACK_TIMEOUT_SECONDS)
+
+    if heartbeat.command_ack:
+        try:
+            ack_id = uuid.UUID(heartbeat.command_ack.command_id)
+            command = crud_command_queue.process_command_ack(
+                db,
+                ack_id,
+                heartbeat.command_ack.success,
+                heartbeat.command_ack.error,
+            )
+            if command:
+                record_schedule_dispensation_log(
+                    db,
+                    command,
+                    heartbeat.command_ack.success,
+                    heartbeat.command_ack.error,
+                )
+        except ValueError:
+            pass
+
     status_data = {
         "dispenser_id": heartbeat.dispenser_id,
         "online": heartbeat.online,
         "critical_stock": heartbeat.critical_stock,
         "ip_address": heartbeat.ip_address,
+        "current_slot": heartbeat.current_slot,
+        "awaiting_confirm": heartbeat.awaiting_confirm,
     }
-    
+
     crud_dispenser.update_dispenser_status(db, heartbeat.dispenser_id, status_data)
-    
+
+    pending = crud_command_queue.get_command_for_delivery(db, heartbeat.dispenser_id)
+    command_public = None
+    if pending:
+        if pending.status == "pending":
+            crud_command_queue.mark_delivered(db, pending)
+        command_public = PendingCommandPublic(
+            id=str(pending.id),
+            type=pending.command_type,
+            period=pending.period,
+            expected_slot=pending.expected_slot,
+            silent_mode=bool(pending.silent_mode),
+        )
+
     return HeartbeatResponse(
-        message="Heartbeat recorded successfully."
+        message="Heartbeat recorded successfully.",
+        command=command_public,
     )
 
 

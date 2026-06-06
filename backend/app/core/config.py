@@ -26,6 +26,8 @@ SCHEDULER_POLL_SECONDS = int(os.getenv("SCHEDULER_POLL_SECONDS", "10"))
 SCHEDULER_DUE_WINDOW_SECONDS = int(os.getenv("SCHEDULER_DUE_WINDOW_SECONDS", "30"))
 SCHEDULER_DEDUP_SECONDS = int(os.getenv("SCHEDULER_DEDUP_SECONDS", "90"))
 TOTAL_CAROUSEL_SLOTS = 21
+SCHEDULER_MODE = os.getenv("SCHEDULER_MODE", "queue")  # queue | push
+COMMAND_ACK_TIMEOUT_SECONDS = int(os.getenv("COMMAND_ACK_TIMEOUT_SECONDS", "900"))
 
 # ─── CORS Configuration ───────────────────────────────────────────────
 CORS_ORIGINS = [

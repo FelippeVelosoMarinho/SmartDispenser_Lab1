@@ -1,5 +1,6 @@
 """Dispensers endpoints."""
 
+import ipaddress
 import logging
 from typing import List
 import datetime
@@ -282,6 +283,31 @@ def _get_dispenser_for_caregiver(
     return dispenser
 
 
+def _is_private_lan_ip(ip: str) -> bool:
+    try:
+        return ipaddress.ip_address(ip).is_private
+    except ValueError:
+        return False
+
+
+def _unreachable_detail(ip: str | None, *, reason: str) -> dict:
+    if ip and _is_private_lan_ip(ip):
+        return {
+            "code": "DISPENSER_LAN_ONLY",
+            "message": (
+                f"O servidor não consegue acessar o IP local do dispensador ({ip}). "
+                "Use o painel web na mesma rede Wi-Fi do ESP32 ou execute o backend na LAN."
+            ),
+            "ip_address": ip,
+            "reason": reason,
+        }
+    return {
+        "code": "DISPENSER_UNREACHABLE",
+        "message": "Não foi possível ler o status do hardware.",
+        "reason": reason,
+    }
+
+
 def _require_dispenser_ip(dispenser: Dispenser) -> str:
     if not dispenser.ip_address:
         raise HTTPException(
@@ -386,10 +412,7 @@ async def read_hardware_status(
     if status is None:
         raise HTTPException(
             status_code=503,
-            detail={
-                "code": "DISPENSER_UNREACHABLE",
-                "message": "Não foi possível ler o status do hardware.",
-            },
+            detail=_unreachable_detail(ip, reason="hardware_status"),
         )
     return HardwareStatusPublic(
         current_slot=int(status.get("current_slot", 0)),
@@ -418,6 +441,11 @@ async def start_dispenser_cycle(
 
     ok, _ = await post_calibrate(ip)
     if not ok:
+        if _is_private_lan_ip(ip):
+            raise HTTPException(
+                status_code=503,
+                detail=_unreachable_detail(ip, reason="start_cycle_calibrate"),
+            )
         raise HTTPException(
             status_code=502,
             detail={

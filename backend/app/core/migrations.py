@@ -292,6 +292,35 @@ _MIGRATIONS: list[tuple[str, str]] = [
         END $$;
         """,
     ),
+    (
+        "dispensers: add current_slot",
+        "ALTER TABLE dispensers ADD COLUMN IF NOT EXISTS current_slot INTEGER;",
+    ),
+    (
+        "dispensers: add awaiting_confirm",
+        "ALTER TABLE dispensers ADD COLUMN IF NOT EXISTS awaiting_confirm BOOLEAN DEFAULT false;",
+    ),
+    (
+        "pending_commands: create table",
+        """
+        CREATE TABLE IF NOT EXISTS pending_commands (
+            id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+            hardware_id TEXT NOT NULL,
+            command_type TEXT NOT NULL,
+            period TEXT,
+            expected_slot INTEGER,
+            silent_mode BOOLEAN DEFAULT false,
+            schedule_id UUID REFERENCES schedules(id),
+            status TEXT NOT NULL DEFAULT 'pending',
+            error_message TEXT,
+            created_at TIMESTAMP DEFAULT NOW(),
+            delivered_at TIMESTAMP,
+            completed_at TIMESTAMP
+        );
+        CREATE INDEX IF NOT EXISTS idx_pending_commands_hardware_status
+            ON pending_commands (hardware_id, status);
+        """,
+    ),
 ]
 
 

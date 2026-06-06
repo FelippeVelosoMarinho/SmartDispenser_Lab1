@@ -53,6 +53,8 @@ def update_dispenser_status(db: Session, hardware_id: str, status: dict) -> dict
             is_online=status.get("online", True),
             critical_stock=status.get("critical_stock", False),
             ip_address=status.get("ip_address"),
+            current_slot=status.get("current_slot"),
+            awaiting_confirm=status.get("awaiting_confirm", False),
             last_sync=now
         )
         db.add(dispenser)
@@ -61,6 +63,10 @@ def update_dispenser_status(db: Session, hardware_id: str, status: dict) -> dict
         dispenser.critical_stock = status.get("critical_stock", dispenser.critical_stock)
         if "ip_address" in status and status["ip_address"]:
             dispenser.ip_address = status["ip_address"]
+        if "current_slot" in status and status["current_slot"] is not None:
+            dispenser.current_slot = status["current_slot"]
+        if "awaiting_confirm" in status and status["awaiting_confirm"] is not None:
+            dispenser.awaiting_confirm = status["awaiting_confirm"]
         dispenser.last_sync = now
         
     db.commit()

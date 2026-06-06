@@ -4,34 +4,11 @@
 #include "alerts.h"
 #include "buttons.h"
 #include "provisioning.h"
+#include "dispense_command.h"
+#include "json_utils.h"
 #include <WiFi.h>
 
-// ── JSON helper ───────────────────────────────────────────────────────
-static String extractField(const String& body, const String& key) {
-  int keyPos = body.indexOf("\"" + key + "\"");
-  if (keyPos == -1) return "";
-
-  int colonPos = body.indexOf(":", keyPos);
-  if (colonPos == -1) return "";
-
-  int valStart = colonPos + 1;
-  while (valStart < (int)body.length() && body[valStart] == ' ') valStart++;
-
-  bool inString = (body[valStart] == '"');
-  if (inString) valStart++;
-
-  String val = "";
-  for (int i = valStart; i < (int)body.length(); i++) {
-    char c = body[i];
-    if (inString  && c == '"')                           break;
-    if (!inString && (c == ',' || c == '}' || c == ' ')) break;
-    val += c;
-  }
-  return val;
-}
-
 // ── CORS helper ───────────────────────────────────────────────────────
-// Encapsula request->send com os headers necessários para o browser chamar o ESP diretamente.
 static void sendJson(AsyncWebServerRequest* request, int code, const String& json) {
   AsyncWebServerResponse* resp = request->beginResponse(code, "application/json", json);
   resp->addHeader("Access-Control-Allow-Origin", "*");
@@ -44,7 +21,6 @@ static void sendJson(AsyncWebServerRequest* request, int code, const String& jso
 
 void setupApiServer(AsyncWebServer& server) {
 
-  // OPTIONS preflight — necessário para requisições cross-origin do browser
   server.onNotFound([](AsyncWebServerRequest* request) {
     if (request->method() == HTTP_OPTIONS) {
       AsyncWebServerResponse* resp = request->beginResponse(204);
@@ -57,7 +33,6 @@ void setupApiServer(AsyncWebServer& server) {
     }
   });
 
-  // GET /status
   server.on("/status", HTTP_GET, [](AsyncWebServerRequest* request) {
     String json = "{";
     json += "\"current_slot\":"        + String(getCurrentSlot())                          + ",";
@@ -71,9 +46,6 @@ void setupApiServer(AsyncWebServer& server) {
     sendJson(request, 200, json);
   });
 
-  // POST /dispense
-  // Body: {"period": "morning"|"afternoon"|"night", "silent_mode": bool,
-  //        "expected_slot": 0-20}  // optional — slot index after advance
   server.on("/dispense", HTTP_POST,
     [](AsyncWebServerRequest* request) {},
     NULL,
@@ -82,43 +54,29 @@ void setupApiServer(AsyncWebServer& server) {
       for (size_t i = 0; i < len; i++) body += (char)data[i];
       Serial.println("POST /dispense: " + body);
 
-      String period    = extractField(body, "period");
-      String silentStr = extractField(body, "silent_mode");
-      String expectedStr = extractField(body, "expected_slot");
-      bool silentMode  = (silentStr == "true");
+      String period = extractJsonField(body, "period");
+      String silentStr = extractJsonField(body, "silent_mode");
+      String expectedStr = extractJsonField(body, "expected_slot");
+      bool silentMode = (silentStr == "true");
       bool hasExpected = (expectedStr.length() > 0);
+      int expectedSlot = hasExpected ? expectedStr.toInt() : 0;
 
-      if (period != "morning" && period != "afternoon" && period != "night") {
-        period = "morning";
+      DispenseResult result = executeDispense(period, silentMode, expectedSlot, hasExpected);
+
+      if (!result.success) {
+        int httpCode = 400;
+        if (String(result.error) == "slot_mismatch") httpCode = 409;
+        if (String(result.error) == "awaiting_confirm") httpCode = 409;
+        String resp = buildDispenseResponseJson(result, hasExpected ? expectedSlot : 0);
+        sendJson(request, httpCode, resp);
+        return;
       }
 
-      if (hasExpected) {
-        int expectedAfter = expectedStr.toInt();
-        if (expectedAfter < 0 || expectedAfter >= TOTAL_SLOTS) {
-          String resp = "{\"success\":false,\"error\":\"invalid_expected_slot\","
-                        "\"current_slot\":" + String(getCurrentSlot()) + "}";
-          sendJson(request, 400, resp);
-          return;
-        }
-        int requiredBefore = (expectedAfter - 1 + TOTAL_SLOTS) % TOTAL_SLOTS;
-        if (getCurrentSlot() != requiredBefore) {
-          String resp = "{\"success\":false,\"error\":\"slot_mismatch\","
-                        "\"current_slot\":" + String(getCurrentSlot()) + ","
-                        "\"expected_slot\":" + String(expectedAfter) + "}";
-          sendJson(request, 409, resp);
-          return;
-        }
-      }
-
-      advanceCarousel();
-      triggerDispenseAlert(silentMode, period);
-
-      String resp = "{\"success\":true,\"current_slot\":" + String(getCurrentSlot()) + "}";
+      String resp = buildDispenseResponseJson(result);
       sendJson(request, 200, resp);
     }
   );
 
-  // POST /confirm
   server.on("/confirm", HTTP_POST,
     [](AsyncWebServerRequest* request) {
       int confirmed = getLastConfirmedSlot();
@@ -139,7 +97,6 @@ void setupApiServer(AsyncWebServer& server) {
     }
   );
 
-  // POST /calibrate
   server.on("/calibrate", HTTP_POST,
     [](AsyncWebServerRequest* request) {
       calibrateCarousel();
@@ -156,15 +113,11 @@ void setupApiServer(AsyncWebServer& server) {
     }
   );
 
-  // POST /reset-wifi
-  // Apaga credenciais (NVS + flash Wi-Fi) e reinicia em modo BLE para re-provisionamento.
   server.on("/reset-wifi", HTTP_POST, [](AsyncWebServerRequest* request) {
     sendJson(request, 200, "{\"success\":true,\"message\":\"Reiniciando em modo BLE...\"}");
-    // Reinicia só depois da resposta TCP (evita curl/Postman pendurados).
     scheduleWifiFactoryReset(400);
   });
 
-  // GET /
   server.on("/", HTTP_GET, [](AsyncWebServerRequest* request) {
     String html  = "<h1>🌿 Eco-Dispenser</h1>";
     html += "<p>Slot atual: <b>" + String(getCurrentSlot()) + "</b> / " + String(TOTAL_SLOTS) + "</p>";

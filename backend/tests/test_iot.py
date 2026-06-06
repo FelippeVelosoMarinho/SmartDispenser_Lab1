@@ -6,7 +6,18 @@ from app.crud.schedule import create_schedule
 from app.crud.log import get_dispensation_logs
 from app.crud.dispenser import get_dispenser_status
 from app.core.database import SessionLocal
-from app.models.domain import Dispenser, Schedule, Patient, User, DispensationLog, Drawer, Slot, Medication
+from app.models.domain import (
+    Dispenser,
+    Schedule,
+    Patient,
+    User,
+    DispensationLog,
+    Drawer,
+    Slot,
+    Medication,
+    PendingCommand,
+)
+from app.crud import command_queue as crud_command_queue
 
 client = TestClient(app)
 
@@ -14,6 +25,7 @@ client = TestClient(app)
 def clear_db():
     db = SessionLocal()
     db.query(DispensationLog).delete()
+    db.query(PendingCommand).delete()
     db.query(Schedule).delete()
     db.query(Slot).delete()
     db.query(Drawer).delete()
@@ -28,6 +40,7 @@ def clear_db():
     
     db = SessionLocal()
     db.query(DispensationLog).delete()
+    db.query(PendingCommand).delete()
     db.query(Schedule).delete()
     db.query(Slot).delete()
     db.query(Drawer).delete()
@@ -54,10 +67,8 @@ def create_schedule_dependencies() -> None:
             Slot(
                 id=1,
                 drawer_id=drawer.id,
-                medication_id=1,
                 position_number=1,
                 max_pill_capacity=10,
-                current_pill_count=0,
             )
         )
     elif not db.query(Slot).filter(Slot.id == 1).first():
@@ -71,10 +82,8 @@ def create_schedule_dependencies() -> None:
             Slot(
                 id=1,
                 drawer_id=drawer.id,
-                medication_id=1,
                 position_number=1,
                 max_pill_capacity=10,
-                current_pill_count=0,
             )
         )
     db.commit()
@@ -138,9 +147,88 @@ def test_process_heartbeat():
     assert resp.status_code == 200
     data = resp.json()
     assert data["message"] == "Heartbeat recorded successfully."
-    
+    assert data.get("command") is None
+
     db = SessionLocal()
     status = get_dispenser_status(db, "disp_iot")
     db.close()
-    
+
     assert status["online"] is True
+
+
+def test_heartbeat_returns_pending_command():
+    create_schedule_dependencies()
+    db = SessionLocal()
+    dispenser = db.query(Dispenser).filter(Dispenser.hardware_id == "disp_iot").first()
+    schedule = Schedule(
+        dispenser_id="disp_iot",
+        period="morning",
+        is_active=True,
+        time_legacy="08:00",
+    )
+    db.add(schedule)
+    db.commit()
+    db.refresh(schedule)
+    crud_command_queue.enqueue_dispense(db, "disp_iot", "morning", 1, schedule.id)
+    db.close()
+
+    resp = client.post(
+        "/api/heartbeat",
+        json={
+            "dispenser_id": "disp_iot",
+            "online": True,
+            "current_slot": 0,
+            "awaiting_confirm": False,
+        },
+    )
+    assert resp.status_code == 200
+    data = resp.json()
+    assert data["command"] is not None
+    assert data["command"]["type"] == "dispense"
+    assert data["command"]["period"] == "morning"
+    assert data["command"]["expected_slot"] == 1
+
+
+def test_heartbeat_command_ack_persists_telemetry_and_log():
+    create_schedule_dependencies()
+    db = SessionLocal()
+    dispenser = db.query(Dispenser).filter(Dispenser.hardware_id == "disp_iot").first()
+    schedule = Schedule(
+        dispenser_id="disp_iot",
+        period="night",
+        is_active=True,
+        time_legacy="20:00",
+    )
+    db.add(schedule)
+    db.commit()
+    db.refresh(schedule)
+    cmd = crud_command_queue.enqueue_dispense(db, "disp_iot", "night", 2, schedule.id)
+    crud_command_queue.mark_delivered(db, cmd)
+    command_id = str(cmd.id)
+    db.close()
+
+    resp = client.post(
+        "/api/heartbeat",
+        json={
+            "dispenser_id": "disp_iot",
+            "online": True,
+            "current_slot": 2,
+            "awaiting_confirm": True,
+            "command_ack": {
+                "command_id": command_id,
+                "success": True,
+            },
+        },
+    )
+    assert resp.status_code == 200
+
+    db = SessionLocal()
+    refreshed = db.query(Dispenser).filter(Dispenser.hardware_id == "disp_iot").first()
+    assert refreshed.current_slot == 2
+    assert refreshed.awaiting_confirm is True
+    acked = db.query(PendingCommand).filter(PendingCommand.id == cmd.id).first()
+    assert acked.status == "completed"
+    logs = get_dispensation_logs(db, dispenser_id="disp_iot")
+    assert len(logs) == 1
+    assert logs[0].success is True
+    db.close()

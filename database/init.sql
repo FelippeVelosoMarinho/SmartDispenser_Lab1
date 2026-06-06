@@ -40,7 +40,10 @@ CREATE TABLE "dispensers" (
   "patient_id" uuid REFERENCES "patients" ("id"),
   "is_online" boolean DEFAULT false,
   "last_sync" timestamp,
-  "critical_stock" boolean DEFAULT false
+  "ip_address" text,
+  "critical_stock" boolean DEFAULT false,
+  "current_slot" integer,
+  "awaiting_confirm" boolean DEFAULT false
 );
 
 CREATE TABLE "drawers" (
@@ -80,8 +83,27 @@ CREATE TABLE "schedules" (
   "patient_id" uuid,
   "dispenser_id" text,
   "time_legacy" text,
-  "last_triggered_at" timestamp
+  "last_triggered_at" timestamp,
+  "period" text
 );
+
+CREATE TABLE "pending_commands" (
+  "id" uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  "hardware_id" text NOT NULL,
+  "command_type" text NOT NULL,
+  "period" text,
+  "expected_slot" integer,
+  "silent_mode" boolean DEFAULT false,
+  "schedule_id" uuid REFERENCES "schedules" ("id"),
+  "status" text NOT NULL DEFAULT 'pending',
+  "error_message" text,
+  "created_at" timestamp DEFAULT now(),
+  "delivered_at" timestamp,
+  "completed_at" timestamp
+);
+
+CREATE INDEX "idx_pending_commands_hardware_status"
+  ON "pending_commands" ("hardware_id", "status");
 
 -- 4. Event Logging (History)
 CREATE TABLE "dispensation_logs" (

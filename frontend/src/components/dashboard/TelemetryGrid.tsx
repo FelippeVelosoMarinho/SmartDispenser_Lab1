@@ -54,7 +54,7 @@ export function TelemetryGrid({ dispenser }: TelemetryGridProps) {
           <span style={titleStyle}>Endereço IP</span>
         </div>
         <div style={{ fontSize: "var(--text-lg)", fontWeight: 700, color: "var(--ink)" }}>
-          {(dispenser as any).ip_address || (isOnline ? "Aguardando heartbeat..." : "Sem endereço IP")}
+          {dispenser.ip_address || (isOnline ? "Aguardando heartbeat..." : "Sem endereço IP")}
         </div>
       </div>
 

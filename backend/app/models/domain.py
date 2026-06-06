@@ -59,6 +59,8 @@ class Dispenser(Base):
     
     # Telemetry fields
     critical_stock = Column(Boolean, default=False)
+    current_slot = Column(Integer, nullable=True)
+    awaiting_confirm = Column(Boolean, default=False)
 
     patient = relationship('Patient', back_populates='dispensers')
     drawers = relationship('Drawer', back_populates='dispenser')
@@ -175,6 +177,23 @@ class RefillHistory(Base):
 
     slot = relationship('Slot')
     caregiver = relationship('User')
+
+
+class PendingCommand(Base):
+    __tablename__ = 'pending_commands'
+
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    hardware_id = Column(String, nullable=False, index=True)
+    command_type = Column(String, nullable=False)
+    period = Column(String, nullable=True)
+    expected_slot = Column(Integer, nullable=True)
+    silent_mode = Column(Boolean, default=False)
+    schedule_id = Column(UUID(as_uuid=True), ForeignKey('schedules.id'), nullable=True)
+    status = Column(String, nullable=False, default='pending')
+    error_message = Column(String, nullable=True)
+    created_at = Column(DateTime, default=datetime.datetime.utcnow)
+    delivered_at = Column(DateTime, nullable=True)
+    completed_at = Column(DateTime, nullable=True)
 
 
 # Backwards compatibility alias

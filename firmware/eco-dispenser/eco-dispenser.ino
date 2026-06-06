@@ -8,7 +8,9 @@
  *   carousel      — controle da roleta (servo + NVS)
  *   alerts        — LEDs de período, buzzer, vibração
  *   buttons       — botões com debounce
- *   api_server    — endpoints HTTP (AsyncWebServer)
+ *   api_server       — endpoints HTTP (AsyncWebServer)
+ *   heartbeat_client — pull de comandos via POST /api/heartbeat
+ *   dispense_command — lógica compartilhada de dispensação
  *
  * Fluxo de boot:
  *   1. Verifica NVS por credenciais WiFi salvas
@@ -18,7 +20,6 @@
  */
 
 #include <WiFi.h>
-#include <HTTPClient.h>
 #include <ESPAsyncWebServer.h>
 #include "secrets.h"
 #include "config.h"
@@ -27,6 +28,7 @@
 #include "alerts.h"
 #include "buttons.h"
 #include "api_server.h"
+#include "heartbeat_client.h"
 
 AsyncWebServer server(SERVER_PORT);
 
@@ -36,81 +38,7 @@ static bool pendingInitialHeartbeat = true;
 static unsigned long initialHeartbeatAt = 0;
 static wl_status_t lastWifiStatus = WL_IDLE_STATUS;
 
-#include <WiFiClientSecure.h>
-
 String globalBackendUrl = "";
-
-static void sendHeartbeat() {
-  if (WiFi.status() != WL_CONNECTED) return;
-  if (globalBackendUrl.length() == 0) {
-    Serial.println("[Heartbeat] BACKEND_URL não configurado — pulando.");
-    return;
-  }
-
-  // A conexão deve ser limpa a cada requisição para evitar que pcb (TCP blocks)
-  // fiquem presos (stale) na memória. Variáveis static aqui burlam o lock do lwIP!
-  String url = globalBackendUrl + "/api/heartbeat";
-  bool isHttps = url.startsWith("https://");
-  
-  WiFiClient* client = nullptr;
-  if (isHttps) {
-    WiFiClientSecure* secureClient = new WiFiClientSecure();
-    secureClient->setInsecure(); // Não valida certificado do ngrok
-    client = secureClient;
-  } else {
-    client = new WiFiClient();
-  }
-
-  HTTPClient http;
-  
-  if (http.begin(*client, url)) {
-    http.addHeader("Content-Type", "application/json");
-    // Header necessário para ngrok free tier bypassar a tela de aviso no HTTP/HTTPS
-    http.addHeader("ngrok-skip-browser-warning", "true");
-    http.setTimeout(5000);
-    http.setReuse(false);
-
-    String mac  = getHardwareId();
-    String ip   = WiFi.localIP().toString();
-    
-    // Payload "Universal": Contém os campos novos E os antigos.
-    // Assim não dá erro 422 se o backend remoto ainda estiver desatualizado.
-    String body = "{\"dispenser_id\":\"" + mac + "\","
-                  "\"uptime_s\":" + String(millis() / 1000) + ","
-                  "\"current_slot\":" + String(getCurrentSlot()) + ","
-                  "\"wifi_rssi\":" + String(WiFi.RSSI()) + ","
-                  "\"online\":true,"
-                  "\"critical_stock\":false,"
-                  "\"ip_address\":\"" + ip + "\"}";
-
-    int code = http.POST(body);
-    if (code > 0) {
-      Serial.println("[Heartbeat] " + String(code) + " ← " + url);
-      // Limpa RX do lwIP antes de encerrar, evitando o crash tcp_alloc no ESP32-C3.
-      WiFiClient* stream = http.getStreamPtr();
-      String response = "";
-      if (stream) {
-        while (stream->available()) {
-          (void)stream->read();
-        }
-      } else {
-        response = http.getString();
-      }
-      if (code != 200) {
-        if (response.length() == 0) response = http.getString();
-        Serial.println("[Heartbeat] Resposta Erro: " + response);
-      }
-    } else {
-      Serial.println("[Heartbeat] Falha ao contactar backend: " + http.errorToString(code));
-    }
-    http.end();
-    client->stop();
-    delay(100);
-  } else {
-    Serial.println("[Heartbeat] Falha ao inicializar conexão HTTP");
-  }
-  delete client;
-}
 
 void setup() {
   Serial.begin(115200);
@@ -209,6 +137,8 @@ void setup() {
   setupApiServer(server);
   server.begin();
   Serial.println("🚀 Servidor HTTP iniciado na porta " + String(SERVER_PORT));
+
+  setBackendUrl(globalBackendUrl);
 
   // Evita disparar HTTP no exato instante pós-conexão/pós-BLE deinit.
   pendingInitialHeartbeat = true;

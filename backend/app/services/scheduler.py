@@ -1,4 +1,4 @@
-"""Dispensation scheduler — fires POST /dispense on the ESP at configured period times.
+"""Dispensation scheduler — enqueues dispense commands or pushes to ESP (LAN dev).
 
 Period schedules (morning/afternoon/night) advance the carousel sequentially (+1 per
 dispense). Legacy position-based schedules (no period field) are ignored.
@@ -15,10 +15,13 @@ from sqlalchemy.orm import Session
 from app.core.config import (
     SCHEDULER_DEDUP_SECONDS,
     SCHEDULER_DUE_WINDOW_SECONDS,
+    SCHEDULER_MODE,
     SCHEDULER_POLL_SECONDS,
     TOTAL_CAROUSEL_SLOTS,
+    COMMAND_ACK_TIMEOUT_SECONDS,
 )
 from app.core.database import SessionLocal
+from app.crud import command_queue as crud_command_queue
 from app.models.domain import DispensationLog, Dispenser, Schedule
 from app.services.schedule_utils import carousel_slot_after_sequential
 
@@ -127,34 +130,14 @@ def _record_log(
     db.add(log)
 
 
-async def _process_period_schedule(
-    db: Session, schedule: Schedule, now: datetime.datetime
+async def _process_period_schedule_push(
+    db: Session,
+    schedule: Schedule,
+    dispenser: Dispenser,
+    period: str,
+    now: datetime.datetime,
 ) -> None:
-    period = schedule.period
-    if period not in _PERIOD_ORDER:
-        return
-
-    dispenser: Dispenser | None = None
-    if schedule.dispenser_id:
-        dispenser = (
-            db.query(Dispenser)
-            .filter(Dispenser.hardware_id == schedule.dispenser_id)
-            .first()
-        )
-
-    schedule.last_triggered_at = now
-    db.commit()
-
-    if not dispenser:
-        logger.warning(
-            "[Scheduler] Schedule %s: dispenser '%s' not in DB — skipped",
-            schedule.id,
-            schedule.dispenser_id,
-        )
-        _record_log(db, schedule, False, "dispenser not found in DB")
-        db.commit()
-        return
-
+    """Legacy LAN push mode — POST /dispense directly to ESP IP."""
     if not dispenser.ip_address:
         logger.warning(
             "[Scheduler] Dispenser %s has no IP yet (no heartbeat) — skipped",
@@ -184,7 +167,7 @@ async def _process_period_schedule(
     expected_after = carousel_slot_after_sequential(current_slot, TOTAL_CAROUSEL_SLOTS)
 
     logger.info(
-        "[Scheduler] → %s @ %s  period=%s  current_slot=%s  expected_after=%s",
+        "[Scheduler] push → %s @ %s  period=%s  current_slot=%s  expected_after=%s",
         dispenser.hardware_id,
         dispenser.ip_address,
         period,
@@ -209,10 +192,91 @@ async def _process_period_schedule(
         logger.error("[Scheduler] Dispense failed — dispenser %s", dispenser.hardware_id)
 
 
+async def _process_period_schedule_queue(
+    db: Session,
+    schedule: Schedule,
+    dispenser: Dispenser,
+    period: str,
+) -> None:
+    """Queue mode — enqueue command for delivery via heartbeat response."""
+    if dispenser.awaiting_confirm:
+        logger.warning(
+            "[Scheduler] Dispenser %s awaiting confirmation — skipped %s",
+            dispenser.hardware_id,
+            period,
+        )
+        return
+
+    if dispenser.current_slot is None:
+        logger.warning(
+            "[Scheduler] Dispenser %s has no current_slot from heartbeat — skipped %s",
+            dispenser.hardware_id,
+            period,
+        )
+        return
+
+    expected_after = carousel_slot_after_sequential(
+        dispenser.current_slot, TOTAL_CAROUSEL_SLOTS
+    )
+
+    command = crud_command_queue.enqueue_dispense(
+        db,
+        dispenser.hardware_id,
+        period,
+        expected_after,
+        schedule.id,
+    )
+
+    logger.info(
+        "[Scheduler] enqueued %s for %s period=%s expected_slot=%s command_id=%s",
+        command.command_type,
+        dispenser.hardware_id,
+        period,
+        expected_after,
+        command.id,
+    )
+
+
+async def _process_period_schedule(
+    db: Session, schedule: Schedule, now: datetime.datetime
+) -> None:
+    period = schedule.period
+    if period not in _PERIOD_ORDER:
+        return
+
+    dispenser: Dispenser | None = None
+    if schedule.dispenser_id:
+        dispenser = (
+            db.query(Dispenser)
+            .filter(Dispenser.hardware_id == schedule.dispenser_id)
+            .first()
+        )
+
+    schedule.last_triggered_at = now
+    db.commit()
+
+    if not dispenser:
+        logger.warning(
+            "[Scheduler] Schedule %s: dispenser '%s' not in DB — skipped",
+            schedule.id,
+            schedule.dispenser_id,
+        )
+        if SCHEDULER_MODE == "push":
+            _record_log(db, schedule, False, "dispenser not found in DB")
+            db.commit()
+        return
+
+    if SCHEDULER_MODE == "push":
+        await _process_period_schedule_push(db, schedule, dispenser, period, now)
+    else:
+        await _process_period_schedule_queue(db, schedule, dispenser, period)
+
+
 async def run_dispense_scheduler() -> None:
     """Async background task: poll DB and fire due period schedules."""
     logger.info(
-        "[Scheduler] Started — polling every %d s (period-based)",
+        "[Scheduler] Started — mode=%s polling every %d s (period-based)",
+        SCHEDULER_MODE,
         SCHEDULER_POLL_SECONDS,
     )
 
@@ -223,6 +287,10 @@ async def run_dispense_scheduler() -> None:
 
             db: Session = SessionLocal()
             try:
+                crud_command_queue.expire_stale_delivered(
+                    db, COMMAND_ACK_TIMEOUT_SECONDS
+                )
+
                 candidates = (
                     db.query(Schedule)
                     .filter(Schedule.is_active == True)  # noqa: E712

@@ -238,16 +238,16 @@ curl -s -o /dev/null -w "%{http_code}" -X POST http://<IP_ESP>/dispense \
 
 ---
 
-## Fase 5 — Dispensação automática por período (scheduler)
+## Fase 5 — Dispensação automática por período (scheduler via heartbeat)
 
-**Objetivo:** backend dispara nos três horários configurados (manhã/tarde/noite), avançando a roleta sequencialmente.
+**Objetivo:** backend enfileira comandos nos horários configurados; o ESP **puxa** o comando na resposta do `POST /api/heartbeat` e executa localmente (funciona com backend na nuvem).
 
 ### Fluxo integrado (dashboard + script E2E)
 
 1. Dashboard → reabastecer compartimentos 1–21
-2. **Iniciar ciclo** (calibrate automático)
+2. **Iniciar ciclo** (calibrate automático — requer mesma Wi-Fi; ver `espLocal.ts`)
 3. Salvar horários manhã / tarde / noite (ex.: 21:00, 21:01, 21:02 para teste rápido)
-4. Aguardar scheduler disparar 3×
+4. Aguardar scheduler enfileirar + ESP receber no próximo heartbeat (~30 s de latência máxima)
 
 Fixture em [`test-fixtures/e2e-periods.json`](test-fixtures/e2e-periods.json):
 
@@ -255,8 +255,6 @@ Fixture em [`test-fixtures/e2e-periods.json`](test-fixtures/e2e-periods.json):
 # Edite credentials, patient_id e dispenser_mac no JSON
 ./scripts/teste-e2e-periodos.sh
 ```
-
-O script faz login → `start-cycle` → `PUT period-schedule` → monitora logs até 3 dispenses.
 
 ### API manual (Swagger)
 
@@ -266,22 +264,30 @@ O script faz login → `start-cycle` → `PUT period-schedule` → monitora logs
 
 **Regras do scheduler** (`backend/app/services/scheduler.py`):
 
-- Poll a cada **10 s** em teste (`SCHEDULER_POLL_SECONDS`); janela de disparo **±30 s**
-- Processa schedules com campo `period` (morning/afternoon/night)
-- `expected_slot = (current_slot + 1) % 21` — sequência pura, sem posição fixa por schedule
-- Não dispara se `awaiting_confirm: true`
+- Modo padrão: `SCHEDULER_MODE=queue` (enfileira em `pending_commands`)
+- Poll a cada **10 s** (`SCHEDULER_POLL_SECONDS`); janela de disparo **±30 s**
+- Usa `current_slot` e `awaiting_confirm` do último heartbeat (não chama IP privado do ESP)
+- `expected_slot = (current_slot + 1) % 21`
 - Dedup: não re-dispara em 90 s
+- `SCHEDULER_MODE=push` — apenas dev LAN (POST direto em `/dispense`)
+
+**Firmware** (`heartbeat_client.cpp`):
+
+- Parseia `command` na resposta do heartbeat
+- Executa `executeDispense()` localmente
+- Envia `POST /api/event` e `command_ack` no heartbeat seguinte
 
 ### Roteiro de teste E2E
 
-1. **Iniciar ciclo** no dashboard (ou script) → slot 0
+1. **Iniciar ciclo** no dashboard (mesma Wi-Fi) → slot 0
 2. Salvar horários 21:00 / 21:01 / 21:02
-3. Monitorar:
-   - Serial do ESP: `POST /dispense` com `period` correto
-   - Logs backend: `[Scheduler]`
-   - Dashboard: telemetria da roleta (`hardware-status`)
-4. Confirmar no botão físico após cada dose (se necessário para próxima)
-5. Verificar `current_slot` avançando 0→1→2→3
+3. Monitorar Serial do ESP:
+   - `[Scheduler] enqueued` nos logs do backend
+   - `[Heartbeat] command received: dispense morning expected=1`
+   - `[Event] POST /api/event 200`
+   - `[Heartbeat] command ack queued: <uuid> success=true`
+4. Confirmar no botão físico após cada dose (se `awaiting_confirm` bloquear próximo horário)
+5. Verificar `current_slot` avançando 0→1→2→3 via `GET http://<ESP_IP>/status`
 
 **Verificar logs de dispensação:**
 

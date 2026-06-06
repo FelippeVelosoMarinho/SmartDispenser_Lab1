@@ -1,20 +1,24 @@
-"""Integration-style test: period schedules fire sequentially with mocked ESP."""
+"""Integration-style test: period schedules enqueue commands in queue mode."""
 
 import asyncio
 import datetime
 import uuid
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import MagicMock, patch
 
 from app.models.domain import Dispenser, Schedule
 from app.services.scheduler import _process_period_schedule
 
 
-def test_period_sequence_morning_afternoon_night():
-    """Simula manhã→tarde→noite: cada dispense avança current_slot +1."""
+def test_period_sequence_enqueues_morning_afternoon_night():
+    """Simula manhã→tarde→noite: cada schedule enfileira expected_slot +1."""
     now = datetime.datetime(2026, 6, 10, 21, 0, 0)
-    dispenser = Dispenser(hardware_id="disp_flow", ip_address="10.0.0.1")
-    current_slot = {"value": 0}
-    dispense_calls: list[tuple[str, int]] = []
+    dispenser = Dispenser(
+        hardware_id="disp_flow",
+        ip_address="10.0.0.1",
+        current_slot=0,
+        awaiting_confirm=False,
+    )
+    enqueue_calls: list[tuple[str, int]] = []
 
     schedules = [
         Schedule(
@@ -52,25 +56,28 @@ def test_period_sequence_morning_afternoon_night():
     db = MagicMock()
     db.query.side_effect = query_side_effect
 
-    async def mock_status(ip):
-        return {"current_slot": current_slot["value"], "awaiting_confirm": False}
-
-    async def mock_dispense(ip, period, expected_slot):
-        dispense_calls.append((period, expected_slot))
-        current_slot["value"] = expected_slot
-        return True, None
+    def fake_enqueue(db_sess, hardware_id, period, expected_slot, schedule_id):
+        enqueue_calls.append((period, expected_slot))
+        dispenser.current_slot = expected_slot
+        cmd = MagicMock()
+        cmd.id = uuid.uuid4()
+        cmd.command_type = "dispense"
+        return cmd
 
     async def run_all():
-        for s in schedules:
-            with patch("app.services.scheduler._get_status", side_effect=mock_status):
-                with patch("app.services.scheduler._call_dispense", side_effect=mock_dispense):
+        with patch("app.services.scheduler.SCHEDULER_MODE", "queue"):
+            with patch(
+                "app.services.scheduler.crud_command_queue.enqueue_dispense",
+                side_effect=fake_enqueue,
+            ):
+                for s in schedules:
                     await _process_period_schedule(db, s, now)
 
     asyncio.run(run_all())
 
-    assert dispense_calls == [
+    assert enqueue_calls == [
         ("morning", 1),
         ("afternoon", 2),
         ("night", 3),
     ]
-    assert current_slot["value"] == 3
+    assert dispenser.current_slot == 3
