@@ -21,6 +21,21 @@ def test_effective_scheduled_at_from_hhmm_legacy():
     assert result.minute == 0
 
 
+def test_effective_scheduled_at_period_ignores_stale_scheduled_at():
+    """Period HH:MM must use today's wall clock, not scheduled_at from save date."""
+    stale = datetime.datetime(2020, 1, 1, 8, 0, 0)
+    s = Schedule(
+        period="morning",
+        time_legacy="08:00",
+        scheduled_at=stale,
+    )
+    result = _effective_scheduled_at(s)
+    assert result is not None
+    assert result.hour == 8
+    assert result.minute == 0
+    assert result.date() == datetime.datetime.now().date()
+
+
 def test_is_due_requires_period():
     now = datetime.datetime.now().replace(second=5, microsecond=0)
     dedup = now - datetime.timedelta(seconds=90)

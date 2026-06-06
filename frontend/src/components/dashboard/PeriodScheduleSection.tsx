@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import type { DispenserDetails, HardwareStatus, PeriodSchedule } from "../../lib/api";
 import {
   getHardwareStatus,
@@ -6,46 +6,19 @@ import {
   savePeriodSchedule,
   startDispenserCycle,
 } from "../../lib/api";
+import {
+  computeNextDispense,
+  formatCountdown,
+  nextPeriodLabel,
+  toTimeInputValue,
+} from "../../lib/periodSchedule";
 
 interface PeriodScheduleSectionProps {
   dispenser: DispenserDetails;
 }
 
-const PERIOD_LABELS: Record<string, string> = {
-  morning: "Manhã",
-  afternoon: "Tarde",
-  night: "Noite",
-};
-
-function toTimeInputValue(raw: string): string {
-  if (!raw) return "08:00";
-  if (raw.includes("T")) {
-    const part = raw.split("T")[1];
-    return part ? part.slice(0, 5) : "08:00";
-  }
-  return raw.length >= 5 ? raw.slice(0, 5) : raw;
-}
-
-function nextPeriodLabel(schedule: PeriodSchedule | null, now: Date): string {
-  if (!schedule) return "—";
-  const entries = [
-    { key: "morning", time: schedule.morning_time },
-    { key: "afternoon", time: schedule.afternoon_time },
-    { key: "night", time: schedule.night_time },
-  ];
-  const nowMins = now.getHours() * 60 + now.getMinutes();
-  let best: { key: string; time: string; delta: number } | null = null;
-  for (const e of entries) {
-    const t = toTimeInputValue(e.time);
-    const [h, m] = t.split(":").map(Number);
-    let mins = h * 60 + m;
-    let delta = mins - nowMins;
-    if (delta < 0) delta += 24 * 60;
-    if (!best || delta < best.delta) best = { key: e.key, time: t, delta };
-  }
-  if (!best) return "—";
-  return `${PERIOD_LABELS[best.key] ?? best.key} às ${best.time}`;
-}
+const HEARTBEAT_LATENCY_NOTE =
+  "O servo pode ativar até ~30 s após o horário (entrega via heartbeat do ESP).";
 
 export function PeriodScheduleSection({ dispenser }: PeriodScheduleSectionProps) {
   const [morning, setMorning] = useState("21:00");
@@ -58,6 +31,7 @@ export function PeriodScheduleSection({ dispenser }: PeriodScheduleSectionProps)
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [scheduleMeta, setScheduleMeta] = useState<PeriodSchedule | null>(null);
+  const [now, setNow] = useState(() => new Date());
 
   const hardwareId = dispenser.hardware_id;
   const patientId = dispenser.patient_id;
@@ -103,6 +77,16 @@ export function PeriodScheduleSection({ dispenser }: PeriodScheduleSectionProps)
     const id = setInterval(refreshHardware, 5000);
     return () => clearInterval(id);
   }, [refreshHardware]);
+
+  useEffect(() => {
+    const id = setInterval(() => setNow(new Date()), 1000);
+    return () => clearInterval(id);
+  }, []);
+
+  const nextDispense = useMemo(
+    () => computeNextDispense(scheduleMeta, now),
+    [scheduleMeta, now],
+  );
 
   async function handleSave(e: React.FormEvent) {
     e.preventDefault();
@@ -175,6 +159,56 @@ export function PeriodScheduleSection({ dispenser }: PeriodScheduleSectionProps)
         use <strong>Iniciar ciclo</strong> para calibrar automaticamente.
       </p>
 
+      {nextDispense && dispenser.is_online && (
+        <div
+          role="timer"
+          aria-live="polite"
+          aria-label={`Próxima dispensação em ${formatCountdown(nextDispense.secondsRemaining)}`}
+          style={{
+            marginBottom: "var(--space-4)",
+            padding: "var(--space-4)",
+            borderRadius: "var(--radius-md)",
+            border: "1px solid var(--primary)",
+            background: "linear-gradient(135deg, rgba(16, 185, 129, 0.08) 0%, var(--canvas) 100%)",
+            textAlign: "center",
+          }}
+        >
+          <span style={{ fontSize: "var(--text-xs)", color: "var(--ink-3)", textTransform: "uppercase", letterSpacing: "0.06em" }}>
+            Próxima dispensação
+          </span>
+          <p
+            style={{
+              margin: "var(--space-2) 0",
+              fontSize: "clamp(2rem, 5vw, 2.75rem)",
+              fontWeight: 700,
+              color: "var(--primary)",
+              fontVariantNumeric: "tabular-nums",
+              lineHeight: 1.1,
+            }}
+          >
+            {formatCountdown(nextDispense.secondsRemaining)}
+          </p>
+          <p style={{ margin: 0, fontSize: "var(--text-sm)", color: "var(--ink-2)" }}>
+            {nextDispense.periodLabel} às {nextDispense.timeLabel}
+            {scheduleMeta?.source === "defaults" ? " (padrão — salve para confirmar)" : ""}
+          </p>
+          <p style={{ margin: "var(--space-2) 0 0", fontSize: "var(--text-xs)", color: "var(--ink-3)" }}>
+            {HEARTBEAT_LATENCY_NOTE}
+          </p>
+          {hwStatus?.awaiting_confirm && (
+            <p style={{ margin: "var(--space-2) 0 0", fontSize: "var(--text-xs)", color: "var(--warning)" }}>
+              Confirmação pendente — o próximo horário pode ser ignorado até o paciente confirmar.
+            </p>
+          )}
+        </div>
+      )}
+
+      {!dispenser.is_online && scheduleMeta?.is_active && (
+        <p style={{ color: "var(--warning)", fontSize: "var(--text-sm)", marginBottom: "var(--space-3)" }}>
+          Dispensador offline — contador pausado até o ESP reconectar e receber comandos.
+        </p>
+      )}
+
       {hwStatus && (
         <div
           style={{
@@ -202,7 +236,7 @@ export function PeriodScheduleSection({ dispenser }: PeriodScheduleSectionProps)
           <div>
             <span style={{ fontSize: "var(--text-xs)", color: "var(--ink-3)" }}>Próximo período</span>
             <p style={{ margin: 0, fontWeight: 600, color: "var(--ink)" }}>
-              {nextPeriodLabel(scheduleMeta, new Date())}
+              {nextPeriodLabel(scheduleMeta, now)}
             </p>
           </div>
           <div>

@@ -33,6 +33,21 @@ _PERIOD_ORDER = {"morning": 0, "afternoon": 1, "night": 2}
 
 
 def _effective_scheduled_at(schedule: Schedule) -> datetime.datetime | None:
+    now = datetime.datetime.now()
+
+    # Period schedules (HH:MM) fire daily — use time_legacy, not stale scheduled_at from save day.
+    if (
+        schedule.period
+        and schedule.time_legacy
+        and len(schedule.time_legacy) == 5
+        and schedule.time_legacy[2] == ":"
+    ):
+        try:
+            hour, minute = int(schedule.time_legacy[:2]), int(schedule.time_legacy[3:5])
+            return now.replace(hour=hour, minute=minute, second=0, microsecond=0)
+        except ValueError:
+            pass
+
     if schedule.scheduled_at:
         return schedule.scheduled_at
     if schedule.time_legacy and "T" in schedule.time_legacy:
