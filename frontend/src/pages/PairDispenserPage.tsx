@@ -14,6 +14,7 @@ import {
 } from "../lib/api";
 import { useToast } from "../components/ui";
 import { APP_NAME } from "../lib/brand";
+import { getEspBackendUrl } from "../lib/espBackendUrl";
 
 interface DiscoveredDispenser {
   id: string;
@@ -674,7 +675,7 @@ function BluetoothPairingWizard() {
     setStep("sync");
     
     try {
-      const backendUrl = window.location.origin;
+      const backendUrl = getEspBackendUrl();
       const payload = JSON.stringify({ ssid, pass: password, backend_url: backendUrl });
       const encoder = new TextEncoder();
       const data = encoder.encode(payload);

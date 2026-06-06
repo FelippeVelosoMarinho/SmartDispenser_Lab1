@@ -80,6 +80,8 @@ services:
       - CHOKIDAR_USEPOLLING=true
       - VITE_API_URL=http://smart_dispenser_backend:8000
       - VITE_HMR_CLIENT_PORT=8081
+      # ESP recebe esta URL no BLE; navegador continua via ngrok/proxy
+      - VITE_ESP_BACKEND_URL=http://2.24.216.183:8001
     depends_on:
       - backend
     profiles:
