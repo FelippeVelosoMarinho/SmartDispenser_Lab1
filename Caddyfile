@@ -1,0 +1,6 @@
+pill.josoesantos.dev {
+    tls {
+        dns cloudflare {env.CLOUDFLARE_API_TOKEN}
+    }
+    reverse_proxy backend:8001
+}
