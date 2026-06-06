@@ -36,6 +36,8 @@ static bool pendingInitialHeartbeat = true;
 static unsigned long initialHeartbeatAt = 0;
 static wl_status_t lastWifiStatus = WL_IDLE_STATUS;
 
+#include <WiFiClientSecure.h>
+
 static void sendHeartbeat() {
   if (WiFi.status() != WL_CONNECTED) return;
   if (strlen(BACKEND_URL) == 0) {
@@ -45,12 +47,24 @@ static void sendHeartbeat() {
 
   // A conexão deve ser limpa a cada requisição para evitar que pcb (TCP blocks)
   // fiquem presos (stale) na memória. Variáveis static aqui burlam o lock do lwIP!
-  WiFiClient client;
-  HTTPClient http;
   String url = String(BACKEND_URL) + "/api/heartbeat";
+  bool isHttps = url.startsWith("https://");
   
-  if (http.begin(client, url)) {
+  WiFiClient* client = nullptr;
+  if (isHttps) {
+    WiFiClientSecure* secureClient = new WiFiClientSecure();
+    secureClient->setInsecure(); // Não valida certificado do ngrok
+    client = secureClient;
+  } else {
+    client = new WiFiClient();
+  }
+
+  HTTPClient http;
+  
+  if (http.begin(*client, url)) {
     http.addHeader("Content-Type", "application/json");
+    // Header necessário para ngrok free tier bypassar a tela de aviso no HTTP/HTTPS
+    http.addHeader("ngrok-skip-browser-warning", "true");
     http.setTimeout(5000);
     http.setReuse(false);
 
@@ -88,11 +102,12 @@ static void sendHeartbeat() {
       Serial.println("[Heartbeat] Falha ao contactar backend: " + http.errorToString(code));
     }
     http.end();
-    client.stop();
+    client->stop();
     delay(100);
   } else {
     Serial.println("[Heartbeat] Falha ao inicializar conexão HTTP");
   }
+  delete client;
 }
 
 void setup() {
