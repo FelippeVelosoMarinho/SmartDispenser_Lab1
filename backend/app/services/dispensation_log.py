@@ -28,6 +28,10 @@ def record_schedule_dispensation_log(
         error_message=error,
     )
     db.add(log)
+
+    if not success and schedule and error in ("slot_mismatch", "awaiting_confirm"):
+        schedule.last_triggered_at = None
+
     db.commit()
     db.refresh(log)
     return log

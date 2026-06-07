@@ -69,6 +69,20 @@ def test_is_due_outside_window():
     assert _is_due(s, now, dedup) is False
 
 
+def test_is_due_not_before_scheduled_time():
+    """Due window must not fire minutes before the configured HH:MM."""
+    now = datetime.datetime(2026, 6, 10, 22, 34, 0)
+    dedup = now - datetime.timedelta(seconds=90)
+    s = Schedule(
+        is_active=True,
+        period="morning",
+        time_legacy="22:35",
+        last_triggered_at=None,
+    )
+    with patch("app.services.scheduler.scheduler_now", return_value=now):
+        assert _is_due(s, now, dedup) is False
+
+
 def test_is_due_wider_window_while_awaiting_confirm():
     now = datetime.datetime(2026, 6, 10, 21, 1, 30)
     dedup = now - datetime.timedelta(seconds=90)
@@ -82,6 +96,20 @@ def test_is_due_wider_window_while_awaiting_confirm():
     with patch("app.services.scheduler.scheduler_now", return_value=now):
         assert _is_due(s, now, dedup) is False
         assert _is_due(s, now, dedup, dispenser) is True
+
+
+def test_is_due_awaiting_confirm_does_not_fire_early():
+    now = datetime.datetime(2026, 6, 10, 22, 36, 0)
+    dedup = now - datetime.timedelta(seconds=90)
+    s = Schedule(
+        is_active=True,
+        period="night",
+        time_legacy="22:37",
+        last_triggered_at=None,
+    )
+    dispenser = Dispenser(hardware_id="d1", awaiting_confirm=True)
+    with patch("app.services.scheduler.scheduler_now", return_value=now):
+        assert _is_due(s, now, dedup, dispenser) is False
 
 
 def test_is_due_respects_dedup():
@@ -123,20 +151,24 @@ def test_process_period_schedule_enqueues_in_queue_mode():
     async def run():
         with patch("app.services.scheduler.SCHEDULER_MODE", "queue"):
             with patch(
-                "app.services.scheduler.crud_command_queue.enqueue_dispense"
-            ) as mock_enqueue:
-                mock_enqueue.return_value = MagicMock(
-                    id=uuid.uuid4(),
-                    command_type="dispense",
-                )
-                await _process_period_schedule(db, schedule, datetime.datetime.now())
-                mock_enqueue.assert_called_once_with(
-                    db,
-                    "disp_test",
-                    "morning",
-                    1,
-                    schedule.id,
-                )
+                "app.services.scheduler.crud_command_queue.has_active_dispense",
+                return_value=False,
+            ):
+                with patch(
+                    "app.services.scheduler.crud_command_queue.enqueue_dispense"
+                ) as mock_enqueue:
+                    mock_enqueue.return_value = MagicMock(
+                        id=uuid.uuid4(),
+                        command_type="dispense",
+                    )
+                    await _process_period_schedule(db, schedule, datetime.datetime.now())
+                    mock_enqueue.assert_called_once_with(
+                        db,
+                        "disp_test",
+                        "morning",
+                        1,
+                        schedule.id,
+                    )
 
     asyncio.run(run())
     assert schedule.last_triggered_at is not None

@@ -8,12 +8,17 @@ from fastapi import APIRouter, HTTPException, Request, Depends, BackgroundTasks
 from sqlalchemy.orm import Session
 from app.core.database import get_db
 
-from app.core.config import COMMAND_ACK_TIMEOUT_SECONDS, ESP32_BASE_URL
+from app.core.config import (
+    COMMAND_ACK_TIMEOUT_SECONDS,
+    ESP32_BASE_URL,
+    TOTAL_CAROUSEL_SLOTS,
+)
 from app.crud import command_queue as crud_command_queue
 from app.crud import schedule as crud_schedule
 from app.crud import log as crud_log
 from app.crud import dispenser as crud_dispenser
 from app.services.dispensation_log import record_schedule_dispensation_log
+from app.services.schedule_utils import carousel_slot_after_sequential
 from app.models.domain import User, Patient, Dispenser, Medication
 from app.services.notifier import send_email_notification
 from app.services.templates import (
@@ -352,6 +357,25 @@ async def process_heartbeat(
     pending = crud_command_queue.get_command_for_delivery(db, heartbeat.dispenser_id)
     command_public = None
     if pending:
+        if pending.command_type == "dispense" and pending.expected_slot is not None:
+            live = (
+                db.query(Dispenser)
+                .filter(Dispenser.hardware_id == heartbeat.dispenser_id)
+                .first()
+            )
+            live_slot = (
+                live.current_slot
+                if live and live.current_slot is not None
+                else heartbeat.current_slot
+            )
+            if live_slot is not None:
+                corrected = carousel_slot_after_sequential(
+                    int(live_slot), TOTAL_CAROUSEL_SLOTS
+                )
+                if corrected != pending.expected_slot:
+                    pending.expected_slot = corrected
+                    db.commit()
+                    db.refresh(pending)
         if pending.status == "pending":
             crud_command_queue.mark_delivered(db, pending)
         command_public = PendingCommandPublic(

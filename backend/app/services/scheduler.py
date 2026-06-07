@@ -16,6 +16,7 @@ from app.core.config import (
     SCHEDULER_AWAITING_CONFIRM_GRACE_SECONDS,
     SCHEDULER_DEDUP_SECONDS,
     SCHEDULER_DUE_WINDOW_SECONDS,
+    SCHEDULER_EARLY_SLACK_SECONDS,
     SCHEDULER_IGNORE_AWAITING_CONFIRM,
     SCHEDULER_MODE,
     SCHEDULER_POLL_SECONDS,
@@ -81,12 +82,7 @@ def _effective_scheduled_at(schedule: Schedule) -> datetime.datetime | None:
 
 
 def _due_window_seconds(dispenser: Dispenser | None) -> int:
-    """Widen the due window while confirmation is pending so the next period can still fire."""
-    if dispenser and dispenser.awaiting_confirm:
-        return max(
-            SCHEDULER_DUE_WINDOW_SECONDS,
-            SCHEDULER_AWAITING_CONFIRM_GRACE_SECONDS,
-        )
+    """Late-side window after scheduled time (heartbeat delivery slack)."""
     return SCHEDULER_DUE_WINDOW_SECONDS
 
 
@@ -107,8 +103,16 @@ def _is_due(
     if not scheduled_at:
         return False
 
-    delta = abs((now - scheduled_at).total_seconds())
-    return delta <= _due_window_seconds(dispenser)
+    signed = (now - scheduled_at).total_seconds()
+    late_window = _due_window_seconds(dispenser)
+
+    if signed < -SCHEDULER_EARLY_SLACK_SECONDS:
+        return False
+    if signed <= late_window:
+        return True
+    if dispenser and dispenser.awaiting_confirm:
+        return signed <= SCHEDULER_AWAITING_CONFIRM_GRACE_SECONDS
+    return False
 
 
 async def _get_status(ip: str) -> dict[str, Any] | None:
@@ -246,6 +250,14 @@ async def _process_period_schedule_queue(
     period: str,
 ) -> bool:
     """Queue mode — enqueue command for delivery via heartbeat response."""
+    if crud_command_queue.has_active_dispense(db, dispenser.hardware_id):
+        logger.warning(
+            "[Scheduler] Dispenser %s has active dispense in queue — skipped %s",
+            dispenser.hardware_id,
+            period,
+        )
+        return False
+
     if dispenser.awaiting_confirm:
         if SCHEDULER_IGNORE_AWAITING_CONFIRM:
             logger.warning(
@@ -381,8 +393,14 @@ async def run_dispense_scheduler() -> None:
                 if due:
                     logger.info("[Scheduler] %d period schedule(s) due at %s", len(due), now.isoformat())
 
+                dispensers_enqueued_this_poll: set[str] = set()
                 for schedule in due:
+                    hw_id = schedule.dispenser_id or ""
+                    if hw_id in dispensers_enqueued_this_poll:
+                        continue
                     await _process_period_schedule(db, schedule, now)
+                    if schedule.last_triggered_at and schedule.last_triggered_at >= dedup_cutoff:
+                        dispensers_enqueued_this_poll.add(hw_id)
             finally:
                 db.close()
 

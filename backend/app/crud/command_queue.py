@@ -33,6 +33,21 @@ def _existing_active_calibrate(db: Session, hardware_id: str) -> Optional[Pendin
     )
 
 
+def _existing_active_dispense(db: Session, hardware_id: str) -> Optional[PendingCommand]:
+    return (
+        db.query(PendingCommand)
+        .filter(PendingCommand.hardware_id == hardware_id)
+        .filter(PendingCommand.command_type == "dispense")
+        .filter(PendingCommand.status.in_(ACTIVE_STATUSES))
+        .first()
+    )
+
+
+def has_active_dispense(db: Session, hardware_id: str) -> bool:
+    """True while a dispense command is pending delivery or awaiting ACK."""
+    return _existing_active_dispense(db, hardware_id) is not None
+
+
 def enqueue_calibrate(db: Session, hardware_id: str) -> PendingCommand:
     """Enqueue carousel calibration (start-cycle) for heartbeat delivery."""
     existing = _existing_active_calibrate(db, hardware_id)

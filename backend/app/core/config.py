@@ -24,6 +24,8 @@ DISPENSE_PERIOD_AFTERNOON = os.getenv("DISPENSE_PERIOD_AFTERNOON", "21:01")
 DISPENSE_PERIOD_NIGHT = os.getenv("DISPENSE_PERIOD_NIGHT", "21:02")
 SCHEDULER_POLL_SECONDS = int(os.getenv("SCHEDULER_POLL_SECONDS", "10"))
 SCHEDULER_DUE_WINDOW_SECONDS = int(os.getenv("SCHEDULER_DUE_WINDOW_SECONDS", "45"))
+# Max seconds before scheduled time (0 = never fire before countdown reaches zero).
+SCHEDULER_EARLY_SLACK_SECONDS = int(os.getenv("SCHEDULER_EARLY_SLACK_SECONDS", "0"))
 # Extra slack after scheduled time while patient has not confirmed previous dose.
 SCHEDULER_AWAITING_CONFIRM_GRACE_SECONDS = int(
     os.getenv("SCHEDULER_AWAITING_CONFIRM_GRACE_SECONDS", "120")
