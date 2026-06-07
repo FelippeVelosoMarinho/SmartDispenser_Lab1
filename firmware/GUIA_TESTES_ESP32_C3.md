@@ -25,7 +25,7 @@ sequenceDiagram
     end
     ESP->>ESP: Servo avança + LED + buzzer/vibração
     ESP->>BE: Heartbeat (IP, online) a cada 30s
-    Note over ESP: Paciente confirma no botão GPIO 0
+    Note over ESP: Paciente confirma no botão BOOT (GPIO 9)
 ```
 
 | Camada | Papel |
@@ -50,8 +50,8 @@ Mapeamento em [`boards/config_c3_supermini.h`](eco-dispenser/boards/config_c3_su
 | LED noite | 5 | Aceso em `period: "night"` |
 | Buzzer | 21 | 3 bipes (modo normal) |
 | Motor vibração | 10 | Ativo com `silent_mode: true` |
-| Botão confirmar | 0 | Limpa alerta após dispensação |
-| Botões vol + / − | 6 / 7 | Ajustam volume; segurar ambos 5 s = reset Wi-Fi |
+| Botão confirmar | **9** (BOOT onboard) | Limpa alerta após dispensação — **não precisa de botão externo** |
+| Botões vol + / − | 6 / 7 | Opcionais (externos); segurar ambos 5 s = reset Wi-Fi |
 | LED onboard | 8 | Active LOW (diagnóstico) |
 
 ### Software

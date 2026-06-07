@@ -18,10 +18,12 @@ DispenseResult executeDispense(
 ) {
   DispenseResult result = {false, nullptr, getCurrentSlot()};
 
+#if REQUIRE_PATIENT_CONFIRM
   if (isAwaitingConfirmation()) {
     result.error = "awaiting_confirm";
     return result;
   }
+#endif
 
   String normalized = normalizePeriod(period);
 

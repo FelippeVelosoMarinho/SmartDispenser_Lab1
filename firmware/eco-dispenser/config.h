@@ -44,6 +44,12 @@ const int TOTAL_SLOTS = 21;
 const int DEBOUNCE_MS = 50;
 const int SERVER_PORT = 80;
 
+// 1 = produção (paciente confirma no botão BOOT da placa antes da próxima dose).
+// 0 = laboratório (dispensas seguidas sem bloqueio; recompile o firmware).
+#ifndef REQUIRE_PATIENT_CONFIRM
+#define REQUIRE_PATIENT_CONFIRM 1
+#endif
+
 // ── Backend ───────────────────────────────────────────────────────────
 // URL base da API (sem trailing slash). Definida em secrets.h.
 extern const char* BACKEND_URL;

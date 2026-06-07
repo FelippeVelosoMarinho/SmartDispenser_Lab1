@@ -13,8 +13,10 @@ import httpx
 from sqlalchemy.orm import Session
 
 from app.core.config import (
+    SCHEDULER_AWAITING_CONFIRM_GRACE_SECONDS,
     SCHEDULER_DEDUP_SECONDS,
     SCHEDULER_DUE_WINDOW_SECONDS,
+    SCHEDULER_IGNORE_AWAITING_CONFIRM,
     SCHEDULER_MODE,
     SCHEDULER_POLL_SECONDS,
     SCHEDULER_TIMEZONE,
@@ -78,7 +80,22 @@ def _effective_scheduled_at(schedule: Schedule) -> datetime.datetime | None:
     return None
 
 
-def _is_due(schedule: Schedule, now: datetime.datetime, dedup_cutoff: datetime.datetime) -> bool:
+def _due_window_seconds(dispenser: Dispenser | None) -> int:
+    """Widen the due window while confirmation is pending so the next period can still fire."""
+    if dispenser and dispenser.awaiting_confirm:
+        return max(
+            SCHEDULER_DUE_WINDOW_SECONDS,
+            SCHEDULER_AWAITING_CONFIRM_GRACE_SECONDS,
+        )
+    return SCHEDULER_DUE_WINDOW_SECONDS
+
+
+def _is_due(
+    schedule: Schedule,
+    now: datetime.datetime,
+    dedup_cutoff: datetime.datetime,
+    dispenser: Dispenser | None = None,
+) -> bool:
     if not schedule.is_active:
         return False
     if not schedule.period:
@@ -91,7 +108,7 @@ def _is_due(schedule: Schedule, now: datetime.datetime, dedup_cutoff: datetime.d
         return False
 
     delta = abs((now - scheduled_at).total_seconds())
-    return delta <= SCHEDULER_DUE_WINDOW_SECONDS
+    return delta <= _due_window_seconds(dispenser)
 
 
 async def _get_status(ip: str) -> dict[str, Any] | None:
@@ -176,14 +193,21 @@ async def _process_period_schedule_push(
         return False
 
     if status.get("awaiting_confirm") in (True, "true"):
-        logger.warning(
-            "[Scheduler] Dispenser %s awaiting confirmation — skipped %s",
-            dispenser.hardware_id,
-            period,
-        )
-        _record_log(db, schedule, False, "awaiting_confirm on dispenser")
-        db.commit()
-        return False
+        if SCHEDULER_IGNORE_AWAITING_CONFIRM:
+            logger.warning(
+                "[Scheduler] Ignorando awaiting_confirm (lab) — %s period=%s",
+                dispenser.hardware_id,
+                period,
+            )
+        else:
+            logger.warning(
+                "[Scheduler] Dispenser %s awaiting confirmation — skipped %s",
+                dispenser.hardware_id,
+                period,
+            )
+            _record_log(db, schedule, False, "awaiting_confirm on dispenser")
+            db.commit()
+            return False
 
     current_slot = int(status.get("current_slot", -1))
     expected_after = carousel_slot_after_sequential(current_slot, TOTAL_CAROUSEL_SLOTS)
@@ -223,12 +247,19 @@ async def _process_period_schedule_queue(
 ) -> bool:
     """Queue mode — enqueue command for delivery via heartbeat response."""
     if dispenser.awaiting_confirm:
-        logger.warning(
-            "[Scheduler] Dispenser %s awaiting confirmation — skipped %s",
-            dispenser.hardware_id,
-            period,
-        )
-        return False
+        if SCHEDULER_IGNORE_AWAITING_CONFIRM:
+            logger.warning(
+                "[Scheduler] Ignorando awaiting_confirm (lab) — %s period=%s",
+                dispenser.hardware_id,
+                period,
+            )
+        else:
+            logger.warning(
+                "[Scheduler] Dispenser %s awaiting confirmation — skipped %s",
+                dispenser.hardware_id,
+                period,
+            )
+            return False
 
     if dispenser.current_slot is None:
         logger.warning(
@@ -323,7 +354,28 @@ async def run_dispense_scheduler() -> None:
                     .filter(Schedule.period.isnot(None))
                     .all()
                 )
-                due = [s for s in candidates if _is_due(s, now, dedup_cutoff)]
+                dispenser_ids = {
+                    s.dispenser_id for s in candidates if s.dispenser_id
+                }
+                dispensers_by_id: dict[str, Dispenser] = {}
+                if dispenser_ids:
+                    rows = (
+                        db.query(Dispenser)
+                        .filter(Dispenser.hardware_id.in_(dispenser_ids))
+                        .all()
+                    )
+                    dispensers_by_id = {d.hardware_id: d for d in rows}
+
+                due = [
+                    s
+                    for s in candidates
+                    if _is_due(
+                        s,
+                        now,
+                        dedup_cutoff,
+                        dispensers_by_id.get(s.dispenser_id or ""),
+                    )
+                ]
                 due.sort(key=lambda s: (_PERIOD_ORDER.get(s.period or "", 99), s.dispenser_id or ""))
 
                 if due:

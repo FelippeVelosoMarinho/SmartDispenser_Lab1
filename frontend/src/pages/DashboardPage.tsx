@@ -5,7 +5,10 @@ import type { DispenserDetails } from "../lib/api";
 import { TelemetryGrid } from "../components/dashboard/TelemetryGrid";
 import { NextDispenseCountdown } from "../components/dashboard/NextDispenseCountdown";
 import { CompartmentsSection } from "../components/dashboard/CompartmentsSection";
-import { PeriodScheduleSection } from "../components/dashboard/PeriodScheduleSection";
+import {
+  PeriodScheduleSection,
+  useHardwareStatus,
+} from "../components/dashboard/PeriodScheduleSection";
 import { DispenserGuideSection } from "../components/dashboard/DispenserGuideSection";
 import { APP_NAME } from "../lib/brand";
 
@@ -48,6 +51,12 @@ export function DashboardPage() {
 
     return () => clearInterval(interval);
   }, []);
+
+  const hwStatus = useHardwareStatus(
+    activeDispenser?.hardware_id ?? "",
+    activeDispenser?.is_online ?? false,
+    activeDispenser?.ip_address,
+  );
 
   if (isLoading) {
     return (
@@ -225,6 +234,7 @@ export function DashboardPage() {
       <NextDispenseCountdown
         hardwareId={activeDispenser.hardware_id}
         isOnline={activeDispenser.is_online}
+        awaitingConfirm={hwStatus?.awaiting_confirm ?? false}
       />
       <TelemetryGrid dispenser={activeDispenser} />
       <PeriodScheduleSection dispenser={activeDispenser} />

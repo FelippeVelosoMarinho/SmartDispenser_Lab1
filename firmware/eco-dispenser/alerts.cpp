@@ -45,7 +45,11 @@ void alertsSetup() {
 // Chamado pelo backend via POST /dispense.
 // Acende o LED do período e dispara o alerta no modo correto.
 void triggerDispenseAlert(bool silentMode, const String& period) {
+#if REQUIRE_PATIENT_CONFIRM
   awaitingConfirmation = true;
+#else
+  awaitingConfirmation = false;
+#endif
   showPeriodLed(period);
 
   if (silentMode) {

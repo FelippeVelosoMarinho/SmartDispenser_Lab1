@@ -34,7 +34,7 @@ const int VIB_PIN = 32;
 // ── Botões (INPUT_PULLUP — repouso HIGH, pressionado LOW) ─────────────
 const int BTN_VOL_UP   = 16;
 const int BTN_VOL_DOWN = 17;
-const int BTN_CONFIRM  = 0;
+const int BTN_CONFIRM  = 0;  // botão BOOT onboard no DevKit WROOM
 
 // ── LED onboard (diagnóstico) ─────────────────────────────────────────
 const int LED_ONBOARD = 2;

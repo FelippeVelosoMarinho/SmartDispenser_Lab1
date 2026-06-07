@@ -69,6 +69,21 @@ def test_is_due_outside_window():
     assert _is_due(s, now, dedup) is False
 
 
+def test_is_due_wider_window_while_awaiting_confirm():
+    now = datetime.datetime(2026, 6, 10, 21, 1, 30)
+    dedup = now - datetime.timedelta(seconds=90)
+    s = Schedule(
+        is_active=True,
+        period="afternoon",
+        time_legacy="21:00",
+        last_triggered_at=None,
+    )
+    dispenser = Dispenser(hardware_id="d1", awaiting_confirm=True)
+    with patch("app.services.scheduler.scheduler_now", return_value=now):
+        assert _is_due(s, now, dedup) is False
+        assert _is_due(s, now, dedup, dispenser) is True
+
+
 def test_is_due_respects_dedup():
     now = datetime.datetime(2026, 6, 10, 21, 0, 5)
     dedup = now - datetime.timedelta(seconds=90)

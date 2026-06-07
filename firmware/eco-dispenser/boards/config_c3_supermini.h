@@ -31,9 +31,10 @@ const int BUZZER_FREQ = 1000;
 const int VIB_PIN = 10;
 
 // ── Botões (INPUT_PULLUP — repouso HIGH, pressionado LOW) ─────────────
+// Vol +/- exigem botões externos (GPIO 6/7). Confirmação usa o BOOT da placa.
 const int BTN_VOL_UP   = 6;
 const int BTN_VOL_DOWN = 7;
-const int BTN_CONFIRM  = 0;
+const int BTN_CONFIRM  = 9;  // botão BOOT onboard (não GPIO 0)
 
 // ── LED onboard (diagnóstico) ─────────────────────────────────────────
 const int LED_ONBOARD = 8;

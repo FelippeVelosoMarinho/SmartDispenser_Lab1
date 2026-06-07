@@ -23,7 +23,15 @@ DISPENSE_PERIOD_MORNING = os.getenv("DISPENSE_PERIOD_MORNING", "21:00")
 DISPENSE_PERIOD_AFTERNOON = os.getenv("DISPENSE_PERIOD_AFTERNOON", "21:01")
 DISPENSE_PERIOD_NIGHT = os.getenv("DISPENSE_PERIOD_NIGHT", "21:02")
 SCHEDULER_POLL_SECONDS = int(os.getenv("SCHEDULER_POLL_SECONDS", "10"))
-SCHEDULER_DUE_WINDOW_SECONDS = int(os.getenv("SCHEDULER_DUE_WINDOW_SECONDS", "30"))
+SCHEDULER_DUE_WINDOW_SECONDS = int(os.getenv("SCHEDULER_DUE_WINDOW_SECONDS", "45"))
+# Extra slack after scheduled time while patient has not confirmed previous dose.
+SCHEDULER_AWAITING_CONFIRM_GRACE_SECONDS = int(
+    os.getenv("SCHEDULER_AWAITING_CONFIRM_GRACE_SECONDS", "120")
+)
+# Lab only: enqueue next dose even if DB says awaiting_confirm (needs firmware lab mode too).
+SCHEDULER_IGNORE_AWAITING_CONFIRM = os.getenv(
+    "SCHEDULER_IGNORE_AWAITING_CONFIRM", "false"
+).lower() in ("1", "true", "yes")
 SCHEDULER_DEDUP_SECONDS = int(os.getenv("SCHEDULER_DEDUP_SECONDS", "90"))
 TOTAL_CAROUSEL_SLOTS = 21
 SCHEDULER_MODE = os.getenv("SCHEDULER_MODE", "queue")  # queue | push

@@ -39,7 +39,7 @@ Ao boot, o Serial exibe: `Eco-Dispenser iniciando (ESP32-C3 SuperMini)...` ou `(
 | **Vibração** | GPIO **10** | GPIO **32** | Modo silencioso |
 | **Botão Vol+** | GPIO **6** | GPIO **16** | INPUT_PULLUP |
 | **Botão Vol−** | GPIO **7** | GPIO **17** | INPUT_PULLUP |
-| **Botão Confirmar** | GPIO **0** | GPIO **0** | BOOT — cuidado ao pressionar durante upload |
+| **Botão Confirmar** | GPIO **9** (BOOT onboard) | GPIO **0** (BOOT onboard) | C3: não use GPIO 0 — não há botão lá |
 | **LED onboard** | GPIO **8** | GPIO **2** | Diagnóstico Wi-Fi / boot |
 
 ### 2.3 Diferenças de comportamento de hardware
