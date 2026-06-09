@@ -44,6 +44,7 @@ export function AppLayout() {
 
   const sidebarFooter = (
     <div style={{ display: "flex", flexDirection: "column", gap: "var(--space-4)", width: "100%" }}>
+      {sidebarOpen && <ThemeSwitcher />}
       <div
         style={{
           display: "flex",
@@ -60,6 +61,7 @@ export function AppLayout() {
           alignItems: "center",
           gap: "var(--space-3)",
           minWidth: 0,
+          flex: 1,
         }}
       >
         <div
@@ -141,9 +143,9 @@ export function AppLayout() {
         onMouseEnter={(e) => { e.currentTarget.style.background = "rgba(239, 68, 68, 0.08)"; }}
         onMouseLeave={(e) => { e.currentTarget.style.background = "transparent"; }}
       >
-        </button>
+        <i className="ph-duotone ph-sign-out" style={{ fontSize: "1.25rem" }} />
+      </button>
       </div>
-      {sidebarOpen && <ThemeSwitcher />}
     </div>
   );
 
