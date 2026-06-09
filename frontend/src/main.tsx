@@ -7,6 +7,11 @@ import { AuthProvider, useAuth } from "./auth/AuthContext";
 import { ToastProvider } from "./components/ui";
 import { router } from "./router";
 
+const savedTheme = localStorage.getItem("app-theme");
+if (savedTheme && savedTheme !== "light") {
+  document.documentElement.setAttribute("data-theme", savedTheme);
+}
+
 function RoutedApp() {
   const auth = useAuth();
   return <RouterProvider router={router} context={{ auth }} />;

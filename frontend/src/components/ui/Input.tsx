@@ -85,7 +85,8 @@ export const Input = React.forwardRef<HTMLInputElement, InputProps>(
             className="pillar-input__error"
             role="alert"
           >
-            {error}
+            <i className="ph-duotone ph-warning" aria-hidden="true" />
+            <span>{error}</span>
           </div>
         )}
         {!hasError && helperText && (

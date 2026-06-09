@@ -226,6 +226,122 @@
   }
 }
 
+/* For manual dark mode override regardless of system preference */
+:root[data-theme="dark"] {
+  --canvas: #0b1320;
+  --surface: #11192a;
+  --surface-sunk: #0b1320;
+  --surface-raised: #152038;
+  --surface-dim: #1e2a44;
+  --ink: #e8eef5;
+  --ink-2: #b6c2d2;
+  --ink-3: #8494a8;
+  --ink-4: #5b6a80;
+  --border-subtle: #1e2a44;
+  --border: #2c3a56;
+  --border-strong: #4a5a78;
+  --primary: #34d399;
+  --primary-hover: #6ee7b7;
+  --primary-press: #a7f3d0;
+  --primary-soft: #064e3b;
+  --secondary-ink: #8fd0cd;
+  --secondary-soft: #143232;
+  --success: #70c291;
+  --warning: #e6a25f;
+  --danger: #f08b83;
+}
+
+/* =========================================================
+   COLOR BLINDNESS & ACCESSIBILITY THEMES
+   ========================================================= */
+
+/* Protanopia (insensibilidade ao vermelho) */
+:root[data-theme="protanopia"] {
+  --primary: #0072B2; /* Azul forte */
+  --primary-hover: #005f9e;
+  --primary-press: #004d80;
+  --primary-soft: #e6f4f1;
+  
+  --danger: #D55E00; /* Laranja forte ao invés de vermelho */
+  --danger-ink: #8c3e00;
+  --danger-soft: #faebd7;
+  
+  --success: #009E73; /* Verde amarelado/azulado */
+  --success-ink: #005a42;
+  
+  --warning: #F0E442;
+  --warning-ink: #6b661d;
+}
+
+/* Deuteranopia (insensibilidade ao verde) */
+:root[data-theme="deuteranopia"] {
+  --primary: #0072B2; /* Azul forte, evita verdes problemáticos */
+  --primary-hover: #005f9e;
+  --primary-press: #004d80;
+  --primary-soft: #e6f4f1;
+  
+  --danger: #D55E00; /* Laranja visível */
+  --danger-ink: #8c3e00;
+  --danger-soft: #faebd7;
+  
+  --success: #56B4E9; /* Azul claro ao invés de verde */
+  --success-ink: #2f6a8c;
+  
+  --warning: #F0E442;
+  --warning-ink: #6b661d;
+}
+
+/* Tritanopia (insensibilidade ao azul/amarelo) */
+:root[data-theme="tritanopia"] {
+  --primary: #CC79A7; /* Rosa/Magenta */
+  --primary-hover: #b36892;
+  --primary-press: #99577d;
+  --primary-soft: #fcf1f6;
+  
+  --danger: #D55E00;
+  --danger-ink: #8c3e00;
+  --danger-soft: #faebd7;
+  
+  --success: #009E73;
+  --success-ink: #005a42;
+  
+  --warning: #ECE133;
+  --warning-ink: #8f881f;
+}
+
+/* High Contrast Mode */
+:root[data-theme="high-contrast"] {
+  --canvas: #000000;
+  --surface: #000000;
+  --surface-sunk: #000000;
+  --surface-raised: #000000;
+  --surface-dim: #ffffff;
+  
+  --ink: #ffffff;
+  --ink-2: #ffff00;
+  --ink-3: #00ffff;
+  --ink-4: #ffffff;
+  
+  --border-subtle: #ffffff;
+  --border: #ffffff;
+  --border-strong: #ffffff;
+  
+  --primary: #ffff00;
+  --primary-hover: #ffaa00;
+  --primary-press: #ff8800;
+  --primary-soft: #333300;
+  --primary-on: #000000;
+  
+  --danger: #ff0000;
+  --danger-ink: #ffcccc;
+  --success: #00ff00;
+  --success-ink: #ccffcc;
+  --warning: #ffaa00;
+  --warning-ink: #ffeecc;
+  
+  --focus-ring: 0 0 0 4px #000000, 0 0 0 8px #ffff00;
+}
+
 /* =========================================================
    SEMANTIC ELEMENT DEFAULTS
    Drop into any project; elements inherit Pillar styles.

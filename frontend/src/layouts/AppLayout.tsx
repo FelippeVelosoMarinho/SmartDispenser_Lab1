@@ -4,6 +4,7 @@ import { Sidebar } from "../components/ui/Sidebar";
 import type { NavItem } from "../components/ui/Sidebar";
 import { PillHubLogo } from "../components/brand/PillHubLogo";
 import { useAuth } from "../auth/AuthContext";
+import { ThemeSwitcher } from "../components/ui/ThemeSwitcher";
 
 export function AppLayout() {
   const [sidebarOpen, setSidebarOpen] = useState(
@@ -42,16 +43,17 @@ export function AppLayout() {
   );
 
   const sidebarFooter = (
-    <div
-      style={{
-        display: "flex",
-        alignItems: "center",
-        justifyContent: sidebarOpen ? "space-between" : "center",
-        gap: "var(--space-2)",
-        width: "100%",
-        overflow: "hidden",
-      }}
-    >
+    <div style={{ display: "flex", flexDirection: "column", gap: "var(--space-4)", width: "100%" }}>
+      <div
+        style={{
+          display: "flex",
+          alignItems: "center",
+          justifyContent: sidebarOpen ? "space-between" : "center",
+          gap: "var(--space-2)",
+          width: "100%",
+          overflow: "hidden",
+        }}
+      >
       <div
         style={{
           display: "flex",
@@ -139,8 +141,9 @@ export function AppLayout() {
         onMouseEnter={(e) => { e.currentTarget.style.background = "rgba(239, 68, 68, 0.08)"; }}
         onMouseLeave={(e) => { e.currentTarget.style.background = "transparent"; }}
       >
-        <i className="ph-duotone ph-sign-out" style={{ fontSize: "1.25rem" }} />
-      </button>
+        </button>
+      </div>
+      {sidebarOpen && <ThemeSwitcher />}
     </div>
   );
 
