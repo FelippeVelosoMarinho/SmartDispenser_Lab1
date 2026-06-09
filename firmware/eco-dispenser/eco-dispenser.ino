@@ -168,6 +168,11 @@ void loop() {
     lastHeartbeat = millis();
   }
 
+  if (WiFi.status() == WL_CONNECTED && consumeEarlyHeartbeat()) {
+    sendHeartbeat();
+    lastHeartbeat = millis();
+  }
+
   if (WiFi.status() == WL_CONNECTED && millis() - lastHeartbeat >= HEARTBEAT_INTERVAL_MS) {
     sendHeartbeat();
     lastHeartbeat = millis();

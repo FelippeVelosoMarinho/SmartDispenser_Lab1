@@ -64,3 +64,7 @@ void calibrateCarousel() {
 int getCurrentSlot() {
   return currentSlot;
 }
+
+bool isCriticalStock() {
+  return currentSlot >= (TOTAL_SLOTS - 3);
+}

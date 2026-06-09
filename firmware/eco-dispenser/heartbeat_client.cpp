@@ -19,9 +19,20 @@ static String pendingAckError = "";
 static String lastExecutedCommandId = "";
 static bool lastAckSuccess = false;
 static String lastAckError = "";
+static bool sEarlyHeartbeatPending = false;
 
 void setBackendUrl(const String& url) {
   sBackendUrl = url;
+}
+
+void requestEarlyHeartbeat() {
+  sEarlyHeartbeatPending = true;
+}
+
+bool consumeEarlyHeartbeat() {
+  if (!sEarlyHeartbeatPending) return false;
+  sEarlyHeartbeatPending = false;
+  return true;
 }
 
 static void sendIotEvent(const String& mac, bool success, const String& errorMsg) {
@@ -161,7 +172,7 @@ void sendHeartbeat() {
                   "\"current_slot\":" + String(getCurrentSlot()) + ","
                   "\"wifi_rssi\":" + String(WiFi.RSSI()) + ","
                   "\"online\":true,"
-                  "\"critical_stock\":false,"
+                  "\"critical_stock\":" + String(isCriticalStock() ? "true" : "false") + ","
                   "\"awaiting_confirm\":" + String(isAwaitingConfirmation() ? "true" : "false") + ","
                   "\"ip_address\":\"" + ip + "\"";
 

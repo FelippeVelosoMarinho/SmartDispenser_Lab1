@@ -5,5 +5,6 @@ void carouselSetup();
 void advanceCarousel();
 void calibrateCarousel();
 int  getCurrentSlot();
+bool isCriticalStock();
 
 #endif

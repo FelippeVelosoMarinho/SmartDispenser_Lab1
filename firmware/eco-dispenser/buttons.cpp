@@ -3,6 +3,7 @@
 #include "alerts.h"
 #include "carousel.h"
 #include "provisioning.h"
+#include "heartbeat_client.h"
 
 static const unsigned long FACTORY_RESET_HOLD_MS = 5000;
 static unsigned long factoryResetHoldStart = 0;
@@ -92,6 +93,7 @@ void checkButtons() {
     if (isAwaitingConfirmation()) {
       lastConfirmedSlot = getCurrentSlot();
       clearAlerts();
+      requestEarlyHeartbeat();
       Serial.printf("✅ Confirmado pelo paciente — slot %d\n", lastConfirmedSlot);
     }
   }
