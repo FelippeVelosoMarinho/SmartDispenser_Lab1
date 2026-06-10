@@ -55,7 +55,9 @@ void triggerDispenseAlert(bool silentMode, const String& period) {
 #if REQUIRE_PATIENT_CONFIRM
   awaitingConfirmation = true;
 #else
-  awaitingConfirmation = false;
+  // Modo silencioso sempre exige confirmação para parar o motor,
+  // mesmo em modo lab (REQUIRE_PATIENT_CONFIRM=0).
+  awaitingConfirmation = silentMode;
 #endif
   showPeriodLed(period);
 
