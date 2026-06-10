@@ -2,7 +2,6 @@
 #include "config.h"
 
 static bool awaitingConfirmation = false;
-static int  buzzerLevel = 3; // escala 1–5
 
 // Vibração persistente (modo silencioso)
 static bool  sVibratingAlert  = false;
@@ -23,12 +22,9 @@ static void showPeriodLed(const String& period) {
 
 // ── Buzzer ────────────────────────────────────────────────────────────
 
-// Mapeia nível 1–5 para frequências distintas de bipe.
 static void beep(int times) {
-  const int freqs[] = {400, 600, 800, 1000, 1200};
-  int freq = freqs[constrain(buzzerLevel - 1, 0, 4)];
   for (int i = 0; i < times; i++) {
-    tone(BUZZER_PIN, freq, 300);
+    tone(BUZZER_PIN, BUZZER_FREQ, 300);
     delay(500);
   }
 }
@@ -101,16 +97,6 @@ void alertsTick(unsigned long nowMs) {
     sVibOn = true;
     sVibLastChange = nowMs;
   }
-}
-
-void volumeUp() {
-  buzzerLevel = constrain(buzzerLevel + 1, 1, 5);
-  Serial.printf("🔊 Volume: %d/5\n", buzzerLevel);
-}
-
-void volumeDown() {
-  buzzerLevel = constrain(buzzerLevel - 1, 1, 5);
-  Serial.printf("🔉 Volume: %d/5\n", buzzerLevel);
 }
 
 bool isAwaitingConfirmation() {

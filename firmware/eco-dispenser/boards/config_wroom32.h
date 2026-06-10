@@ -30,9 +30,7 @@ const int BUZZER_FREQ = 1000;
 // ── Motor de vibração (via transistor NPN BC547) ──────────────────────
 const int VIB_PIN = 22;
 
-// ── Botões (INPUT_PULLUP — repouso HIGH, pressionado LOW) ─────────────
-const int BTN_VOL_UP   = 12;
-const int BTN_VOL_DOWN = 13;
+// ── Botão de confirmação (INPUT_PULLUP — repouso HIGH, pressionado LOW) ──
 const int BTN_CONFIRM  = 15;
 
 // ── LED onboard (diagnóstico) ─────────────────────────────────────────
