@@ -15,3 +15,12 @@ firmware/eco-dispenser/secrets.h
 firmware/.env
 **/.env
 backend/.env
+
+# LaTeX build artifacts
+relatorio/*.aux
+relatorio/*.fdb_latexmk
+relatorio/*.fls
+relatorio/*.log
+relatorio/*.out
+relatorio/*.synctex.gz
+relatorio/*.toc
