@@ -66,6 +66,13 @@ void setup() {
     ssid = getStoredSsid();
     pass = getStoredPassword();
     globalBackendUrl = getStoredBackendUrl();
+    // Se secrets.h tiver uma URL definida, ela sempre prevalece sobre a NVS.
+    // Isso permite trocar de rede sem factory reset: basta editar secrets.h e reflashear.
+    if (strlen(BACKEND_URL) > 0 && globalBackendUrl != String(BACKEND_URL)) {
+      globalBackendUrl = String(BACKEND_URL);
+      saveCredentials(ssid, pass, globalBackendUrl);
+      Serial.println("📝 URL do backend atualizada via secrets.h: " + globalBackendUrl);
+    }
     Serial.println("📁 Credenciais carregadas da NVS. SSID: " + ssid);
 
   } else if (strlen(WIFI_SSID) > 0) {
