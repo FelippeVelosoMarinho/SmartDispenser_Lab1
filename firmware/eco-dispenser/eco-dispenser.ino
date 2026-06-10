@@ -148,6 +148,7 @@ void setup() {
 
 void loop() {
   processPendingWifiFactoryReset();
+  alertsTick(millis());
   checkButtons();
 
   wl_status_t currentWifiStatus = WiFi.status();

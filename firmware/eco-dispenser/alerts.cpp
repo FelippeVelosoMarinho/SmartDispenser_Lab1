@@ -4,6 +4,13 @@
 static bool awaitingConfirmation = false;
 static int  buzzerLevel = 3; // escala 1–5
 
+// Vibração persistente (modo silencioso)
+static bool  sVibratingAlert  = false;
+static bool  sVibOn           = false;
+static unsigned long sVibLastChange = 0;
+static const unsigned long VIB_ON_MS  = 400;
+static const unsigned long VIB_OFF_MS = 250;
+
 // ── LEDs de período ───────────────────────────────────────────────────
 
 // Acende apenas o LED correspondente ao período do dia.
@@ -53,14 +60,12 @@ void triggerDispenseAlert(bool silentMode, const String& period) {
   showPeriodLed(period);
 
   if (silentMode) {
-    // Modo silencioso: 3 pulsos de vibração (espelho do beep)
-    Serial.println("[Alerts] modo silencioso — vibrando");
-    for (int i = 0; i < 3; i++) {
-      digitalWrite(VIB_PIN, HIGH);
-      delay(300);
-      digitalWrite(VIB_PIN, LOW);
-      if (i < 2) delay(200);
-    }
+    // Modo silencioso: vibração persistente até o paciente confirmar (via alertsTick)
+    Serial.println("[Alerts] modo silencioso — iniciando vibração persistente");
+    sVibratingAlert = true;
+    sVibOn = true;
+    sVibLastChange = millis();
+    digitalWrite(VIB_PIN, HIGH);
   } else {
     // Modo normal: 3 bipes
     beep(3);
@@ -71,11 +76,29 @@ void triggerDispenseAlert(bool silentMode, const String& period) {
 // Chamado quando o paciente confirma (botão ou POST /confirm).
 void clearAlerts() {
   awaitingConfirmation = false;
+  sVibratingAlert = false;
+  sVibOn = false;
   digitalWrite(LED_MORNING,   LOW);
   digitalWrite(LED_AFTERNOON, LOW);
   digitalWrite(LED_NIGHT,     LOW);
   digitalWrite(VIB_PIN,       LOW);
   noTone(BUZZER_PIN);
+}
+
+// Chamado a cada iteração do loop principal.
+// Mantém o padrão de vibração pulsada enquanto aguarda confirmação.
+void alertsTick(unsigned long nowMs) {
+  if (!sVibratingAlert) return;
+  unsigned long elapsed = nowMs - sVibLastChange;
+  if (sVibOn && elapsed >= VIB_ON_MS) {
+    digitalWrite(VIB_PIN, LOW);
+    sVibOn = false;
+    sVibLastChange = nowMs;
+  } else if (!sVibOn && elapsed >= VIB_OFF_MS) {
+    digitalWrite(VIB_PIN, HIGH);
+    sVibOn = true;
+    sVibLastChange = nowMs;
+  }
 }
 
 void volumeUp() {
