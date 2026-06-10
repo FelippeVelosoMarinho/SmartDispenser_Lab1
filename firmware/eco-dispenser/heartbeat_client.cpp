@@ -116,6 +116,7 @@ static void processHeartbeatCommand(const String& responseBody, const String& ma
     int expectedSlot = hasExpected ? expectedStr.toInt() : 0;
 
     Serial.println("[Heartbeat] ▶ comando recebido: DISPENSAR periodo=" + period +
+                   " silent_mode=" + silentStr +
                    " expected_slot=" + expectedStr);
 
     DispenseResult result = executeDispense(period, silentMode, expectedSlot, hasExpected);

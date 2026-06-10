@@ -53,10 +53,14 @@ void triggerDispenseAlert(bool silentMode, const String& period) {
   showPeriodLed(period);
 
   if (silentMode) {
-    // Modo silencioso: vibra no lugar do buzzer
-    digitalWrite(VIB_PIN, HIGH);
-    delay(600);
-    digitalWrite(VIB_PIN, LOW);
+    // Modo silencioso: 3 pulsos de vibração (espelho do beep)
+    Serial.println("[Alerts] modo silencioso — vibrando");
+    for (int i = 0; i < 3; i++) {
+      digitalWrite(VIB_PIN, HIGH);
+      delay(300);
+      digitalWrite(VIB_PIN, LOW);
+      if (i < 2) delay(200);
+    }
   } else {
     // Modo normal: 3 bipes
     beep(3);
