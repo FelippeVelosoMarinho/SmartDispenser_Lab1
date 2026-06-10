@@ -91,7 +91,7 @@
 
     \vfill
 
-    {\large Belo Horizonte, maio de 2026}
+    {\large Belo Horizonte, junho de 2026}
 \end{titlepage}
 
 % =========================================================
@@ -197,8 +197,8 @@ A diversidade do público-alvo impôs requisitos de acessibilidade rígidos: ale
         Alerta sonoro         & Mínimo 60 dB, 5V                      & Buzzer Ativo 5V \\
         Alerta vibratório     & Silencioso, estrutura segura          & Micro Motor 3V \\
         Alerta visual         & Alta luminosidade, 3 períodos         & 3$\times$ LED 5mm \\
-        Botão confirmação     & Tátil, grande, GPIO 0                 & Push Button 12$\times$12mm \\
-        Botões de volume      & GPIOs 9 e 10                          & Push Button 12$\times$12mm \\
+        Botão confirmação     & Tátil, grande, GPIO 9 (BOOT)          & Push Button 12$\times$12mm \\
+        Botões de volume      & GPIOs 6 (Vol+) e 7 (Vol-)             & Push Button 12$\times$12mm \\
         Alimentação           & 127V, até 1A                          & Carregador USB padrão \\
         \bottomrule
     \end{tabular}
@@ -244,13 +244,17 @@ Os casos de uso do sistema, levantados durante a fase de modelagem, são:
 
 \subsection{Fluxo de Comunicação Típico}
 
+A comunicação entre firmware e backend é baseada em \textbf{heartbeat periódico}: o ESP32 é quem inicia a conexão, eliminando a necessidade de o backend conhecer o IP do dispositivo com antecedência.
+
 \begin{enumerate}
-    \item O cuidador acessa o painel web e configura um agendamento de dispensação.
-    \item No horário configurado, o backend envia \texttt{POST /dispense} ao firmware com o período e modo de alerta.
-    \item O firmware avança a roleta (servo SG90), acende o LED do período e dispara o alerta (buzzer ou vibração).
-    \item O paciente retira o medicamento e pressiona o botão de confirmação (ou o cuidador confirma remotamente).
-    \item O firmware registra a confirmação; o backend persiste o log no banco de dados.
-    \item Se não houver confirmação dentro do prazo, o backend notifica o cuidador.
+    \item O cuidador acessa o painel web e configura os horários de dispensação (manhã, tarde e noite).
+    \item O \textbf{scheduler} do backend (tarefa assíncrona em background) verifica a cada 10 segundos quais agendamentos estão no prazo; ao detectar um, enfileira um comando \texttt{dispense} na tabela \texttt{pending\_commands}.
+    \item O firmware envia \texttt{POST /api/heartbeat} ao backend a cada 30 segundos (ou imediatamente após uma confirmação do paciente). O corpo inclui \texttt{current\_slot}, \texttt{awaiting\_confirm}, \texttt{critical\_stock}, RSSI e, se aplicável, o ACK do último comando executado.
+    \item O backend responde ao heartbeat com o próximo comando pendente (\texttt{dispense} ou \texttt{calibrate}), marcando-o como entregue. Se não há comando, responde com \texttt{"command": null}.
+    \item Ao receber um comando \texttt{dispense}, o firmware avança a roleta (servo SG90), acende o LED do período e dispara o alerta: buzzer em modo normal, ou vibração persistente em pulsos até confirmação no \textbf{modo silencioso}.
+    \item O paciente retira o medicamento e pressiona o botão físico de confirmação; o firmware limpa os alertas e agenda um heartbeat imediato para notificar o backend.
+    \item O backend recebe o ACK no próximo heartbeat, marca o comando como concluído, atualiza o flag \texttt{awaiting\_confirm} e persiste o evento no log de dispensações.
+    \item Se não houver confirmação dentro do prazo, o backend notifica o cuidador por e-mail.
 \end{enumerate}
 
 \newpage
@@ -283,11 +287,19 @@ A API HTTP exposta pelo firmware possui os seguintes endpoints:
     \end{tabular}
 \end{table}
 
-O endpoint \texttt{GET /status} retorna um JSON com os campos: \texttt{current\_slot}, \texttt{total\_slots} (fixo em 21), \texttt{awaiting\_confirm}, \texttt{last\_confirmed\_slot}, \texttt{wifi\_rssi} e \texttt{uptime\_s}.
+O endpoint \texttt{GET /status} retorna um JSON com os campos:
+\texttt{current\_slot}, \texttt{total\_slots} (fixo em~21), \texttt{awaiting\_confirm},
+\texttt{last\_confirmed\_slot}, \texttt{wifi\_rssi} e \texttt{uptime\_s}.
 
-O \texttt{POST /dispense} aceita \texttt{\{"period": "morning"|"afternoon"|"night", "silent\_mode": bool\}} e controla qual alerta é disparado. O parsing do JSON é feito manualmente, sem a biblioteca ArduinoJson, por incompatibilidades de versão encontradas durante o desenvolvimento.
+O \texttt{POST /dispense} aceita um objeto JSON com os campos \texttt{period} (\texttt{"morning"}, \texttt{"afternoon"} ou \texttt{"night"}) e \texttt{silent\_mode} (booleano) e controla qual alerta é disparado. O parsing do JSON é feito manualmente, sem a biblioteca ArduinoJson, por incompatibilidades de versão encontradas durante o desenvolvimento.
 
-A credencial WiFi é armazenada em \texttt{firmware/eco-dispenser/secrets.h}. O backend localiza o dispositivo pelo endereço IP configurado na variável de ambiente \texttt{ESP32\_IP}. A descoberta automática do IP via mDNS está planejada como trabalho futuro.
+Além do servidor HTTP, o firmware possui o módulo \textbf{heartbeat\_client}, que executa periodicamente o seguinte ciclo: (1)~constrói um JSON com o estado atual do dispositivo (\texttt{current\_slot}, \texttt{awaiting\_confirm}, \texttt{critical\_stock}, RSSI, uptime e eventual ACK de comando anterior); (2)~envia \texttt{POST /api/heartbeat} ao backend; (3)~processa o campo \texttt{command} da resposta, executando a dispensação ou calibração indicada. Esse mecanismo de \emph{pull} elimina a necessidade de o backend conhecer o IP do firmware. Após a confirmação do paciente, o firmware aciona \texttt{re\-quest\-Early\-Heart\-beat()}, disparando um heartbeat imediato em vez de aguardar os 30~segundos regulares.
+
+O nível de estoque crítico é calculado dinamicamente pela função \texttt{isCriticalStock()}: retorna \texttt{true} quando o slot atual é maior ou igual a \texttt{TOTAL\_SLOTS\,--\,3} (ou seja, restam apenas 3 compartimentos não utilizados). O valor é reportado no heartbeat para que o backend envie alerta ao cuidador.
+
+Em \textbf{modo silencioso}, o motor de vibração não pulsa uma única vez: a função \texttt{alertsTick()}, chamada a cada iteração do \texttt{loop()}, mantém o motor em ciclo de 400~ms ligado / 250~ms desligado enquanto \texttt{awaiting\_confirm} for \texttt{true}. O alerta cessa automaticamente quando o paciente pressiona o botão de confirmação.
+
+A credencial WiFi e a URL do backend são armazenadas em \texttt{secrets.h} (excluído do controle de versão via \texttt{.gitignore}); na primeira inicialização, são migradas para a NVS do ESP32 para boots futuros.
 
 \subsection{Backend (FastAPI)}
 
@@ -295,16 +307,18 @@ O backend é uma aplicação Python com o framework \textbf{FastAPI} e servidor 
 
 \begin{itemize}
     \item \texttt{/api/auth} — autenticação (registro, login, perfil) com JWT;
-    \item \texttt{/api/iot} — proxy para o hardware (status, LED, eventos, heartbeat);
+    \item \texttt{/api/iot} — endpoints IoT: \texttt{POST /heartbeat} (principal ponto de contato com o firmware), eventos e status;
     \item \texttt{/api/patients} — CRUD de pacientes;
     \item \texttt{/api/medications} — CRUD de medicamentos;
     \item \texttt{/api/schedules} — gerenciamento de agendamentos;
-    \item \texttt{/api/logs} — histórico de dispensações;
-    \item \texttt{/api/dispensers} — gerenciamento de dispositivos;
-    \item \texttt{/api/health} — verificação de saúde e alcançabilidade do ESP32.
+    \item \texttt{/api/logs} — histórico de dispensações e reabastecimentos;
+    \item \texttt{/api/dispensers} — gerenciamento de dispositivos, incluindo agendas periódicas e status de hardware;
+    \item \texttt{/api/health} — verificação de saúde do serviço.
 \end{itemize}
 
-A comunicação com o firmware é feita via \texttt{httpx.AsyncClient} com \texttt{base\_url = http://\{ESP32\_IP\}}. Uma decisão técnica importante foi utilizar \texttt{127.0.0.1} em vez de \texttt{localhost} para evitar problemas de resolução IPv6 no ambiente de desenvolvimento.
+O backend possui um \textbf{scheduler assíncrono} (tarefa de background iniciada junto com a aplicação) que varre os agendamentos ativos a cada 10 segundos. Quando um horário está dentro da janela de disparo (até 120 s após o horário configurado), o scheduler enfileira um comando na tabela \texttt{pending\_commands} do banco de dados (mode \emph{queue}). A deduplicação impede que o mesmo agendamento seja enfileirado mais de uma vez por período, com janela de 180 s. Ao receber um heartbeat do firmware, o endpoint \texttt{POST /api/heartbeat} entrega o comando pendente mais antigo na resposta JSON e processa o ACK enviado pelo ESP do comando anterior.
+
+As notificações por e-mail são enviadas via SMTP nos seguintes eventos: cadastro de novo cuidador (boas-vindas), transição para estado de estoque crítico (\texttt{critical\_stock}), e falha de dispensação. A integração usa \texttt{smtplib} com as credenciais configuradas via variáveis de ambiente.
 
 \subsection{Frontend (React)}
 
@@ -316,7 +330,7 @@ Em desenvolvimento, as requisições ao prefixo \texttt{/api} são redirecionada
 
 \subsection{Banco de Dados}
 
-O banco de dados é o \textbf{PostgreSQL 16}. O schema inicial é provisionado via \texttt{database/init.sql} na primeira inicialização do volume Docker. Os modelos de domínio são definidos em SQLAlchemy e incluem entidades para usuários, pacientes, medicamentos, agendamentos, dispensers e logs de dispensação.
+O banco de dados é o \textbf{PostgreSQL 16}. O schema inicial é provisionado via \texttt{database/\allowbreak init.sql} na primeira inicialização do volume Docker. Os modelos de domínio são definidos em SQLAlchemy e incluem entidades para usuários, pacientes, medicamentos, agendamentos, dispensers, fila de comandos pendentes (\texttt{pending\_commands}) e logs de dispensação.
 
 \subsection{Orquestração com Docker Compose}
 
@@ -370,11 +384,11 @@ Os possíveis status de cada caso de teste são:
     TC02 & Modo de operação normal (alertas não-sonoros/silencioso) & \parcial \\
     TC03 & Modo de reabastecimento                                  & \naorealizado \\
     TC04 & Dispensação de comprimido único                          & \naorealizado \\
-    TC05 & Dispensação no horário agendado                          & \parcial \\
+    TC05 & Dispensação no horário agendado                          & \aprovado \\
     TC06 & Confirmação de retirada                                  & \aprovado \\
     TC07 & Integridade estrutural do slot de retirada               & \naorealizado \\
-    TC08 & Alerta de código ativado em horário configurado          & \parcial \\
-    TC09 & Notificação ao cuidador/médico associado                 & \naorealizado \\
+    TC08 & Alerta de código ativado em horário configurado          & \aprovado \\
+    TC09 & Notificação ao cuidador/médico associado                 & \parcial \\
     TC10 & Conectividade: controlador alcança servidor              & \aprovado \\
     TC11 & Ajuste de volume do alerta sonoro                        & \naorealizado \\
     TC12 & Capacidade mínima de 21 slots                            & \aprovado \\
@@ -407,16 +421,18 @@ Os possíveis status de cada caso de teste são:
 \subsubsection{TC02 — Modo de Operação Normal (Alertas Não-Sonoros / Silencioso)}
 
 \begin{description}[leftmargin=4cm, style=nextline]
-    \item[Pré-condição] Dispositivo ligado e conectado ao WiFi.
+    \item[Pré-condição] Dispositivo ligado e conectado ao WiFi; agendamento configurado com modo silencioso ativado.
     \item[Passos]
         \begin{enumerate}
-            \item Enviar \texttt{POST /dispense} com \texttt{silent\_mode: true} e \texttt{period: "night"}.
-            \item Verificar que o servo avança um slot.
-            \item Verificar que o motor de vibração pulsa por aproximadamente 600~ms.
+            \item Configurar agendamento com \texttt{silent\_mode: true} via frontend.
+            \item Aguardar o horário agendado; o scheduler enfileira o comando com o campo \texttt{silent\_mode: true}.
+            \item Verificar que o firmware, ao receber o comando via heartbeat, avança a roleta.
+            \item Verificar que o motor de vibração entra em ciclo persistente (400~ms ligado / 250~ms desligado) enquanto \texttt{awaiting\_confirm} for \texttt{true}.
             \item Verificar que o buzzer permanece silencioso.
+            \item Pressionar o botão de confirmação; verificar que o motor para imediatamente.
         \end{enumerate}
-    \item[Resultado esperado] Os remédios são dispensados; alerta vibratório é ativado sem emissão de som.
-    \item[Resultado obtido] Endpoint retornou HTTP 200 com \texttt{success: true}. Comportamento físico do motor não verificado por ausência de hardware.
+    \item[Resultado esperado] Remédios dispensados; alerta vibratório persistente ativado sem emissão de som; vibração cessa na confirmação.
+    \item[Resultado obtido] Lógica de software verificada: campo \texttt{silent\_mode} propagado corretamente do frontend ao banco de dados, ao scheduler e ao comando entregue via heartbeat. Função \texttt{alertsTick()} implementada e integrada ao \texttt{loop()} do firmware. Comportamento físico do motor verificado parcialmente (vibração detectada, intensidade dependente da tensão de alimentação do circuito).
     \item[Status] \parcial
 \end{description}
 
@@ -454,17 +470,18 @@ Os possíveis status de cada caso de teste são:
 \subsubsection{TC05 — Dispensação no Horário Agendado}
 
 \begin{description}[leftmargin=4cm, style=nextline]
-    \item[Pré-condição] Backend em execução; agendamento configurado para horário X.
+    \item[Pré-condição] Backend em execução; ESP32 conectado ao WiFi e enviando heartbeats; agendamento configurado para horário X via frontend.
     \item[Passos]
         \begin{enumerate}
-            \item Configurar um agendamento de dispensação para horário X via frontend.
+            \item Configurar agendamento de dispensação para horário X via frontend.
             \item Aguardar o horário X.
-            \item Verificar que o backend envia \texttt{POST /dispense} ao firmware.
-            \item Verificar que o alerta é ativado com as configurações corretas.
+            \item Verificar que o scheduler enfileira o comando na tabela \texttt{pending\_\allowbreak commands}.
+            \item Verificar que o firmware recebe o comando no próximo heartbeat e avança a roleta.
+            \item Verificar que os alertas são ativados com o período e modo corretos.
         \end{enumerate}
     \item[Resultado esperado] A medicação do slot esperado é dispensada no horário X com os alertas configurados.
-    \item[Resultado obtido] O endpoint \texttt{/dispense} funciona corretamente quando acionado manualmente. O disparo automático pelo backend em horário agendado não foi validado em ambiente integrado completo.
-    \item[Status] \parcial
+    \item[Resultado obtido] Validado em integração completa em 08/06/2026: o scheduler detectou o horário dentro da janela configurada, enfileirou o comando \texttt{dispense} e o firmware executou a dispensação no heartbeat seguinte (latência máxima de 30~s). O servo avançou, o LED do período acendeu e o buzzer soou corretamente. Mecanismo de deduplicação (janela de 180~s) preveniu disparos duplos.
+    \item[Status] \aprovado
 \end{description}
 
 \subsubsection{TC06 — Confirmação de Retirada}
@@ -500,29 +517,30 @@ Os possíveis status de cada caso de teste são:
 \subsubsection{TC08 — Alerta de Código Ativado em Horário Configurado}
 
 \begin{description}[leftmargin=4cm, style=nextline]
-    \item[Pré-condição] Firmware em execução; agendamento configurado para horário X.
+    \item[Pré-condição] Firmware em execução; ESP32 conectado ao WiFi; agendamento configurado para horário X.
     \item[Passos]
         \begin{enumerate}
-            \item Agendar alerta para horário X com configurações de sinal específicas.
-            \item Verificar que o alerta é ativado em X com as configurações corretas.
+            \item Agendar alerta para horário X com período e modo de alerta específicos.
+            \item Aguardar o horário X.
+            \item Verificar que o alerta é ativado com as configurações corretas (LED do período, buzzer ou vibração conforme \texttt{silent\_mode}).
         \end{enumerate}
-    \item[Resultado esperado] O alerta é ativado exatamente no horário X com o período e modo corretos.
-    \item[Resultado obtido] A lógica de alerta do firmware foi testada via API: \texttt{POST /dispense} ativa o alerta corretamente com as configurações enviadas. O disparo automático por agendamento do backend não foi validado em integração completa.
-    \item[Status] \parcial
+    \item[Resultado esperado] O alerta é ativado dentro da janela de até 30~s após o horário X, com período e modo corretos.
+    \item[Resultado obtido] Validado em integração completa em 08/06/2026: o LED do período acendeu, o buzzer soou (modo normal) imediatamente após a entrega do comando via heartbeat, com latência de até 30~s em relação ao horário configurado, conforme esperado pela arquitetura de polling.
+    \item[Status] \aprovado
 \end{description}
 
 \subsubsection{TC09 — Notificação ao Cuidador/Médico Associado}
 
 \begin{description}[leftmargin=4cm, style=nextline]
-    \item[Pré-condição] Paciente associado a cuidador e médico no sistema; dispensação sem confirmação.
+    \item[Pré-condição] Cuidador com e-mail cadastrado no sistema; dispensação executada ou estoque crítico detectado.
     \item[Passos]
         \begin{enumerate}
-            \item Verificar que a notificação chega ao cuidador e médico \emph{associados} ao paciente.
-            \item Verificar que a notificação \emph{não} chega a usuários não associados.
+            \item Verificar que o e-mail de notificação chega ao cuidador associado ao paciente nos eventos configurados.
+            \item Verificar que notificações de estoque crítico são enviadas quando \texttt{critical\_stock} transiciona para \texttt{true}.
         \end{enumerate}
-    \item[Resultado esperado] Somente os responsáveis vinculados ao paciente recebem a notificação.
-    \item[Resultado obtido] Não realizado. A integração com o serviço de notificações push (Firebase Cloud Messaging) não foi implementada na versão atual.
-    \item[Status] \naorealizado
+    \item[Resultado esperado] O cuidador vinculado recebe e-mail nas situações relevantes.
+    \item[Resultado obtido] Notificações por e-mail implementadas via SMTP para os seguintes eventos: cadastro de cuidador (boas-vindas), transição para estoque crítico (\texttt{critical\_stock: true}) e falha de dispensação. Notificações push (Firebase Cloud Messaging) não foram implementadas.
+    \item[Status] \parcial
 \end{description}
 
 \subsubsection{TC10 — Conectividade: Controlador Alcança Servidor}
@@ -536,7 +554,7 @@ Os possíveis status de cada caso de teste são:
             \item Verificar que \texttt{wifi\_rssi} está entre $-$100~dBm e 0~dBm.
         \end{enumerate}
     \item[Resultado esperado] Servidor HTTP do firmware responde corretamente; uptime cresce; RSSI válido.
-    \item[Resultado obtido] Todos os testes de conectividade da suíte pytest passaram: \texttt{test\_esp32\_responde}, \texttt{test\_uptime\_aumenta\_com\_tempo} e \texttt{test\_rssi\_dentro\_do\_esperado}.
+    \item[Resultado obtido] Todos os três testes de conectividade da suíte pytest passaram: resposta HTTP~200, crescimento de uptime e RSSI dentro do intervalo válido.
     \item[Status] \aprovado
 \end{description}
 
@@ -546,7 +564,7 @@ Os possíveis status de cada caso de teste são:
     \item[Pré-condição] Dispositivo físico montado; buzzer em operação.
     \item[Passos]
         \begin{enumerate}
-            \item Com volume em 0\%, pressionar BTN\_VOL\_UP (GPIO 9).
+            \item Com volume em 0\%, pressionar BTN\_VOL\_UP (GPIO 6).
             \item Verificar que o volume do alerta passa a ser audível (equivalente a 20\%).
         \end{enumerate}
     \item[Resultado esperado] O alerta passa a emitir som após o ajuste.
@@ -716,24 +734,29 @@ Para um projeto de sistema embarcado com componentes de hardware e software tão
     \midrule
     \endhead
     Servidor HTTP no firmware           & Sim  & Endpoints /status, /dispense, /confirm, /calibrate \\
+    Heartbeat periódico (pull de comandos) & Sim & ESP32 envia POST /api/heartbeat a cada 30~s; backend responde com comando pendente \\
+    Confirmação imediata pós-botão      & Sim  & \texttt{requestEarlyHeartbeat()} aciona heartbeat imediato após confirmação do paciente \\
     Controle do servo (roleta 21 slots) & Sim  & Wrap-around após slot 21 \\
-    Alerta sonoro (buzzer)              & Sim  & Verificado por código; físico não testado \\
-    Alerta visual (3 LEDs por período)  & Sim  & Verificado por código; físico não testado \\
-    Alerta vibratório (motor)           & Sim  & Verificado por código; físico não testado \\
-    Botão de confirmação física         & Sim  & GPIO 0; lógica implementada \\
-    Botões de volume (VOL\_UP/DOWN)     & Sim  & GPIOs 9 e 10; sem endpoint HTTP \\
-    Flag de confirmação pendente (\texttt{awaiting\_confirm}) & Sim  & Exposto via \texttt{/status}; bloqueio de dupla dose deve ser implementado no backend \\
-    Backend FastAPI com proxy IoT       & Sim  & Endpoints IoT funcionais \\
+    Alerta sonoro (buzzer)              & Sim  & Validado fisicamente \\
+    Alerta visual (3 LEDs por período)  & Sim  & Validado fisicamente \\
+    Alerta vibratório persistente       & Sim  & Ciclo 400~ms/250~ms até confirmação; validado parcialmente \\
+    Modo silencioso (configurável)      & Sim  & Checkbox no frontend; propagado até o firmware via heartbeat \\
+    Estoque crítico dinâmico            & Sim  & \texttt{isCriticalStock()} calcula em tempo real; reportado no heartbeat \\
+    Botão de confirmação física         & Sim  & GPIO 9 (BOOT); validado fisicamente \\
+    Botões de volume (VOL\_UP/DOWN)     & Sim  & GPIOs 6 e 7; sem endpoint HTTP \\
+    Flag \texttt{awaiting\_confirm}     & Sim  & Exposto via \texttt{/status} e heartbeat; bloqueio de dupla dose implementado no scheduler \\
+    Backend FastAPI com scheduler       & Sim  & Scheduler assíncrono com fila de comandos e deduplicação \\
     Autenticação JWT                    & Sim  & Login e proteção de rotas \\
     CRUD pacientes e medicamentos       & Sim  & Modelos e endpoints implementados \\
-    Agendamentos de dispensação         & Sim  & Disparo automático não validado em integração \\
-    Histórico de adesão (logs)          & Sim  & Endpoint de logs implementado \\
-    Frontend React (dashboard)          & Sim  & Páginas de login, pacientes, dispensers \\
+    Agendamentos de dispensação         & Sim  & Disparo automático validado em integração \\
+    Notificações por e-mail             & Sim  & Boas-vindas, estoque crítico e falha de dispensação \\
+    Histórico de adesão (logs)          & Sim  & Endpoint de logs implementado; visualização no frontend não implementada \\
+    Frontend React (dashboard)          & Sim  & Countdown, agendas, telemetria, modo silencioso, gestão de pacientes \\
     Docker Compose (dev/prod)           & Sim  & Perfis configurados e funcionais \\
-    Notificações push ao cuidador       & Não  & Firebase não integrado \\
-    Descoberta automática do ESP (mDNS) & Não  & Em andamento (equipe back/front) \\
-    Modo reabastecimento (UI)           & Não  & Lógica de hardware prevista; UI não implementada \\
-    Testes físicos do hardware          & Não  & Dispositivo físico completo não disponível \\
+    Notificações push (Firebase)        & Não  & Firebase não integrado \\
+    Descoberta automática do ESP (mDNS) & Não  & IP configurado via NVS; mDNS previsto como trabalho futuro \\
+    Modo reabastecimento (UI)           & Não  & Fluxo de calibração implementado; UI completa não finalizada \\
+    Testes físicos do hardware          & Não  & Hardware parcialmente disponível; TCs físicos não executados integralmente \\
     Operação offline (sem backend)      & Não  & Previsto como trabalho futuro \\
     \bottomrule
     \caption{Balanço de entregas realizadas e não realizadas}
@@ -749,17 +772,18 @@ Para um projeto de sistema embarcado com componentes de hardware e software tão
 
 \subsection{Conclusão}
 
-O Eco-Dispenser Inteligente atingiu seus objetivos centrais de MVP: foi desenvolvido um sistema integrado capaz de dispensar medicamentos automaticamente, emitir alertas multimodais e registrar confirmações do paciente. O firmware do ESP32-C3 expõe uma API HTTP funcional e testada; o backend FastAPI realiza o proxy para o hardware com autenticação e persistência; o frontend React oferece uma interface de configuração e monitoramento.
+O Eco-Dispenser Inteligente atingiu seus objetivos centrais de MVP: foi desenvolvido um sistema integrado capaz de dispensar medicamentos automaticamente nos horários configurados, emitir alertas multimodais (sonoro, visual e vibratório), registrar confirmações do paciente e notificar o cuidador por e-mail em situações críticas. A arquitetura heartbeat-based eliminou a dependência de IP fixo para comunicação, tornando o sistema mais robusto em redes domésticas. O scheduler assíncrono com fila de comandos e deduplicação garantiu a entrega confiável das dispensações sem disparos duplicados. O frontend oferece configuração de horários, modo silencioso, countdown da próxima dispensação e monitoramento de telemetria em tempo real.
 
-As principais limitações da versão atual são a ausência de notificações push ao cuidador e a necessidade de configuração manual do endereço IP do dispositivo. Ambos os problemas têm soluções identificadas e em andamento.
+As principais limitações da versão atual são a ausência de notificações push ao cuidador (somente e-mail), a necessidade de configuração manual do endereço de backend no firmware, e a não execução dos testes físicos completos de hardware.
 
 \subsection{Trabalhos Futuros}
 
 \begin{itemize}
-    \item \textbf{Descoberta automática do ESP (mDNS):} o firmware anunciaria o dispositivo como \texttt{eco-dispenser.local} na rede local, eliminando a configuração manual de IP;
-    \item \textbf{Notificações push:} integração com Firebase Cloud Messaging para alertar cuidadores em caso de não adesão;
+    \item \textbf{Descoberta automática do ESP (mDNS):} o firmware anunciaria o dispositivo como \texttt{eco-dispenser.local} na rede local, eliminando a configuração manual da URL do backend no firmware;
+    \item \textbf{Notificações push:} integração com Firebase Cloud Messaging (ou similar) para alertar cuidadores em tempo real em caso de não adesão, complementando as notificações por e-mail já implementadas;
+    \item \textbf{Visualização do histórico no frontend:} página de logs de dispensação e adesão, cujos dados já são coletados pelo backend;
     \item \textbf{Testes físicos completos:} execução dos casos de teste de hardware (TC04, TC07, TC11, TC13, TC14, TC15) com o dispositivo montado;
-    \item \textbf{Operação offline:} firmware com alertas físicos mesmo sem conectividade ao backend;
+    \item \textbf{Operação offline:} firmware com alertas físicos mesmo sem conectividade ao backend, garantindo funcionamento básico em queda de rede;
     \item \textbf{Modo reabastecimento:} implementação da interface e do fluxo completo de reabastecimento semanal;
     \item \textbf{Deploy em produção:} configuração de HTTPS e infraestrutura para uso fora da rede local.
 \end{itemize}
