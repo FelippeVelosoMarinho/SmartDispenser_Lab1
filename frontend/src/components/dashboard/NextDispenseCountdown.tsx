@@ -1,7 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { getPeriodSchedule, type PeriodSchedule } from "../../lib/api";
 import { computeNextDispense, formatCountdown } from "../../lib/periodSchedule";
-import { UnsavedScheduleBanner } from "./UnsavedScheduleBanner";
 
 interface NextDispenseCountdownProps {
   hardwareId: string;
@@ -16,6 +15,7 @@ const FALLBACK_SCHEDULE: PeriodSchedule = {
   afternoon_time: "14:00",
   night_time: "20:00",
   is_active: true,
+  silent_mode: false,
   source: "defaults",
 };
 
@@ -62,10 +62,8 @@ export function NextDispenseCountdown({
   const usesDefaults = effectiveSchedule.source === "defaults";
 
   return (
-    <>
-      {usesDefaults && <UnsavedScheduleBanner />}
-      <div
-        role="timer"
+    <div
+      role="timer"
       aria-live="polite"
       aria-label={`Próxima dispensação em ${formatCountdown(nextDispense.secondsRemaining)}`}
       style={{
@@ -119,33 +117,34 @@ export function NextDispenseCountdown({
           color: isOnline ? "var(--primary)" : "var(--ink-3)",
           fontVariantNumeric: "tabular-nums",
           lineHeight: 1,
+          textAlign: "center",
+          maxWidth: "none",
         }}
       >
         {formatCountdown(nextDispense.secondsRemaining)}
       </p>
 
-      <p style={{ margin: 0, fontSize: "var(--text-base)", fontWeight: 600, color: "var(--ink)" }}>
+      <p style={{ margin: 0, fontSize: "var(--text-base)", fontWeight: 600, color: "var(--ink)", textAlign: "center", maxWidth: "none" }}>
         {nextDispense.periodLabel} às {nextDispense.timeLabel}
       </p>
 
       {!usesDefaults && (
-        <p style={{ margin: "var(--space-2) 0 0", fontSize: "var(--text-xs)", color: "var(--ink-3)" }}>
+        <p style={{ margin: "var(--space-2) 0 0", fontSize: "var(--text-xs)", color: "var(--ink-3)", textAlign: "center", maxWidth: "none" }}>
           O servo pode ativar até ~30 s após o horário (heartbeat do ESP).
         </p>
       )}
 
       {!isOnline && (
-        <p style={{ margin: "var(--space-2) 0 0", fontSize: "var(--text-sm)", color: "var(--warning)" }}>
+        <p style={{ margin: "var(--space-2) 0 0", fontSize: "var(--text-sm)", color: "var(--warning)", textAlign: "center", maxWidth: "none" }}>
           Dispensador offline — o contador mostra o horário previsto; a ativação ocorre quando o ESP reconectar.
         </p>
       )}
 
       {awaitingConfirm && isOnline && (
-        <p style={{ margin: "var(--space-2) 0 0", fontSize: "var(--text-sm)", color: "var(--warning)" }}>
+        <p style={{ margin: "var(--space-2) 0 0", fontSize: "var(--text-sm)", color: "var(--warning)", textAlign: "center", maxWidth: "none" }}>
           Confirmação pendente — o próximo horário pode ser adiado até o paciente confirmar.
         </p>
       )}
-      </div>
-    </>
+    </div>
   );
 }
