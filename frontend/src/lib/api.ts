@@ -333,6 +333,7 @@ export interface PeriodSchedule {
   afternoon_time: string;
   night_time: string;
   is_active: boolean;
+  silent_mode: boolean;
   source: string;
 }
 
@@ -342,6 +343,7 @@ export interface PeriodScheduleInput {
   afternoon_time: string;
   night_time: string;
   is_active?: boolean;
+  silent_mode?: boolean;
 }
 
 export interface HardwareStatus {

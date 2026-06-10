@@ -132,6 +132,7 @@ def upsert_period_schedules(
     afternoon_time: str,
     night_time: str,
     is_active: bool = True,
+    silent_mode: bool = False,
 ) -> List[Schedule]:
     """Create or update the three period schedules for a dispenser."""
     resolved = resolve_hardware_id(db, hardware_id)
@@ -164,6 +165,7 @@ def upsert_period_schedules(
             existing.time_legacy = time_legacy
             existing.scheduled_time = scheduled_time
             existing.is_active = is_active
+            existing.silent_mode = silent_mode
             existing.slot_id = None
             db.commit()
             db.refresh(existing)
@@ -178,6 +180,7 @@ def upsert_period_schedules(
                 scheduled_time=scheduled_time,
                 time_legacy=time_legacy,
                 is_active=is_active,
+                silent_mode=silent_mode,
             )
             db.add(row)
             db.commit()

@@ -291,6 +291,7 @@ async def _process_period_schedule_queue(
         period,
         expected_after,
         schedule.id,
+        silent_mode=bool(schedule.silent_mode),
     )
 
     logger.info(

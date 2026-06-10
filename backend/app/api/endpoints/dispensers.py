@@ -332,11 +332,14 @@ def _period_schedule_response(
     defaults = default_period_times()
     times = dict(defaults)
     is_active = True
+    silent_mode = False
     for row in rows:
         if row.period and row.time_legacy:
             times[row.period] = row.time_legacy
         if row.is_active is not None:
             is_active = row.is_active
+        if row.silent_mode:
+            silent_mode = True
     return PeriodSchedulePublic(
         dispenser_id=hardware_id,
         patient_id=patient_id,
@@ -344,6 +347,7 @@ def _period_schedule_response(
         afternoon_time=times["afternoon"],
         night_time=times["night"],
         is_active=is_active,
+        silent_mode=silent_mode,
         source=source,
     )
 
@@ -395,6 +399,7 @@ async def put_period_schedule(
             body.afternoon_time,
             body.night_time,
             body.is_active,
+            body.silent_mode,
         )
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc

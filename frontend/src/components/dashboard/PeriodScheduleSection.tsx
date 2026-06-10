@@ -17,11 +17,11 @@ export function PeriodScheduleSection({ dispenser }: PeriodScheduleSectionProps)
   const [morning, setMorning] = useState("21:00");
   const [afternoon, setAfternoon] = useState("21:01");
   const [night, setNight] = useState("21:02");
+  const [silentMode, setSilentMode] = useState(false);
   const [hwStatus, setHwStatus] = useState<HardwareStatus | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [starting, setStarting] = useState(false);
-  const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [scheduleMeta, setScheduleMeta] = useState<PeriodSchedule | null>(null);
   const [now, setNow] = useState(() => new Date());
@@ -54,6 +54,7 @@ export function PeriodScheduleSection({ dispenser }: PeriodScheduleSectionProps)
         setMorning(toTimeInputValue(ps.morning_time));
         setAfternoon(toTimeInputValue(ps.afternoon_time));
         setNight(toTimeInputValue(ps.night_time));
+        setSilentMode(ps.silent_mode ?? false);
       } catch (err) {
         if (!cancelled) setError(err instanceof Error ? err.message : "Erro ao carregar horários");
       } finally {
@@ -84,7 +85,6 @@ export function PeriodScheduleSection({ dispenser }: PeriodScheduleSectionProps)
     }
     setSaving(true);
     setError(null);
-    setMessage(null);
     try {
       const saved = await savePeriodSchedule(hardwareId, {
         patient_id: patientId,
@@ -92,9 +92,9 @@ export function PeriodScheduleSection({ dispenser }: PeriodScheduleSectionProps)
         afternoon_time: afternoon,
         night_time: night,
         is_active: true,
+        silent_mode: silentMode,
       });
       setScheduleMeta(saved);
-      setMessage("Horários salvos. O servidor disparará a dispensação nos horários configurados.");
     } catch (err) {
       setError(err instanceof Error ? err.message : "Erro ao salvar");
     } finally {
@@ -105,7 +105,6 @@ export function PeriodScheduleSection({ dispenser }: PeriodScheduleSectionProps)
   async function handleStartCycle() {
     setStarting(true);
     setError(null);
-    setMessage(null);
     try {
       await startDispenserCycle(hardwareId, dispenser.ip_address);
       window.location.reload();
@@ -244,6 +243,30 @@ export function PeriodScheduleSection({ dispenser }: PeriodScheduleSectionProps)
               <input type="time" value={night} onChange={(e) => setNight(e.target.value)} required />
             </label>
           </div>
+          <label
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: "var(--space-2)",
+              marginBottom: "var(--space-4)",
+              fontSize: "var(--text-sm)",
+              cursor: "pointer",
+              userSelect: "none",
+            }}
+          >
+            <input
+              type="checkbox"
+              checked={silentMode}
+              onChange={(e) => setSilentMode(e.target.checked)}
+              style={{ width: 16, height: 16, cursor: "pointer" }}
+            />
+            <span>
+              Modo silencioso{" "}
+              <span style={{ color: "var(--ink-3)", fontWeight: 400 }}>
+                — sem alarme sonoro
+              </span>
+            </span>
+          </label>
           <button
             type="submit"
             disabled={saving || !patientId}
@@ -268,9 +291,6 @@ export function PeriodScheduleSection({ dispenser }: PeriodScheduleSectionProps)
         </p>
       )}
 
-      {message && (
-        <p style={{ marginTop: "var(--space-3)", color: "var(--primary)", fontSize: "var(--text-sm)" }}>{message}</p>
-      )}
       {error && (
         <p style={{ marginTop: "var(--space-3)", color: "var(--danger)", fontSize: "var(--text-sm)" }}>{error}</p>
       )}

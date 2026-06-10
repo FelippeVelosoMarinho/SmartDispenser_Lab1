@@ -43,6 +43,7 @@ class PeriodSchedulePut(BaseModel):
     afternoon_time: str = Field(..., description="HH:MM")
     night_time: str = Field(..., description="HH:MM")
     is_active: bool = True
+    silent_mode: bool = False
 
 
 class PeriodSchedulePublic(BaseModel):
@@ -53,4 +54,5 @@ class PeriodSchedulePublic(BaseModel):
     afternoon_time: str
     night_time: str
     is_active: bool = True
+    silent_mode: bool = False
     source: str = "database"  # database | defaults

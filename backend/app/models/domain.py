@@ -121,6 +121,7 @@ class Schedule(Base):
     time_legacy = Column(String, nullable=True)   # ISO datetime ou HH:MM
     last_triggered_at = Column(DateTime, nullable=True)
     period = Column(String, nullable=True)  # morning | afternoon | night
+    silent_mode = Column(Boolean, default=False)
 
     slot = relationship('Slot', back_populates='schedules', foreign_keys=[slot_id])
 
