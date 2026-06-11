@@ -13,13 +13,13 @@
 #define SERVO_NEEDS_PWM_TIMER 1
 
 // ── Servo (roleta) ────────────────────────────────────────────────────
-const int SERVO_PIN      = 2;
+const int SERVO_PIN      = 10;
 const int SERVO_REST     = 0;
 const int SERVO_ADVANCE  = 90;
 const int SERVO_DELAY_MS = 400;
 
 // ── LEDs de período do dia ────────────────────────────────────────────
-const int LED_MORNING   = 10;
+const int LED_MORNING   = 7;
 const int LED_AFTERNOON = 1;
 const int LED_NIGHT     = 0;
 
@@ -28,7 +28,7 @@ const int BUZZER_PIN  = 2;
 const int BUZZER_FREQ = 1000;
 
 // ── Motor de vibração (via transistor NPN BC547) ──────────────────────
-const int VIB_PIN = 10;
+const int VIB_PIN = 6;
 
 // ── Botão de confirmação (INPUT_PULLUP — repouso HIGH, pressionado LOW) ──
 const int BTN_CONFIRM  = 3;  // botão BOOT onboard
