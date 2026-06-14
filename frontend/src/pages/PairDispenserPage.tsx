@@ -40,6 +40,7 @@ interface EspStatus {
   last_confirmed_slot: number;
   wifi_rssi: number;
   uptime_s: number;
+  hardware_id?: string;
 }
 
 const PROBE_TIMEOUT_MS = 1200;
@@ -58,11 +59,12 @@ async function probeIp(ip: string): Promise<DiscoveredDispenser | null> {
     const data: EspStatus = await res.json();
     // Verify it looks like our firmware
     if (typeof data.wifi_rssi !== "number" || typeof data.current_slot !== "number") return null;
+    const hwId = data.hardware_id ?? ip;
     return {
-      id: ip,
+      id: hwId,
       ip,
-      serial: `ESP-C3-${ip.split(".").pop()?.padStart(3, "0") ?? ip}`,
-      mac: "—",
+      serial: data.hardware_id ?? `ESP-C3-${ip.split(".").pop()?.padStart(3, "0") ?? ip}`,
+      mac: data.hardware_id ?? "—",
       rssi: data.wifi_rssi,
       firmware: "—",
     };
