@@ -24,6 +24,8 @@ class User(Base):
     full_name = Column(String, nullable=False)
     email = Column(String, unique=True)
     notifications_enabled = Column(Boolean, default=True)
+    reset_token = Column(String, nullable=True)
+    reset_token_expires = Column(DateTime, nullable=True)
 
     patients = relationship('Patient', secondary=patient_caregiver, back_populates='caregivers')
 

@@ -1,5 +1,7 @@
 """User CRUD operations (database store)."""
 
+import secrets
+import datetime
 from typing import Optional, List
 from sqlalchemy.orm import Session
 from app.models.domain import User
@@ -43,6 +45,37 @@ def user_exists(db: Session, username: str) -> bool:
 def get_all_users(db: Session) -> List[User]:
     """Get all users."""
     return db.query(User).all()
+
+
+def get_user_by_email(db: Session, email: str) -> Optional[User]:
+    """Get a user by email address."""
+    return db.query(User).filter(User.email == email).first()
+
+
+def set_reset_token(db: Session, user: User, expires_hours: int = 1) -> str:
+    """Generate and store a password reset token. Returns the raw token."""
+    token = secrets.token_hex(32)
+    user.reset_token = token
+    user.reset_token_expires = datetime.datetime.utcnow() + datetime.timedelta(hours=expires_hours)
+    db.commit()
+    return token
+
+
+def get_user_by_reset_token(db: Session, token: str) -> Optional[User]:
+    """Get a user whose reset token is valid and not expired."""
+    now = datetime.datetime.utcnow()
+    return (
+        db.query(User)
+        .filter(User.reset_token == token, User.reset_token_expires > now)
+        .first()
+    )
+
+
+def clear_reset_token(db: Session, user: User) -> None:
+    """Remove the reset token from a user after successful password reset."""
+    user.reset_token = None
+    user.reset_token_expires = None
+    db.commit()
 
 
 def delete_user(db: Session, username: str) -> bool:

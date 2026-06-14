@@ -16,6 +16,8 @@ import { PairDispenserPage } from "./pages/PairDispenserPage";
 import { PatientMedicationsPage } from "./pages/PatientMedicationsPage";
 import { LoginPage } from "./pages/LoginPage";
 import { RegisterPage } from "./pages/RegisterPage";
+import { ForgotPasswordPage } from "./pages/ForgotPasswordPage";
+import { ResetPasswordPage } from "./pages/ResetPasswordPage";
 import { NotFoundPage } from "./pages/NotFoundPage";
 
 interface RouterContext {
@@ -101,8 +103,25 @@ const pairDispenserRoute = createRoute({
   component: PairDispenserPage,
 });
 
+const forgotPasswordRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: "/forgot-password",
+  component: ForgotPasswordPage,
+});
+
+const resetPasswordRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: "/reset-password",
+  validateSearch: (search: Record<string, unknown>) => ({
+    token: typeof search.token === "string" ? search.token : undefined,
+  }),
+  component: ResetPasswordPage,
+});
+
 const routeTree = rootRoute.addChildren([
   loginRoute,
+  forgotPasswordRoute,
+  resetPasswordRoute,
   createRoute({
     getParentRoute: () => rootRoute,
     path: "/register",

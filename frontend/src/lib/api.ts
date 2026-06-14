@@ -181,6 +181,20 @@ async function requestJson<T>(path: string, init: RequestInit = {}): Promise<T> 
   return (await response.json()) as T;
 }
 
+export async function forgotPassword(email: string): Promise<void> {
+  await requestJson<unknown>("/auth/forgot-password", {
+    method: "POST",
+    body: JSON.stringify({ email }),
+  });
+}
+
+export async function resetPassword(token: string, newPassword: string): Promise<void> {
+  await requestJson<unknown>("/auth/reset-password", {
+    method: "POST",
+    body: JSON.stringify({ token, new_password: newPassword }),
+  });
+}
+
 export async function loginWithPassword(username: string, password: string) {
   const token = await requestJson<TokenResponse>("/auth/login", {
     method: "POST",

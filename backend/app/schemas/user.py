@@ -60,3 +60,19 @@ class TokenResponse(BaseModel):
 
     access_token: str
     token_type: str = "bearer"
+
+
+class ForgotPasswordRequest(BaseModel):
+    email: str
+
+
+class ResetPasswordRequest(BaseModel):
+    token: str
+    new_password: str
+
+    @field_validator('new_password')
+    @classmethod
+    def password_must_be_strong(cls, v: str) -> str:
+        if len(v) < 8:
+            raise ValueError('A senha deve ter no mínimo 8 caracteres.')
+        return v

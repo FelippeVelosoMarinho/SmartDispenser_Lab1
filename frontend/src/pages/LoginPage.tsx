@@ -95,7 +95,14 @@ export function LoginPage() {
             </div>
 
             <div className="login-forgot">
-              <a href="#forgot" className="login-forgot__link">
+              <a
+                role="button"
+                className="login-forgot__link"
+                onClick={(e) => {
+                  e.preventDefault();
+                  navigate({ to: "/forgot-password" });
+                }}
+              >
                 Esqueceu a senha?
               </a>
             </div>

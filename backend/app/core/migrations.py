@@ -263,6 +263,14 @@ _MIGRATIONS: list[tuple[str, str]] = [
         "ALTER TABLE refill_history ADD COLUMN IF NOT EXISTS performed_by_legacy TEXT;",
     ),
     (
+        "caregivers: add reset_token",
+        "ALTER TABLE caregivers ADD COLUMN IF NOT EXISTS reset_token TEXT;",
+    ),
+    (
+        "caregivers: add reset_token_expires",
+        "ALTER TABLE caregivers ADD COLUMN IF NOT EXISTS reset_token_expires TIMESTAMP;",
+    ),
+    (
         "dispensers: add ip_address",
         "ALTER TABLE dispensers ADD COLUMN IF NOT EXISTS ip_address TEXT;",
     ),
@@ -277,6 +285,10 @@ _MIGRATIONS: list[tuple[str, str]] = [
     (
         "schedules: add period",
         "ALTER TABLE schedules ADD COLUMN IF NOT EXISTS period TEXT;",
+    ),
+    (
+        "schedules: add silent_mode",
+        "ALTER TABLE schedules ADD COLUMN IF NOT EXISTS silent_mode BOOLEAN DEFAULT false;",
     ),
     (
         "dispensers: drop battery_level",

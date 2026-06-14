@@ -57,6 +57,9 @@ if _extra_cors:
         origin.strip() for origin in _extra_cors.split(",") if origin.strip()
     )
 
+# ─── Frontend URL (used for password reset links) ────────────────────────
+FRONTEND_URL = os.getenv("FRONTEND_URL", "http://localhost:5173")
+
 # ─── SMTP / Notification Configuration ──────────────────────────────────
 SMTP_SERVER = os.getenv("SMTP_SERVER", "smtp.gmail.com")
 SMTP_PORT = int(os.getenv("SMTP_PORT", "587"))

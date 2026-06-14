@@ -189,3 +189,47 @@ def get_welcome_email_template(full_name: str, username: str) -> str:
     </html>
     """
 
+
+def get_password_reset_email_template(full_name: str, reset_url: str) -> str:
+    """HTML template for password reset email."""
+    display_name = full_name or "Cuidador"
+    return f"""
+    <!DOCTYPE html>
+    <html>
+    <head>
+        <meta charset="utf-8">
+        <title>Redefinição de Senha</title>
+    </head>
+    <body style="font-family: Arial, sans-serif; margin: 0; padding: 20px; background-color: #f8fafc; color: #1e293b;">
+        <div style="max-width: 600px; margin: 0 auto; background: #ffffff; border: 1px solid #e2e8f0; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);">
+            <div style="background-color: #0f766e; padding: 24px; text-align: center; color: #ffffff;">
+                <h1 style="margin: 0; font-size: 22px; font-weight: bold;">Redefinição de Senha 🔐</h1>
+            </div>
+            <div style="padding: 24px;">
+                <p style="font-size: 16px; line-height: 1.5; margin-bottom: 16px;">Olá, <strong>{display_name}</strong>,</p>
+                <p style="font-size: 16px; line-height: 1.5; margin-bottom: 24px;">
+                    Recebemos uma solicitação para redefinir a senha da sua conta no Smart Dispenser.
+                    Clique no botão abaixo para criar uma nova senha.
+                </p>
+                <div style="text-align: center; margin-bottom: 24px;">
+                    <a href="{reset_url}" style="display: inline-block; background-color: #0f766e; color: #ffffff; padding: 14px 28px; border-radius: 8px; text-decoration: none; font-size: 16px; font-weight: bold;">
+                        Redefinir Senha
+                    </a>
+                </div>
+                <p style="font-size: 14px; color: #64748b; line-height: 1.5;">
+                    Este link é válido por <strong>1 hora</strong>. Se você não solicitou a redefinição de senha, ignore este e-mail — sua senha permanece a mesma.
+                </p>
+                <div style="background-color: #fef9c3; border-left: 4px solid #ca8a04; padding: 12px 16px; border-radius: 4px; margin-top: 16px;">
+                    <p style="margin: 0; font-size: 13px; color: #713f12;">
+                        Se o botão não funcionar, copie e cole o link abaixo no seu navegador:<br>
+                        <a href="{reset_url}" style="color: #0f766e; word-break: break-all;">{reset_url}</a>
+                    </p>
+                </div>
+            </div>
+            <div style="background-color: #f8fafc; padding: 16px; text-align: center; border-top: 1px solid #e2e8f0;">
+                <p style="margin: 0; font-size: 12px; color: #94a3b8;">Smart Dispenser • Sistema de Dispensação Inteligente</p>
+            </div>
+        </div>
+    </body>
+    </html>
+    """
