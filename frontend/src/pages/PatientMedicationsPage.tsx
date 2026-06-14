@@ -9,7 +9,7 @@ import { APP_NAME } from "../lib/brand";
 import "./PatientMedicationsPage.css";
 
 type Frequency = "diaria" | "semanal" | "mensal";
-type TimeOfDay = "manha" | "tarde" | "noite" | "madrugada";
+type TimeOfDay = "manha" | "tarde" | "noite";
 
 interface Medication {
   id: string;
@@ -52,7 +52,6 @@ const TIME_OPTIONS: { value: TimeOfDay; label: string; icon: string }[] = [
   { value: "manha", label: "Manhã", icon: "ph-duotone ph-sun-horizon" },
   { value: "tarde", label: "Tarde", icon: "ph-duotone ph-sun" },
   { value: "noite", label: "Noite", icon: "ph-duotone ph-moon-stars" },
-  { value: "madrugada", label: "Madrugada", icon: "ph-duotone ph-moon" },
 ];
 
 export function PatientMedicationsPage() {
