@@ -72,7 +72,7 @@
 
     \vspace{3cm}
 
-    {\Huge\bfseries Eco-Dispenser Inteligente}\\[0.5cm]
+    {\Huge\bfseries PillHub}\\[0.5cm]
     {\Large Sistema Automatizado de Dispensação de Medicamentos}
 
     \vspace{2cm}
@@ -106,7 +106,7 @@
 \section*{Resumo}
 \addcontentsline{toc}{section}{Resumo}
 
-O Eco-Dispenser Inteligente é um sistema embarcado de dispensação automática de medicamentos desenvolvido para promover a autonomia e a segurança de pacientes atendidos por um centro de reabilitação. O sistema é composto por um dispositivo físico baseado no microcontrolador ESP32-C3, um servidor de backend em FastAPI (Python) com banco de dados PostgreSQL, e um painel de controle web em React. O dispenser realiza a liberação de comprimidos em horários programados, emite alertas multimodais (sonoro, visual e vibratório) e registra a confirmação do paciente. Este relatório descreve a arquitetura do sistema, as decisões de implementação, a validação dos requisitos por meio de casos de teste e uma análise crítica do processo de desenvolvimento segundo o modelo cascata.
+O Dispenser Inteligente é um sistema embarcado de dispensação automática de medicamentos desenvolvido para promover a autonomia e a segurança de pacientes atendidos por um centro de reabilitação. O sistema é composto por um dispositivo físico baseado no microcontrolador ESP32-C3, um servidor de backend em FastAPI (Python) com banco de dados PostgreSQL, e um painel de controle web em React. O dispenser realiza a liberação de comprimidos em horários programados, emite alertas multimodais (sonoro, visual e vibratório) e registra a confirmação do paciente. Este relatório descreve a arquitetura do sistema, as decisões de implementação, a validação dos requisitos por meio de casos de teste e uma análise crítica do processo de desenvolvimento segundo o modelo cascata.
 
 \newpage
 
@@ -117,7 +117,7 @@ O Eco-Dispenser Inteligente é um sistema embarcado de dispensação automática
 
 \subsection{Contexto}
 
-O Centro de Reabilitação objeto deste projeto atende pacientes encaminhados por unidades básicas de saúde para serviços de fisioterapia, terapia ocupacional e fonoaudiologia. O perfil dos pacientes é heterogêneo: incluem pessoas com Transtorno do Espectro Autista (TEA), Transtorno do Déficit de Atenção e Hiperatividade (TDAH), deficiências físicas e sensoriais (visuais e auditivas), membros amputados, e sequelas neurológicas como acidente vascular cerebral (AVC) e paralisia cerebral, abrangendo todas as faixas etárias, de bebês a idosos.
+O Centro de Reabilitação objeto deste projeto (Centro de Reabilitação Rames Ossen Ali, em Igrarapé) atende pacientes encaminhados por unidades básicas de saúde para serviços de fisioterapia, terapia ocupacional e fonoaudiologia. O perfil dos pacientes é heterogêneo: incluem pessoas com Transtorno do Espectro Autista (TEA), Transtorno do Déficit de Atenção e Hiperatividade (TDAH), deficiências físicas e sensoriais (visuais e auditivas), membros amputados, e sequelas neurológicas como acidente vascular cerebral (AVC) e paralisia cerebral, abrangendo todas as faixas etárias, de bebês a idosos.
 
 O centro não administra medicamentos em suas instalações. Os pacientes e seus cuidadores são responsáveis pelo regime medicamentoso em casa, o que cria desafios significativos: esquecimento de doses, erros de horário, dificuldade de manipulação de embalagens convencionais e ausência de feedback ao cuidador em caso de não adesão.
 
@@ -147,7 +147,7 @@ O principal problema identificado é a \textbf{falta de adesão ao regime medica
 
 \subsection{Visão Geral}
 
-O Eco-Dispenser Inteligente é um dispositivo de mesa composto por uma roleta com 21 compartimentos individuais, cada um destinado a armazenar a medicação de uma dispensação específica (três dispensações diárias por sete dias). O dispositivo é abastecido semanalmente pelo cuidador e opera de forma autônoma, liberando o compartimento correto nos horários pré-configurados e emitindo alertas até que o paciente confirme a retirada.
+O Dispenser Inteligente é um dispositivo de mesa composto por uma roleta com 21 compartimentos individuais, cada um destinado a armazenar a medicação de uma dispensação específica (três dispensações diárias por sete dias). O dispositivo é abastecido semanalmente pelo cuidador e opera de forma autônoma, liberando o compartimento correto nos horários pré-configurados e emitindo alertas até que o paciente confirme a retirada.
 
 O sistema é dividido em quatro camadas funcionais:
 
@@ -162,7 +162,7 @@ O sistema é dividido em quatro camadas funcionais:
 
 O sistema é destinado a uso \textbf{exclusivamente residencial}. O paciente interage com o dispositivo físico para confirmar a retirada do medicamento. O cuidador (familiar, enfermeiro domiciliar ou terapeuta) configura o sistema pelo painel web e recebe notificações caso o paciente não responda dentro do prazo definido.
 
-A diversidade do público-alvo impôs requisitos de acessibilidade rígidos: alertas não agressivos para pacientes com TEA, controle de volume do buzzer, LEDs de alta luminosidade com simbologia de período do dia (sol para manhã, sol com nuvem para tarde, lua para noite), botões físicos grandes e de fácil acionamento, e interface visual com baixa carga cognitiva.
+A diversidade do público-alvo impôs requisitos de acessibilidade rígidos: alertas não agressivos para pacientes com TEA, LEDs de alta luminosidade com simbologia de período do dia (sol para manhã, sol com nuvem para tarde, lua para noite), botão físico de confirmação grande e de fácil acionamento, e interface visual com baixa carga cognitiva.
 
 \subsection{Funcionalidades Principais}
 
@@ -171,12 +171,12 @@ A diversidade do público-alvo impôs requisitos de acessibilidade rígidos: ale
     \item \textbf{Rastreamento de confirmação:} o dispositivo expõe o flag \texttt{awaiting\_confirm} no \texttt{GET /status}, sinalizando ao backend quando uma dispensação está pendente de confirmação. O backend pode — e deve — verificar esse estado antes de acionar uma nova dispensação para evitar doses duplicadas;
     \item \textbf{Alertas multimodais simultâneos:}
         \begin{itemize}
-            \item Sonoro: buzzer com volume ajustável (modo normal);
-            \item Visual: LED 1 para manhã (GPIO 3), LED 2 para tarde (GPIO 4), LED 3 para noite (GPIO 5);
+            \item Sonoro: buzzer (modo normal);
+            \item Visual: LED vermelho para manhã (GPIO 7), LED amarelo para tarde (GPIO 1), LED verde para noite (GPIO 0);
             \item Vibratório: micro motor de vibração em modo silencioso;
         \end{itemize}
     \item \textbf{Persistência dos alertas} até confirmação do paciente;
-    \item \textbf{Confirmação pelo paciente:} botão físico (GPIO 0) ou confirmação remota via API;
+    \item \textbf{Confirmação pelo paciente:} botão físico (GPIO 3) ou confirmação remota via API;
     \item \textbf{Notificação ao cuidador:} caso o paciente não confirme em tempo determinado;
     \item \textbf{Registro de histórico:} cada dispensação e confirmação é registrada para acompanhamento de adesão;
     \item \textbf{Modo reabastecimento:} permite ao cuidador acessar os compartimentos sem acionar a lógica de dispensação.
@@ -186,7 +186,7 @@ A diversidade do público-alvo impôs requisitos de acessibilidade rígidos: ale
 
 \begin{table}[H]
     \centering
-    \caption{Componentes de hardware do Eco-Dispenser}
+    \caption{Componentes de hardware do Dispenser}
     \label{tab:hardware}
     \begin{tabular}{lll}
         \toprule
@@ -197,8 +197,7 @@ A diversidade do público-alvo impôs requisitos de acessibilidade rígidos: ale
         Alerta sonoro         & Mínimo 60 dB, 5V                      & Buzzer Ativo 5V \\
         Alerta vibratório     & Silencioso, estrutura segura          & Micro Motor 3V \\
         Alerta visual         & Alta luminosidade, 3 períodos         & 3$\times$ LED 5mm \\
-        Botão confirmação     & Tátil, grande, GPIO 9 (BOOT)          & Push Button 12$\times$12mm \\
-        Botões de volume      & GPIOs 6 (Vol+) e 7 (Vol-)             & Push Button 12$\times$12mm \\
+        Botão confirmação     & Tátil, grande, GPIO 3                 & Push Button 12$\times$12mm \\
         Alimentação           & 127V, até 1A                          & Carregador USB padrão \\
         \bottomrule
     \end{tabular}
@@ -228,7 +227,7 @@ Os casos de uso do sistema, levantados durante a fase de modelagem, são:
 \begin{figure}[H]
 \centering
 \includegraphics[width=0.85\textwidth]{arquitetura.png}
-\caption{Arquitetura em camadas do Eco-Dispenser}
+\caption{Arquitetura em camadas do Dispenser}
 \label{fig:arquitetura}
 \end{figure}
 
@@ -289,7 +288,9 @@ A API HTTP exposta pelo firmware possui os seguintes endpoints:
 
 O endpoint \texttt{GET /status} retorna um JSON com os campos:
 \texttt{current\_slot}, \texttt{total\_slots} (fixo em~21), \texttt{awaiting\_confirm},
-\texttt{last\_confirmed\_slot}, \texttt{wifi\_rssi} e \texttt{uptime\_s}.
+\texttt{last\_confirmed\_slot}, \texttt{wifi\_rssi}, \texttt{hardware\_id} (endereço MAC) e \texttt{uptime\_s}.
+
+O endpoint \texttt{POST /calibrate} reseta o contador de slots para a posição inicial (slot~0), sendo utilizado pelo cuidador após o reabastecimento semanal. Esse reset é realizado exclusivamente via HTTP — não existe botão físico dedicado para calibração.
 
 O \texttt{POST /dispense} aceita um objeto JSON com os campos \texttt{period} (\texttt{"morning"}, \texttt{"afternoon"} ou \texttt{"night"}) e \texttt{silent\_mode} (booleano) e controla qual alerta é disparado. O parsing do JSON é feito manualmente, sem a biblioteca ArduinoJson, por incompatibilidades de versão encontradas durante o desenvolvimento.
 
@@ -390,11 +391,10 @@ Os possíveis status de cada caso de teste são:
     TC08 & Alerta de código ativado em horário configurado          & \aprovado \\
     TC09 & Notificação ao cuidador/médico associado                 & \parcial \\
     TC10 & Conectividade: controlador alcança servidor              & \aprovado \\
-    TC11 & Ajuste de volume do alerta sonoro                        & \naorealizado \\
-    TC12 & Capacidade mínima de 21 slots                            & \aprovado \\
-    TC13 & Resistência a quedas                                     & \naorealizado \\
-    TC14 & Peso do dispositivo inferior a 1~kg                      & \naorealizado \\
-    TC15 & Esforço de abertura da gaveta $\leq$ 0,2~kgf            & \naorealizado \\
+    TC11 & Capacidade mínima de 21 slots                            & \aprovado \\
+    TC12 & Resistência a quedas                                     & \naorealizado \\
+    TC13 & Peso do dispositivo inferior a 1~kg                      & \naorealizado \\
+    TC14 & Esforço de abertura da gaveta $\leq$ 0,2~kgf            & \naorealizado \\
     \bottomrule
     \caption{Resumo dos casos de teste}
     \label{tab:tc_resumo}
@@ -403,231 +403,301 @@ Os possíveis status de cada caso de teste são:
 \subsection{Detalhamento dos Casos de Teste}
 
 \subsubsection{TC01 — Modo de Operação Normal (Alertas Sonoros e Visuais)}
-
-\begin{description}[leftmargin=4cm, style=nextline]
-    \item[Pré-condição] Dispositivo ligado, conectado ao WiFi, slot em posição inicial após calibração.
-    \item[Passos]
-        \begin{enumerate}
-            \item Enviar \texttt{POST /dispense} com \texttt{silent\_mode: false} e \texttt{period: "morning"}.
-            \item Verificar que o servo avança um slot.
-            \item Verificar que o LED de manhã (GPIO 3) acende.
-            \item Verificar que o buzzer emite bipes audíveis.
-        \end{enumerate}
-    \item[Resultado esperado] Os remédios são dispensados; alertas sonoros e visuais são ativados simultaneamente.
-    \item[Resultado obtido] Endpoint retornou HTTP 200 com \texttt{success: true}. Validação física realizada em 23/05/2026: LED de manhã (GPIO~3) acendeu corretamente, buzzer emitiu 3 bipes audíveis no modo normal. Avanço do servo verificado via \texttt{current\_slot}.
-    \item[Status] \aprovado
-\end{description}
+\begin{table}[H]\small\setlength{\tabcolsep}{6pt}\renewcommand{\arraystretch}{1.3}
+\begin{tabular}{>{\bfseries}p{3.8cm} p{11.2cm}}
+\toprule
+Pré-condição & Dispositivo ligado, conectado ao WiFi, slot na posição inicial após calibração. \\
+\midrule
+Passos &
+\begin{enumerate}[nosep,leftmargin=*]
+  \item Enviar \texttt{POST /dispense} com \texttt{silent\_mode: false} e \texttt{period: "morning"}.
+  \item Verificar que o servo avança um slot.
+  \item Verificar que o LED de manhã (GPIO 7) acende.
+  \item Verificar que o buzzer emite bipes audíveis.
+\end{enumerate} \\
+\midrule
+Resultado esperado & Remédios dispensados; alertas sonoros e visuais ativados simultaneamente. \\
+\midrule
+Resultado obtido & HTTP 200 com \texttt{success: true}. Validação física em 23/05/2026: LED de manhã (GPIO~7) acendeu corretamente, buzzer emitiu 3 bipes. Avanço do servo verificado via \texttt{current\_slot}. \\
+\midrule
+Status & \aprovado \\
+\bottomrule
+\end{tabular}\end{table}
 
 \subsubsection{TC02 — Modo de Operação Normal (Alertas Não-Sonoros / Silencioso)}
-
-\begin{description}[leftmargin=4cm, style=nextline]
-    \item[Pré-condição] Dispositivo ligado e conectado ao WiFi; agendamento configurado com modo silencioso ativado.
-    \item[Passos]
-        \begin{enumerate}
-            \item Configurar agendamento com \texttt{silent\_mode: true} via frontend.
-            \item Aguardar o horário agendado; o scheduler enfileira o comando com o campo \texttt{silent\_mode: true}.
-            \item Verificar que o firmware, ao receber o comando via heartbeat, avança a roleta.
-            \item Verificar que o motor de vibração entra em ciclo persistente (400~ms ligado / 250~ms desligado) enquanto \texttt{awaiting\_confirm} for \texttt{true}.
-            \item Verificar que o buzzer permanece silencioso.
-            \item Pressionar o botão de confirmação; verificar que o motor para imediatamente.
-        \end{enumerate}
-    \item[Resultado esperado] Remédios dispensados; alerta vibratório persistente ativado sem emissão de som; vibração cessa na confirmação.
-    \item[Resultado obtido] Lógica de software verificada: campo \texttt{silent\_mode} propagado corretamente do frontend ao banco de dados, ao scheduler e ao comando entregue via heartbeat. Função \texttt{alertsTick()} implementada e integrada ao \texttt{loop()} do firmware. Comportamento físico do motor verificado parcialmente (vibração detectada, intensidade dependente da tensão de alimentação do circuito).
-    \item[Status] \parcial
-\end{description}
+\begin{table}[H]\small\setlength{\tabcolsep}{6pt}\renewcommand{\arraystretch}{1.3}
+\begin{tabular}{>{\bfseries}p{3.8cm} p{11.2cm}}
+\toprule
+Pré-condição & Dispositivo ligado, conectado ao WiFi; agendamento configurado com \texttt{silent\_mode: true}. \\
+\midrule
+Passos &
+\begin{enumerate}[nosep,leftmargin=*]
+  \item Configurar agendamento com \texttt{silent\_mode: true} via frontend.
+  \item Aguardar o horário agendado; o scheduler enfileira o comando com \texttt{silent\_mode: true}.
+  \item Verificar que o firmware, ao receber o comando via heartbeat, avança a roleta.
+  \item Verificar que o motor de vibração entra em ciclo persistente (400~ms ligado / 250~ms desligado).
+  \item Verificar que o buzzer permanece silencioso.
+  \item Pressionar o botão de confirmação; verificar que o motor para imediatamente.
+\end{enumerate} \\
+\midrule
+Resultado esperado & Remédios dispensados; alerta vibratório persistente ativado sem emissão de som; vibração cessa na confirmação. \\
+\midrule
+Resultado obtido & Campo \texttt{silent\_mode} propagado corretamente do frontend ao banco de dados, ao scheduler e ao comando via heartbeat. Função \texttt{alertsTick()} implementada e integrada ao \texttt{loop()}. Vibração detectada fisicamente (intensidade dependente da tensão de alimentação). \\
+\midrule
+Status & \parcial \\
+\bottomrule
+\end{tabular}\end{table}
 
 \subsubsection{TC03 — Modo de Reabastecimento}
-
-\begin{description}[leftmargin=4cm, style=nextline]
-    \item[Pré-condição] Dispositivo em modo de operação normal.
-    \item[Passos]
-        \begin{enumerate}
-            \item Ativar o modo de reabastecimento via interface.
-            \item Tentar abrir os compartimentos manualmente.
-            \item Verificar que os slots não se movem durante a manipulação.
-            \item Sair do modo de reabastecimento e configurar modo desejado.
-        \end{enumerate}
-    \item[Resultado esperado] Compartimentos acessíveis sem acionamento de dispensação; ao sair do modo, sistema opera normalmente.
-    \item[Resultado obtido] Não realizado. A interface de alternância para o modo de reabastecimento não foi implementada na versão atual.
-    \item[Status] \naorealizado
-\end{description}
+\begin{table}[H]\small\setlength{\tabcolsep}{6pt}\renewcommand{\arraystretch}{1.3}
+\begin{tabular}{>{\bfseries}p{3.8cm} p{11.2cm}}
+\toprule
+Pré-condição & Dispositivo em modo de operação normal. \\
+\midrule
+Passos &
+\begin{enumerate}[nosep,leftmargin=*]
+  \item Ativar o modo de reabastecimento via interface.
+  \item Tentar abrir os compartimentos manualmente.
+  \item Verificar que os slots não se movem durante a manipulação.
+  \item Sair do modo de reabastecimento e configurar modo desejado.
+\end{enumerate} \\
+\midrule
+Resultado esperado & Compartimentos acessíveis sem acionamento de dispensação; ao sair do modo, sistema opera normalmente. \\
+\midrule
+Resultado obtido & Não realizado. A interface de alternância para o modo de reabastecimento não foi implementada na versão atual. \\
+\midrule
+Status & \naorealizado \\
+\bottomrule
+\end{tabular}\end{table}
 
 \subsubsection{TC04 — Dispensação de Comprimido Único}
-
-\begin{description}[leftmargin=4cm, style=nextline]
-    \item[Pré-condição] Todos os slots abastecidos com pelo menos um comprimido.
-    \item[Passos]
-        \begin{enumerate}
-            \item Enviar \texttt{POST /dispense} para acionar uma dispensação.
-            \item Verificar fisicamente que apenas um comprimido é dispensado.
-            \item Verificar que os comprimidos corretos chegam ao slot de retirada.
-        \end{enumerate}
-    \item[Resultado esperado] Apenas um comprimido dispensado por interação; compartimento correto aberto.
-    \item[Resultado obtido] Não realizado. O firmware controla o servo corretamente por software, mas a verificação do comprimido físico exige o dispositivo montado.
-    \item[Status] \naorealizado
-\end{description}
+\begin{table}[H]\small\setlength{\tabcolsep}{6pt}\renewcommand{\arraystretch}{1.3}
+\begin{tabular}{>{\bfseries}p{3.8cm} p{11.2cm}}
+\toprule
+Pré-condição & Todos os slots abastecidos com pelo menos um comprimido. \\
+\midrule
+Passos &
+\begin{enumerate}[nosep,leftmargin=*]
+  \item Enviar \texttt{POST /dispense} para acionar uma dispensação.
+  \item Verificar fisicamente que apenas um comprimido é dispensado.
+  \item Verificar que o comprimido correto chega ao slot de retirada.
+\end{enumerate} \\
+\midrule
+Resultado esperado & Apenas um comprimido dispensado por interação; compartimento correto aberto. \\
+\midrule
+Resultado obtido & Não realizado. O firmware controla o servo corretamente por software, mas a verificação do comprimido físico exige o dispositivo montado. \\
+\midrule
+Status & \naorealizado \\
+\bottomrule
+\end{tabular}\end{table}
 
 \subsubsection{TC05 — Dispensação no Horário Agendado}
-
-\begin{description}[leftmargin=4cm, style=nextline]
-    \item[Pré-condição] Backend em execução; ESP32 conectado ao WiFi e enviando heartbeats; agendamento configurado para horário X via frontend.
-    \item[Passos]
-        \begin{enumerate}
-            \item Configurar agendamento de dispensação para horário X via frontend.
-            \item Aguardar o horário X.
-            \item Verificar que o scheduler enfileira o comando na tabela \texttt{pending\_\allowbreak commands}.
-            \item Verificar que o firmware recebe o comando no próximo heartbeat e avança a roleta.
-            \item Verificar que os alertas são ativados com o período e modo corretos.
-        \end{enumerate}
-    \item[Resultado esperado] A medicação do slot esperado é dispensada no horário X com os alertas configurados.
-    \item[Resultado obtido] Validado em integração completa em 08/06/2026: o scheduler detectou o horário dentro da janela configurada, enfileirou o comando \texttt{dispense} e o firmware executou a dispensação no heartbeat seguinte (latência máxima de 30~s). O servo avançou, o LED do período acendeu e o buzzer soou corretamente. Mecanismo de deduplicação (janela de 180~s) preveniu disparos duplos.
-    \item[Status] \aprovado
-\end{description}
+\begin{table}[H]\small\setlength{\tabcolsep}{6pt}\renewcommand{\arraystretch}{1.3}
+\begin{tabular}{>{\bfseries}p{3.8cm} p{11.2cm}}
+\toprule
+Pré-condição & Backend em execução; ESP32 conectado ao WiFi e enviando heartbeats; agendamento configurado para horário X via frontend. \\
+\midrule
+Passos &
+\begin{enumerate}[nosep,leftmargin=*]
+  \item Configurar agendamento de dispensação para horário X via frontend.
+  \item Aguardar o horário X.
+  \item Verificar que o scheduler enfileira o comando na tabela \texttt{pending\_commands}.
+  \item Verificar que o firmware recebe o comando no próximo heartbeat e avança a roleta.
+  \item Verificar que os alertas são ativados com o período e modo corretos.
+\end{enumerate} \\
+\midrule
+Resultado esperado & A medicação do slot esperado é dispensada no horário X com os alertas configurados. \\
+\midrule
+Resultado obtido & Validado em integração completa em 08/06/2026: o scheduler detectou o horário dentro da janela, enfileirou o comando \texttt{dispense} e o firmware executou a dispensação no heartbeat seguinte (latência máxima de 30~s). Servo, LED e buzzer ativados corretamente. Mecanismo de deduplicação (janela de 180~s) funcionou. \\
+\midrule
+Status & \aprovado \\
+\bottomrule
+\end{tabular}\end{table}
 
 \subsubsection{TC06 — Confirmação de Retirada}
-
-\begin{description}[leftmargin=4cm, style=nextline]
-    \item[Pré-condição] Uma dispensação foi executada; \texttt{awaiting\_confirm} é \texttt{true}.
-    \item[Passos]
-        \begin{enumerate}
-            \item Enviar \texttt{POST /confirm} ao firmware.
-            \item Verificar que \texttt{awaiting\_confirm} passa a \texttt{false} em \texttt{GET /status}.
-            \item Verificar que \texttt{confirmed\_slot} corresponde ao slot dispensado.
-        \end{enumerate}
-    \item[Resultado esperado] Confirmação registrada, alertas limpos, estado atualizado.
-    \item[Resultado obtido] Teste executado com sucesso via suíte pytest. \texttt{POST /confirm} retornou HTTP 200; \texttt{GET /status} confirmou \texttt{awaiting\_confirm: false} e \texttt{confirmed\_slot} correto.
-    \item[Status] \aprovado
-\end{description}
+\begin{table}[H]\small\setlength{\tabcolsep}{6pt}\renewcommand{\arraystretch}{1.3}
+\begin{tabular}{>{\bfseries}p{3.8cm} p{11.2cm}}
+\toprule
+Pré-condição & Uma dispensação foi executada; \texttt{awaiting\_confirm} é \texttt{true}. \\
+\midrule
+Passos &
+\begin{enumerate}[nosep,leftmargin=*]
+  \item Enviar \texttt{POST /confirm} ao firmware.
+  \item Verificar que \texttt{awaiting\_confirm} passa a \texttt{false} em \texttt{GET /status}.
+  \item Verificar que \texttt{confirmed\_slot} corresponde ao slot dispensado.
+\end{enumerate} \\
+\midrule
+Resultado esperado & Confirmação registrada, alertas limpos, estado atualizado. \\
+\midrule
+Resultado obtido & Teste via suíte pytest: \texttt{POST /confirm} retornou HTTP 200; \texttt{GET /status} confirmou \texttt{awaiting\_confirm: false} e \texttt{confirmed\_slot} correto. \\
+\midrule
+Status & \aprovado \\
+\bottomrule
+\end{tabular}\end{table}
 
 \subsubsection{TC07 — Integridade Estrutural do Slot de Retirada}
-
-\begin{description}[leftmargin=4cm, style=nextline]
-    \item[Pré-condição] Dispositivo fisicamente montado.
-    \item[Passos]
-        \begin{enumerate}
-            \item Abrir manualmente o slot de retirada; verificar que o compartimento se abre e mantém integridade.
-            \item Durante uma dispensação, verificar que os demais slots permanecem fechados.
-            \item Simular turbulência; verificar que os slots não abrem inadvertidamente.
-        \end{enumerate}
-    \item[Resultado esperado] Apenas o slot ativo abre; demais permanecem fechados sob turbulência.
-    \item[Resultado obtido] Não realizado. Exige o dispositivo físico montado com a estrutura da roleta.
-    \item[Status] \naorealizado
-\end{description}
+\begin{table}[H]\small\setlength{\tabcolsep}{6pt}\renewcommand{\arraystretch}{1.3}
+\begin{tabular}{>{\bfseries}p{3.8cm} p{11.2cm}}
+\toprule
+Pré-condição & Dispositivo fisicamente montado. \\
+\midrule
+Passos &
+\begin{enumerate}[nosep,leftmargin=*]
+  \item Abrir manualmente o slot de retirada; verificar que o compartimento se abre e mantém integridade.
+  \item Durante uma dispensação, verificar que os demais slots permanecem fechados.
+  \item Simular turbulência; verificar que os slots não abrem inadvertidamente.
+\end{enumerate} \\
+\midrule
+Resultado esperado & Apenas o slot ativo abre; demais permanecem fechados sob turbulência. \\
+\midrule
+Resultado obtido & Não realizado. Exige o dispositivo físico montado com a estrutura da roleta. \\
+\midrule
+Status & \naorealizado \\
+\bottomrule
+\end{tabular}\end{table}
 
 \subsubsection{TC08 — Alerta de Código Ativado em Horário Configurado}
-
-\begin{description}[leftmargin=4cm, style=nextline]
-    \item[Pré-condição] Firmware em execução; ESP32 conectado ao WiFi; agendamento configurado para horário X.
-    \item[Passos]
-        \begin{enumerate}
-            \item Agendar alerta para horário X com período e modo de alerta específicos.
-            \item Aguardar o horário X.
-            \item Verificar que o alerta é ativado com as configurações corretas (LED do período, buzzer ou vibração conforme \texttt{silent\_mode}).
-        \end{enumerate}
-    \item[Resultado esperado] O alerta é ativado dentro da janela de até 30~s após o horário X, com período e modo corretos.
-    \item[Resultado obtido] Validado em integração completa em 08/06/2026: o LED do período acendeu, o buzzer soou (modo normal) imediatamente após a entrega do comando via heartbeat, com latência de até 30~s em relação ao horário configurado, conforme esperado pela arquitetura de polling.
-    \item[Status] \aprovado
-\end{description}
+\begin{table}[H]\small\setlength{\tabcolsep}{6pt}\renewcommand{\arraystretch}{1.3}
+\begin{tabular}{>{\bfseries}p{3.8cm} p{11.2cm}}
+\toprule
+Pré-condição & Firmware em execução; ESP32 conectado ao WiFi; agendamento configurado para horário X. \\
+\midrule
+Passos &
+\begin{enumerate}[nosep,leftmargin=*]
+  \item Agendar alerta para horário X com período e modo de alerta específicos.
+  \item Aguardar o horário X.
+  \item Verificar que o alerta é ativado com as configurações corretas (LED do período, buzzer ou vibração conforme \texttt{silent\_mode}).
+\end{enumerate} \\
+\midrule
+Resultado esperado & O alerta é ativado dentro da janela de até 30~s após o horário X, com período e modo corretos. \\
+\midrule
+Resultado obtido & Validado em integração completa em 08/06/2026: LED do período acendeu, buzzer soou imediatamente após a entrega do comando via heartbeat, com latência de até 30~s conforme esperado pela arquitetura de polling. \\
+\midrule
+Status & \aprovado \\
+\bottomrule
+\end{tabular}\end{table}
 
 \subsubsection{TC09 — Notificação ao Cuidador/Médico Associado}
-
-\begin{description}[leftmargin=4cm, style=nextline]
-    \item[Pré-condição] Cuidador com e-mail cadastrado no sistema; dispensação executada ou estoque crítico detectado.
-    \item[Passos]
-        \begin{enumerate}
-            \item Verificar que o e-mail de notificação chega ao cuidador associado ao paciente nos eventos configurados.
-            \item Verificar que notificações de estoque crítico são enviadas quando \texttt{critical\_stock} transiciona para \texttt{true}.
-        \end{enumerate}
-    \item[Resultado esperado] O cuidador vinculado recebe e-mail nas situações relevantes.
-    \item[Resultado obtido] Notificações por e-mail implementadas via SMTP para os seguintes eventos: cadastro de cuidador (boas-vindas), transição para estoque crítico (\texttt{critical\_stock: true}) e falha de dispensação. Notificações push (Firebase Cloud Messaging) não foram implementadas.
-    \item[Status] \parcial
-\end{description}
+\begin{table}[H]\small\setlength{\tabcolsep}{6pt}\renewcommand{\arraystretch}{1.3}
+\begin{tabular}{>{\bfseries}p{3.8cm} p{11.2cm}}
+\toprule
+Pré-condição & Cuidador com e-mail cadastrado no sistema; dispensação executada ou estoque crítico detectado. \\
+\midrule
+Passos &
+\begin{enumerate}[nosep,leftmargin=*]
+  \item Verificar que o e-mail de notificação chega ao cuidador nos eventos configurados.
+  \item Verificar que notificação de estoque crítico é enviada quando \texttt{critical\_stock} transiciona para \texttt{true}.
+\end{enumerate} \\
+\midrule
+Resultado esperado & O cuidador vinculado recebe e-mail nas situações relevantes. \\
+\midrule
+Resultado obtido & Notificações por e-mail implementadas via SMTP para: cadastro de cuidador (boas-vindas), transição para estoque crítico e falha de dispensação. Notificações push (Firebase Cloud Messaging) não foram implementadas. \\
+\midrule
+Status & \parcial \\
+\bottomrule
+\end{tabular}\end{table}
 
 \subsubsection{TC10 — Conectividade: Controlador Alcança Servidor}
+\begin{table}[H]\small\setlength{\tabcolsep}{6pt}\renewcommand{\arraystretch}{1.3}
+\begin{tabular}{>{\bfseries}p{3.8cm} p{11.2cm}}
+\toprule
+Pré-condição & ESP32 conectado ao WiFi; computador de teste na mesma rede. \\
+\midrule
+Passos &
+\begin{enumerate}[nosep,leftmargin=*]
+  \item Executar \texttt{GET /status} no endereço IP do ESP32; verificar resposta HTTP 200.
+  \item Executar dois \texttt{GET /status} com intervalo de 2~s; verificar que \texttt{uptime\_s} aumentou.
+  \item Verificar que \texttt{wifi\_rssi} está entre $-$100~dBm e 0~dBm.
+\end{enumerate} \\
+\midrule
+Resultado esperado & Servidor HTTP do firmware responde corretamente; uptime cresce; RSSI válido. \\
+\midrule
+Resultado obtido & Todos os três testes de conectividade da suíte pytest passaram: resposta HTTP~200, crescimento de uptime e RSSI dentro do intervalo válido. \\
+\midrule
+Status & \aprovado \\
+\bottomrule
+\end{tabular}\end{table}
 
-\begin{description}[leftmargin=4cm, style=nextline]
-    \item[Pré-condição] ESP32 conectado ao WiFi; computador de teste na mesma rede.
-    \item[Passos]
-        \begin{enumerate}
-            \item Executar \texttt{GET /status} no endereço IP do ESP32; verificar resposta HTTP 200.
-            \item Executar dois \texttt{GET /status} com intervalo de 2~s; verificar que \texttt{uptime\_s} aumentou.
-            \item Verificar que \texttt{wifi\_rssi} está entre $-$100~dBm e 0~dBm.
-        \end{enumerate}
-    \item[Resultado esperado] Servidor HTTP do firmware responde corretamente; uptime cresce; RSSI válido.
-    \item[Resultado obtido] Todos os três testes de conectividade da suíte pytest passaram: resposta HTTP~200, crescimento de uptime e RSSI dentro do intervalo válido.
-    \item[Status] \aprovado
-\end{description}
+\subsubsection{TC11 — Capacidade Mínima de 21 Slots}
+\begin{table}[H]\small\setlength{\tabcolsep}{6pt}\renewcommand{\arraystretch}{1.3}
+\begin{tabular}{>{\bfseries}p{3.8cm} p{11.2cm}}
+\toprule
+Pré-condição & Firmware em execução. \\
+\midrule
+Passos &
+\begin{enumerate}[nosep,leftmargin=*]
+  \item Executar \texttt{GET /status}.
+  \item Verificar que o campo \texttt{total\_slots} é maior ou igual a 21.
+\end{enumerate} \\
+\midrule
+Resultado esperado & O dispenser possui ao menos 21 reservatórios (3 dispensações/dia $\times$ 7 dias). \\
+\midrule
+Resultado obtido & \texttt{GET /status} retornou \texttt{total\_slots: 21}. Confirmado pelo teste automatizado \texttt{test\_total\_slots\_e\_sempre\_21}. \\
+\midrule
+Status & \aprovado \\
+\bottomrule
+\end{tabular}\end{table}
 
-\subsubsection{TC11 — Ajuste de Volume do Alerta Sonoro}
+\subsubsection{TC12 — Resistência a Quedas}
+\begin{table}[H]\small\setlength{\tabcolsep}{6pt}\renewcommand{\arraystretch}{1.3}
+\begin{tabular}{>{\bfseries}p{3.8cm} p{11.2cm}}
+\toprule
+Pré-condição & Dispositivo fisicamente montado e abastecido. \\
+\midrule
+Passos &
+\begin{enumerate}[nosep,leftmargin=*]
+  \item Simular queda do dispositivo de altura equivalente ao uso doméstico (bancada).
+  \item Verificar integridade estrutural e funcional após o impacto.
+\end{enumerate} \\
+\midrule
+Resultado esperado & O dispenser não quebra e mantém funcionalidade após queda leve. \\
+\midrule
+Resultado obtido & Não realizado. Exige o dispositivo físico completo. \\
+\midrule
+Status & \naorealizado \\
+\bottomrule
+\end{tabular}\end{table}
 
-\begin{description}[leftmargin=4cm, style=nextline]
-    \item[Pré-condição] Dispositivo físico montado; buzzer em operação.
-    \item[Passos]
-        \begin{enumerate}
-            \item Com volume em 0\%, pressionar BTN\_VOL\_UP (GPIO 6).
-            \item Verificar que o volume do alerta passa a ser audível (equivalente a 20\%).
-        \end{enumerate}
-    \item[Resultado esperado] O alerta passa a emitir som após o ajuste.
-    \item[Resultado obtido] Não realizado. O ajuste de volume é exclusivamente por botão físico; não há endpoint HTTP para esse controle. O dispositivo físico não estava disponível.
-    \item[Status] \naorealizado
-\end{description}
+\subsubsection{TC13 — Peso do Dispositivo Inferior a 1~kg}
+\begin{table}[H]\small\setlength{\tabcolsep}{6pt}\renewcommand{\arraystretch}{1.3}
+\begin{tabular}{>{\bfseries}p{3.8cm} p{11.2cm}}
+\toprule
+Pré-condição & Dispositivo fisicamente montado e abastecido com comprimidos. \\
+\midrule
+Passos &
+\begin{enumerate}[nosep,leftmargin=*]
+  \item Pesar o dispositivo em balança.
+  \item Verificar que o resultado é inferior a 1~kg.
+\end{enumerate} \\
+\midrule
+Resultado esperado & Peso $<$ 1~kg para garantir portabilidade, especialmente para idosos. \\
+\midrule
+Resultado obtido & Não realizado. O dispositivo físico completo não estava disponível. \\
+\midrule
+Status & \naorealizado \\
+\bottomrule
+\end{tabular}\end{table}
 
-\subsubsection{TC12 — Capacidade Mínima de 21 Slots}
-
-\begin{description}[leftmargin=4cm, style=nextline]
-    \item[Pré-condição] Firmware em execução.
-    \item[Passos]
-        \begin{enumerate}
-            \item Executar \texttt{GET /status}.
-            \item Verificar que o campo \texttt{total\_slots} é maior ou igual a 21.
-        \end{enumerate}
-    \item[Resultado esperado] O dispenser possui ao menos 21 reservatórios (3 dispensações/dia $\times$ 7 dias).
-    \item[Resultado obtido] \texttt{GET /status} retornou \texttt{total\_slots: 21}. Confirmado pelo teste automatizado \texttt{test\_total\_slots\_e\_sempre\_21}.
-    \item[Status] \aprovado
-\end{description}
-
-\subsubsection{TC13 — Resistência a Quedas}
-
-\begin{description}[leftmargin=4cm, style=nextline]
-    \item[Pré-condição] Dispositivo fisicamente montado e abastecido.
-    \item[Passos]
-        \begin{enumerate}
-            \item Simular queda do dispositivo de altura equivalente ao uso doméstico (bancada).
-            \item Verificar integridade estrutural e funcional após o impacto.
-        \end{enumerate}
-    \item[Resultado esperado] O dispenser não quebra e mantém funcionalidade após queda leve.
-    \item[Resultado obtido] Não realizado. Exige o dispositivo físico completo.
-    \item[Status] \naorealizado
-\end{description}
-
-\subsubsection{TC14 — Peso do Dispositivo Inferior a 1~kg}
-
-\begin{description}[leftmargin=4cm, style=nextline]
-    \item[Pré-condição] Dispositivo fisicamente montado e abastecido com comprimidos.
-    \item[Passos]
-        \begin{enumerate}
-            \item Pesar o dispositivo em balança.
-            \item Verificar que o resultado é inferior a 1~kg.
-        \end{enumerate}
-    \item[Resultado esperado] Peso $<$ 1~kg para garantir portabilidade, especialmente para idosos.
-    \item[Resultado obtido] Não realizado. O dispositivo físico completo não estava disponível.
-    \item[Status] \naorealizado
-\end{description}
-
-\subsubsection{TC15 — Esforço de Abertura da Gaveta}
-
-\begin{description}[leftmargin=4cm, style=nextline]
-    \item[Pré-condição] Dispositivo fisicamente montado com mecanismo de gaveta.
-    \item[Passos]
-        \begin{enumerate}
-            \item Medir a força de abertura da gaveta com dinamômetro.
-            \item Verificar que não excede 0,2~kgf.
-            \item Repetir para o fechamento.
-        \end{enumerate}
-    \item[Resultado esperado] Força de abertura e fechamento $\leq$ 0,2~kgf, garantindo acessibilidade a pacientes com força reduzida.
-    \item[Resultado obtido] Não realizado. Exige o dispositivo físico e um dinamômetro.
-    \item[Status] \naorealizado
-\end{description}
+\subsubsection{TC14 — Esforço de Abertura da Gaveta}
+\begin{table}[H]\small\setlength{\tabcolsep}{6pt}\renewcommand{\arraystretch}{1.3}
+\begin{tabular}{>{\bfseries}p{3.8cm} p{11.2cm}}
+\toprule
+Pré-condição & Dispositivo fisicamente montado com mecanismo de gaveta. \\
+\midrule
+Passos &
+\begin{enumerate}[nosep,leftmargin=*]
+  \item Medir a força de abertura da gaveta com dinamômetro.
+  \item Verificar que não excede 0,2~kgf.
+  \item Repetir para o fechamento.
+\end{enumerate} \\
+\midrule
+Resultado esperado & Força de abertura e fechamento $\leq$ 0,2~kgf, garantindo acessibilidade a pacientes com força reduzida. \\
+\midrule
+Resultado obtido & Não realizado. Exige o dispositivo físico e um dinamômetro. \\
+\midrule
+Status & \naorealizado \\
+\bottomrule
+\end{tabular}\end{table}
 
 \newpage
 
@@ -638,7 +708,7 @@ Os possíveis status de cada caso de teste são:
 
 \subsection{Impactos Positivos}
 
-O Eco-Dispenser endereça diretamente a autonomia de pacientes com limitações cognitivas e motoras. Os principais benefícios identificados são:
+O Dispenser endereça diretamente a autonomia de pacientes com limitações cognitivas e motoras. Os principais benefícios identificados são:
 
 \begin{itemize}
     \item \textbf{Autonomia e dignidade:} o paciente gerencia sua própria medicação sem auxílio constante;
@@ -742,8 +812,8 @@ Para um projeto de sistema embarcado com componentes de hardware e software tão
     Alerta vibratório persistente       & Sim  & Ciclo 400~ms/250~ms até confirmação; validado parcialmente \\
     Modo silencioso (configurável)      & Sim  & Checkbox no frontend; propagado até o firmware via heartbeat \\
     Estoque crítico dinâmico            & Sim  & \texttt{isCriticalStock()} calcula em tempo real; reportado no heartbeat \\
-    Botão de confirmação física         & Sim  & GPIO 9 (BOOT); validado fisicamente \\
-    Botões de volume (VOL\_UP/DOWN)     & Sim  & GPIOs 6 e 7; sem endpoint HTTP \\
+    Botão de confirmação física         & Sim  & GPIO 3; validado fisicamente \\
+    Botões de volume (VOL\_UP/DOWN)     & Não  & Removidos do escopo; hardware atual não possui esses botões \\
     Flag \texttt{awaiting\_confirm}     & Sim  & Exposto via \texttt{/status} e heartbeat; bloqueio de dupla dose implementado no scheduler \\
     Backend FastAPI com scheduler       & Sim  & Scheduler assíncrono com fila de comandos e deduplicação \\
     Autenticação JWT                    & Sim  & Login e proteção de rotas \\
@@ -772,7 +842,7 @@ Para um projeto de sistema embarcado com componentes de hardware e software tão
 
 \subsection{Conclusão}
 
-O Eco-Dispenser Inteligente atingiu seus objetivos centrais de MVP: foi desenvolvido um sistema integrado capaz de dispensar medicamentos automaticamente nos horários configurados, emitir alertas multimodais (sonoro, visual e vibratório), registrar confirmações do paciente e notificar o cuidador por e-mail em situações críticas. A arquitetura heartbeat-based eliminou a dependência de IP fixo para comunicação, tornando o sistema mais robusto em redes domésticas. O scheduler assíncrono com fila de comandos e deduplicação garantiu a entrega confiável das dispensações sem disparos duplicados. O frontend oferece configuração de horários, modo silencioso, countdown da próxima dispensação e monitoramento de telemetria em tempo real.
+O Dispenser Inteligente atingiu seus objetivos centrais de MVP: foi desenvolvido um sistema integrado capaz de dispensar medicamentos automaticamente nos horários configurados, emitir alertas multimodais (sonoro, visual e vibratório), registrar confirmações do paciente e notificar o cuidador por e-mail em situações críticas. A arquitetura heartbeat-based eliminou a dependência de IP fixo para comunicação, tornando o sistema mais robusto em redes domésticas. O scheduler assíncrono com fila de comandos e deduplicação garantiu a entrega confiável das dispensações sem disparos duplicados. O frontend oferece configuração de horários, modo silencioso, countdown da próxima dispensação e monitoramento de telemetria em tempo real.
 
 As principais limitações da versão atual são a ausência de notificações push ao cuidador (somente e-mail), a necessidade de configuração manual do endereço de backend no firmware, e a não execução dos testes físicos completos de hardware.
 
@@ -782,7 +852,7 @@ As principais limitações da versão atual são a ausência de notificações p
     \item \textbf{Descoberta automática do ESP (mDNS):} o firmware anunciaria o dispositivo como \texttt{eco-dispenser.local} na rede local, eliminando a configuração manual da URL do backend no firmware;
     \item \textbf{Notificações push:} integração com Firebase Cloud Messaging (ou similar) para alertar cuidadores em tempo real em caso de não adesão, complementando as notificações por e-mail já implementadas;
     \item \textbf{Visualização do histórico no frontend:} página de logs de dispensação e adesão, cujos dados já são coletados pelo backend;
-    \item \textbf{Testes físicos completos:} execução dos casos de teste de hardware (TC04, TC07, TC11, TC13, TC14, TC15) com o dispositivo montado;
+    \item \textbf{Testes físicos completos:} execução dos casos de teste de hardware (TC04, TC07, TC12, TC13, TC14) com o dispositivo montado;
     \item \textbf{Operação offline:} firmware com alertas físicos mesmo sem conectividade ao backend, garantindo funcionamento básico em queda de rede;
     \item \textbf{Modo reabastecimento:} implementação da interface e do fluxo completo de reabastecimento semanal;
     \item \textbf{Deploy em produção:} configuração de HTTPS e infraestrutura para uso fora da rede local.
