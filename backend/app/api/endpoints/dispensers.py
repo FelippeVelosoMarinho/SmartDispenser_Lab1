@@ -138,13 +138,22 @@ def _format_drawer(drawer: Drawer) -> dict:
 @router.get("/discover", response_model=List[DiscoveredDispenser])
 async def discover_dispensers(
     current_user = Depends(get_current_user),
+    db: Session = Depends(get_db),
 ):
-    """Descobre dispensadores disponíveis para pareamento.
-    
-    Retorna uma lista de dispositivos disponíveis descobertos na rede.
-    Atualmente usa dados mock para fins de teste/demo.
-    """
-    return _MOCK_DISCOVERED
+    """Retorna dispensadores online e ainda não pareados com nenhum paciente."""
+    from app.services.dispenser_online import is_dispenser_online
+    unpaired = db.query(Dispenser).filter(Dispenser.patient_id.is_(None)).all()
+    result = []
+    for d in unpaired:
+        if is_dispenser_online(d):
+            result.append({
+                "id": str(d.id),
+                "serial": d.hardware_id,
+                "mac": d.hardware_id,
+                "rssi": 0,
+                "firmware": "unknown",
+            })
+    return result
 
 
 @router.get("", response_model=List[DispenserPublic])
