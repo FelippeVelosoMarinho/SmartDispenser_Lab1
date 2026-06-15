@@ -45,8 +45,8 @@ interface FormErrors {
 
 const EMPTY_FORM: FormState = { nome: "", dosagem: "", horarios: [], observacoes: "" };
 
-const DAYS = ["Segunda", "Terça", "Quarta", "Quinta", "Sexta", "Sábado", "Domingo"];
-const DAYS_SHORT = ["Seg", "Ter", "Qua", "Qui", "Sex", "Sáb", "Dom"];
+const DAYS = ["Dia 1", "Dia 2", "Dia 3", "Dia 4", "Dia 5", "Dia 6", "Dia 7", "Dia 8", "Dia 9", "Dia 10"];
+const DAYS_SHORT = ["D1", "D2", "D3", "D4", "D5", "D6", "D7", "D8", "D9", "D10"];
 
 const PERIODS: { key: Period; label: string; icon: string }[] = [
   { key: "morning",   label: "Manhã",  icon: "ph-sun-horizon" },

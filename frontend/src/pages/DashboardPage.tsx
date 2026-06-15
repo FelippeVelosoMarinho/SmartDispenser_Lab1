@@ -9,7 +9,6 @@ import {
   PeriodScheduleSection,
   useHardwareStatus,
 } from "../components/dashboard/PeriodScheduleSection";
-import { DispenserGuideSection } from "../components/dashboard/DispenserGuideSection";
 import { APP_NAME } from "../lib/brand";
 
 export function DashboardPage() {
@@ -278,7 +277,6 @@ export function DashboardPage() {
         dispenser={activeDispenser}
         onDispenserChange={silentRefresh}
       />
-      <DispenserGuideSection dispenser={activeDispenser} />
 
     </div>
   );

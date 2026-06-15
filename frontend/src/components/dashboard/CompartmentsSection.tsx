@@ -217,7 +217,7 @@ export function CompartmentsSection({ dispenser, onDispenserChange }: Compartmen
                 </div>
                 <div style={{ fontSize: "var(--text-lg)", color: "var(--ink)", fontWeight: 700, marginBottom: "4px", lineHeight: 1.2 }}>
                   {displaySlot.medications?.length > 0
-                    ? (displaySlot.medications.length === 1 ? displaySlot.medications[0].medication.name : `${displaySlot.medications.length} Medicamentos`)
+                    ? `${displaySlot.medications.length} Medicamento${displaySlot.medications.length !== 1 ? 's' : ''}`
                     : "Sem medicamento"}
                 </div>
                 {displaySlot.medications?.length > 0 && (

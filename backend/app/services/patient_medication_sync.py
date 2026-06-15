@@ -15,9 +15,9 @@ PERIOD_OFFSET = {"morning": 0, "afternoon": 1, "night": 2}
 
 
 def day_period_to_slot(day: int, period: str) -> int:
-    """Convert (day, period) to physical slot number 1–21.
+    """Convert (day, period) to physical slot number 1–30.
 
-    day: 0=Monday … 6=Sunday
+    day: 0=Dia 1 … 9=Dia 10
     period: "morning" | "afternoon" | "night"
     """
     return day * 3 + PERIOD_OFFSET[period] + 1
