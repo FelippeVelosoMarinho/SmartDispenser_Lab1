@@ -2,62 +2,293 @@ import { useState, useEffect } from "react";
 import { useNavigate, useParams } from "@tanstack/react-router";
 import { Button } from "../components/ui/Button";
 import { Input } from "../components/ui/Input";
-import { Card, CardContent, CardFooter } from "../components/ui/Card";
+import { Card, CardContent } from "../components/ui/Card";
 import { ConfirmModal } from "../components/ui/ConfirmModal";
 import { useAuth } from "../auth/AuthContext";
+import { useToast } from "../components/ui";
 import { APP_NAME } from "../lib/brand";
 import "./PatientMedicationsPage.css";
 
-type Frequency = "diaria" | "semanal" | "mensal";
-type TimeOfDay = "manha" | "tarde" | "noite";
+// ── Types ─────────────────────────────────────────────────────────────────────
+
+type Period = "morning" | "afternoon" | "night";
+
+interface DayPeriod {
+  day: number;   // 0=Monday … 6=Sunday
+  period: Period;
+}
 
 interface Medication {
   id: string;
   nome: string;
   dosagem: string;
-  frequencia: Frequency;
-  horarios: TimeOfDay[];
+  horarios: DayPeriod[];
   observacoes: string;
+  configured_slots?: number[] | null;
+  warning?: string | null;
 }
 
-interface MedicationFormState {
+interface FormState {
   nome: string;
   dosagem: string;
-  frequencia: Frequency;
-  horarios: TimeOfDay[];
+  horarios: DayPeriod[];
   observacoes: string;
 }
 
-interface MedicationFormErrors {
+interface FormErrors {
   nome?: string;
   dosagem?: string;
   horarios?: string;
 }
 
-const EMPTY_FORM: MedicationFormState = {
-  nome: "",
-  dosagem: "",
-  frequencia: "diaria",
-  horarios: [],
-  observacoes: "",
-};
+// ── Constants ─────────────────────────────────────────────────────────────────
 
-const FREQUENCY_LABELS: Record<Frequency, string> = {
-  diaria: "Diária",
-  semanal: "Semanal",
-  mensal: "Mensal",
-};
+const EMPTY_FORM: FormState = { nome: "", dosagem: "", horarios: [], observacoes: "" };
 
-const TIME_OPTIONS: { value: TimeOfDay; label: string; icon: string }[] = [
-  { value: "manha", label: "Manhã", icon: "ph-duotone ph-sun-horizon" },
-  { value: "tarde", label: "Tarde", icon: "ph-duotone ph-sun" },
-  { value: "noite", label: "Noite", icon: "ph-duotone ph-moon-stars" },
+const DAYS = ["Segunda", "Terça", "Quarta", "Quinta", "Sexta", "Sábado", "Domingo"];
+const DAYS_SHORT = ["Seg", "Ter", "Qua", "Qui", "Sex", "Sáb", "Dom"];
+
+const PERIODS: { key: Period; label: string; icon: string }[] = [
+  { key: "morning",   label: "Manhã",  icon: "ph-sun-horizon" },
+  { key: "afternoon", label: "Tarde",  icon: "ph-sun" },
+  { key: "night",     label: "Noite",  icon: "ph-moon-stars" },
 ];
+
+const PERIOD_OFFSET: Record<Period, number> = { morning: 0, afternoon: 1, night: 2 };
+
+function dayPeriodToSlot(day: number, period: Period): number {
+  return day * 3 + PERIOD_OFFSET[period] + 1;
+}
+
+function hasDayPeriod(horarios: DayPeriod[], day: number, period: Period): boolean {
+  return horarios.some((h) => h.day === day && h.period === period);
+}
+
+function toggleDayPeriod(horarios: DayPeriod[], day: number, period: Period): DayPeriod[] {
+  if (hasDayPeriod(horarios, day, period)) {
+    return horarios.filter((h) => !(h.day === day && h.period === period));
+  }
+  return [...horarios, { day, period }];
+}
+
+// ── ScheduleGrid ──────────────────────────────────────────────────────────────
+
+function ScheduleGrid({
+  value,
+  onChange,
+  error,
+}: {
+  value: DayPeriod[];
+  onChange: (v: DayPeriod[]) => void;
+  error?: string;
+}) {
+  function toggleAll(period: Period) {
+    const allSelected = DAYS.every((_, d) => hasDayPeriod(value, d, period));
+    let next = value.filter((h) => h.period !== period);
+    if (!allSelected) next = [...next, ...DAYS.map((_, d) => ({ day: d, period }))];
+    onChange(next);
+  }
+
+  return (
+    <div>
+      <div style={{ overflowX: "auto" }}>
+        <table style={{ borderCollapse: "collapse", width: "100%", minWidth: 340 }}>
+          <thead>
+            <tr>
+              <th style={{ width: 72, padding: "var(--space-2) var(--space-3)", textAlign: "left", fontFamily: "var(--font-sans)", fontSize: "var(--text-xs)", fontWeight: 600, color: "var(--ink-3)", textTransform: "uppercase", letterSpacing: "0.05em" }} />
+              {PERIODS.map((p) => (
+                <th
+                  key={p.key}
+                  style={{ padding: "var(--space-2) var(--space-3)", textAlign: "center", fontFamily: "var(--font-sans)", fontSize: "var(--text-xs)", fontWeight: 600, color: "var(--ink-2)", textTransform: "uppercase", letterSpacing: "0.05em", cursor: "pointer", userSelect: "none" }}
+                  title={`Selecionar/desmarcar toda ${p.label}`}
+                  onClick={() => toggleAll(p.key)}
+                >
+                  <i className={`ph-duotone ${p.icon}`} style={{ marginRight: 4, fontSize: "0.9rem" }} />
+                  {p.label}
+                </th>
+              ))}
+            </tr>
+          </thead>
+          <tbody>
+            {DAYS.map((dayLabel, d) => (
+              <tr key={d} style={{ borderTop: "1px solid var(--border)" }}>
+                <td style={{ padding: "var(--space-2) var(--space-3)", fontFamily: "var(--font-sans)", fontSize: "var(--text-sm)", color: "var(--ink-2)", fontWeight: 500, whiteSpace: "nowrap" }}>
+                  {dayLabel}
+                </td>
+                {PERIODS.map((p) => {
+                  const checked = hasDayPeriod(value, d, p.key);
+                  const slotNum = dayPeriodToSlot(d, p.key);
+                  return (
+                    <td key={p.key} style={{ padding: "var(--space-2) var(--space-3)", textAlign: "center" }}>
+                      <button
+                        type="button"
+                        title={`Slot ${slotNum} — ${dayLabel} ${p.label}`}
+                        onClick={() => onChange(toggleDayPeriod(value, d, p.key))}
+                        style={{
+                          width: 36,
+                          height: 36,
+                          borderRadius: "var(--radius-sm)",
+                          border: checked ? "2px solid var(--primary)" : "2px solid var(--border)",
+                          background: checked ? "var(--primary)" : "var(--surface)",
+                          color: checked ? "var(--primary-on, #fff)" : "var(--ink-3)",
+                          cursor: "pointer",
+                          display: "inline-flex",
+                          alignItems: "center",
+                          justifyContent: "center",
+                          fontSize: "var(--text-xs)",
+                          fontWeight: 700,
+                          transition: "all 0.15s",
+                          fontFamily: "var(--font-mono)",
+                        }}
+                      >
+                        {slotNum}
+                      </button>
+                    </td>
+                  );
+                })}
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+
+      <div style={{ display: "flex", gap: "var(--space-2)", flexWrap: "wrap", marginTop: "var(--space-3)" }}>
+        {PERIODS.map((p) => (
+          <button
+            type="button"
+            key={p.key}
+            onClick={() => toggleAll(p.key)}
+            style={{ fontSize: "var(--text-xs)", padding: "2px 10px", borderRadius: 9999, border: "1px solid var(--border)", background: "var(--surface)", color: "var(--ink-3)", cursor: "pointer", fontFamily: "var(--font-sans)" }}
+          >
+            Toda {p.label === "Manhã" ? "a manhã" : p.label === "Tarde" ? "a tarde" : "a noite"}
+          </button>
+        ))}
+        <button
+          type="button"
+          onClick={() => onChange([])}
+          style={{ fontSize: "var(--text-xs)", padding: "2px 10px", borderRadius: 9999, border: "1px solid var(--border)", background: "var(--surface)", color: "var(--ink-3)", cursor: "pointer", fontFamily: "var(--font-sans)" }}
+        >
+          Limpar tudo
+        </button>
+      </div>
+
+      {error && (
+        <p style={{ margin: "var(--space-2) 0 0", color: "var(--error, #dc2626)", fontSize: "var(--text-xs)" }}>
+          {error}
+        </p>
+      )}
+    </div>
+  );
+}
+
+// ── MiniGrid (card display) ───────────────────────────────────────────────────
+
+function MiniGrid({ horarios }: { horarios: DayPeriod[] }) {
+  if (!horarios || horarios.length === 0) {
+    return (
+      <span style={{ fontSize: "var(--text-xs)", color: "var(--ink-3)", fontStyle: "italic" }}>
+        ⚠️ Configuração antiga — edite para atualizar
+      </span>
+    );
+  }
+
+  return (
+    <div style={{ display: "flex", gap: 3 }}>
+      {DAYS_SHORT.map((dayLabel, d) => (
+        <div key={d} style={{ display: "flex", flexDirection: "column", gap: 2, alignItems: "center" }}>
+          <span style={{ fontSize: 9, color: "var(--ink-3)", fontFamily: "var(--font-sans)", lineHeight: 1 }}>{dayLabel}</span>
+          {PERIODS.map((p) => {
+            const active = hasDayPeriod(horarios, d, p.key);
+            return (
+              <div
+                key={p.key}
+                title={active ? `${dayLabel} ${p.label} (slot ${dayPeriodToSlot(d, p.key)})` : undefined}
+                style={{
+                  width: 10,
+                  height: 10,
+                  borderRadius: 2,
+                  background: active ? "var(--primary)" : "var(--surface-dim)",
+                  border: active ? "none" : "1px solid var(--border)",
+                }}
+              />
+            );
+          })}
+        </div>
+      ))}
+    </div>
+  );
+}
+
+// ── MedicationCard ────────────────────────────────────────────────────────────
+
+function MedicationCard({
+  med,
+  onEdit,
+  onDelete,
+}: {
+  med: Medication;
+  onEdit: () => void;
+  onDelete: () => void;
+}) {
+  const slots = med.horarios?.map((h) => dayPeriodToSlot(h.day, h.period)).sort((a, b) => a - b) ?? [];
+
+  return (
+    <Card>
+      <CardContent>
+        <div style={{ display: "flex", alignItems: "flex-start", gap: "var(--space-4)", flexWrap: "wrap" }}>
+          <div style={{ width: 44, height: 44, borderRadius: "var(--radius-sm)", background: "var(--primary-soft)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+            <i className="ph-duotone ph-pill" aria-hidden="true" style={{ fontSize: "1.5rem", color: "var(--primary)" }} />
+          </div>
+          <div style={{ flex: "1 1 200px", minWidth: 0 }}>
+            <div style={{ fontWeight: 700, fontSize: "var(--text-base)", color: "var(--ink)", marginBottom: 2 }}>
+              {med.nome}
+            </div>
+            <div style={{ fontSize: "var(--text-sm)", color: "var(--ink-3)", marginBottom: "var(--space-3)" }}>
+              {med.dosagem}
+              {med.observacoes && <span> · {med.observacoes}</span>}
+            </div>
+            <MiniGrid horarios={med.horarios} />
+            {slots.length > 0 && (
+              <div style={{ marginTop: "var(--space-2)", fontSize: "var(--text-xs)", color: "var(--ink-3)", fontFamily: "var(--font-mono)" }}>
+                Slots: {slots.join(", ")}
+              </div>
+            )}
+          </div>
+          <div style={{ display: "flex", gap: "var(--space-2)", flexShrink: 0 }}>
+            <Button variant="secondary" size="small" leftIcon="ph-duotone ph-pencil" onClick={onEdit}>
+              Editar
+            </Button>
+            <Button variant="danger" size="small" leftIcon="ph-duotone ph-trash" onClick={onDelete}>
+              Remover
+            </Button>
+          </div>
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
+
+// ── Main Page ─────────────────────────────────────────────────────────────────
+
+const backBtnStyle: React.CSSProperties = {
+  display: "inline-flex",
+  alignItems: "center",
+  gap: "var(--space-2)",
+  background: "transparent",
+  border: "none",
+  padding: "var(--space-1) 0",
+  color: "var(--ink-3)",
+  fontFamily: "var(--font-sans)",
+  fontSize: "var(--text-sm)",
+  cursor: "pointer",
+  marginBottom: "var(--space-3)",
+};
 
 export function PatientMedicationsPage() {
   const navigate = useNavigate();
   const { patientId } = useParams({ from: "/_authenticated/patients/$patientId/medications" });
   const { accessToken: token } = useAuth();
+  const toast = useToast();
 
   const [patientName, setPatientName] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
@@ -85,8 +316,7 @@ export function PatientMedicationsPage() {
           return;
         }
         if (medsRes.ok) {
-          const meds = await medsRes.json();
-          setMedications(meds);
+          setMedications(await medsRes.json());
         }
       } catch {
         setLoadError("error");
@@ -99,25 +329,17 @@ export function PatientMedicationsPage() {
 
   const [showForm, setShowForm] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
-  const [form, setForm] = useState<MedicationFormState>(EMPTY_FORM);
-  const [errors, setErrors] = useState<MedicationFormErrors>({});
+  const [form, setForm] = useState<FormState>(EMPTY_FORM);
+  const [errors, setErrors] = useState<FormErrors>({});
   const [submitting, setSubmitting] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<Medication | null>(null);
   const [deleting, setDeleting] = useState(false);
 
   if (loading) {
     return (
-      <div
-        className="med-page-container"
-        style={{
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-          minHeight: "400px",
-        }}
-      >
+      <div className="med-page-container" style={{ display: "flex", alignItems: "center", justifyContent: "center", minHeight: "400px" }}>
         <div className="btn-spinner" style={{ borderColor: "var(--border-subtle)", borderTopColor: "var(--primary)" }} />
-        <span style={{ marginLeft: "10px", color: "var(--ink-3)" }}>Carregando paciente...</span>
+        <span style={{ marginLeft: 10, color: "var(--ink-3)" }}>Carregando paciente...</span>
       </div>
     );
   }
@@ -126,42 +348,17 @@ export function PatientMedicationsPage() {
     const isNotFound = loadError === "not_found";
     return (
       <div className="med-page-container">
-        <button
-          type="button"
-          onClick={() => navigate({ to: "/patients" })}
-          style={backBtnStyle}
-        >
+        <button type="button" onClick={() => navigate({ to: "/patients" })} style={backBtnStyle}>
           <i className="ph-duotone ph-arrow-left" aria-hidden="true" />
           Voltar para pacientes
         </button>
-        <div
-          style={{
-            display: "flex",
-            flexDirection: "column",
-            alignItems: "center",
-            gap: "var(--space-4)",
-            color: "var(--ink-3)",
-            paddingTop: "var(--space-10)",
-          }}
-        >
-          <i
-            className={`ph-duotone ${isNotFound ? "ph-user-x" : "ph-warning-circle"}`}
-            style={{ fontSize: "3rem" }}
-            aria-hidden="true"
-          />
+        <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: "var(--space-4)", color: "var(--ink-3)", paddingTop: "var(--space-10)" }}>
+          <i className={`ph-duotone ${isNotFound ? "ph-user-x" : "ph-warning-circle"}`} style={{ fontSize: "3rem" }} aria-hidden="true" />
           <p style={{ fontFamily: "var(--font-sans)", fontSize: "var(--text-base)", margin: 0 }}>
             {isNotFound ? "Paciente não encontrado." : "Erro ao carregar o paciente."}
           </p>
           {!isNotFound && (
-            <Button
-              variant="secondary"
-              leftIcon="ph-duotone ph-arrow-clockwise"
-              onClick={() => {
-                setLoadError(null);
-                setLoading(true);
-                setRetryCount((n) => n + 1);
-              }}
-            >
+            <Button variant="secondary" leftIcon="ph-duotone ph-arrow-clockwise" onClick={() => { setLoadError(null); setLoading(true); setRetryCount((n) => n + 1); }}>
               Tentar novamente
             </Button>
           )}
@@ -170,26 +367,12 @@ export function PatientMedicationsPage() {
     );
   }
 
-  function validate(): MedicationFormErrors {
-    const next: MedicationFormErrors = {};
+  function validate(): FormErrors {
+    const next: FormErrors = {};
     if (!form.nome.trim()) next.nome = "Informe o nome do medicamento.";
     if (!form.dosagem.trim()) next.dosagem = "Informe a dosagem.";
-    if (form.horarios.length === 0) next.horarios = "Selecione ao menos um horário.";
+    if (form.horarios.length === 0) next.horarios = "Selecione ao menos uma combinação de dia e período.";
     return next;
-  }
-
-  function updateField<K extends keyof MedicationFormState>(key: K, value: MedicationFormState[K]) {
-    setForm((prev) => ({ ...prev, [key]: value }));
-    if (errors[key as keyof MedicationFormErrors]) {
-      setErrors((prev) => ({ ...prev, [key]: undefined }));
-    }
-  }
-
-  function toggleHorario(h: TimeOfDay) {
-    const next = form.horarios.includes(h)
-      ? form.horarios.filter((x) => x !== h)
-      : [...form.horarios, h];
-    updateField("horarios", next);
   }
 
   function openAdd() {
@@ -201,13 +384,7 @@ export function PatientMedicationsPage() {
 
   function openEdit(med: Medication) {
     setEditingId(med.id);
-    setForm({
-      nome: med.nome,
-      dosagem: med.dosagem,
-      frequencia: med.frequencia,
-      horarios: med.horarios,
-      observacoes: med.observacoes,
-    });
+    setForm({ nome: med.nome, dosagem: med.dosagem, horarios: med.horarios ?? [], observacoes: med.observacoes });
     setErrors({});
     setShowForm(true);
   }
@@ -220,26 +397,36 @@ export function PatientMedicationsPage() {
 
     setSubmitting(true);
     try {
+      const payload = { nome: form.nome.trim(), dosagem: form.dosagem.trim(), horarios: form.horarios, observacoes: form.observacoes.trim() };
+
+      const res = await fetch(
+        editingId
+          ? `/api/patients/${patientId}/medications/${editingId}`
+          : `/api/patients/${patientId}/medications`,
+        {
+          method: editingId ? "PUT" : "POST",
+          headers: { "Content-Type": "application/json", ...authHeaders },
+          body: JSON.stringify(payload),
+        }
+      );
+      if (!res.ok) throw new Error(await res.text());
+      const saved: Medication = await res.json();
+
       if (editingId) {
-        const res = await fetch(`/api/patients/${patientId}/medications/${editingId}`, {
-          method: "PUT",
-          headers: { "Content-Type": "application/json", ...authHeaders },
-          body: JSON.stringify(form),
-        });
-        if (!res.ok) throw new Error("Erro ao atualizar medicamento");
-        const updated: Medication = await res.json();
-        setMedications((prev) => prev.map((m) => (m.id === editingId ? updated : m)));
+        setMedications((prev) => prev.map((m) => (m.id === editingId ? saved : m)));
       } else {
-        const res = await fetch(`/api/patients/${patientId}/medications`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json", ...authHeaders },
-          body: JSON.stringify(form),
-        });
-        if (!res.ok) throw new Error("Erro ao adicionar medicamento");
-        const created: Medication = await res.json();
-        setMedications((prev) => [...prev, created]);
+        setMedications((prev) => [...prev, saved]);
       }
+
       setShowForm(false);
+
+      if (saved.warning) {
+        toast.warning(saved.warning);
+      } else if (saved.configured_slots && saved.configured_slots.length > 0) {
+        toast.success(`${saved.nome} configurado nos slots ${saved.configured_slots.join(", ")} — coloque o medicamento nesses compartimentos.`);
+      }
+    } catch {
+      toast.danger("Erro ao salvar medicamento. Tente novamente.");
     } finally {
       setSubmitting(false);
     }
@@ -253,9 +440,12 @@ export function PatientMedicationsPage() {
         method: "DELETE",
         headers: authHeaders,
       });
-      if (!res.ok) throw new Error("Erro ao remover medicamento");
+      if (!res.ok) throw new Error("Erro ao remover");
       setMedications((prev) => prev.filter((m) => m.id !== deleteTarget.id));
       setDeleteTarget(null);
+      toast.success(`${deleteTarget.nome} removido e slots liberados.`);
+    } catch {
+      toast.danger("Erro ao remover medicamento.");
     } finally {
       setDeleting(false);
     }
@@ -263,384 +453,134 @@ export function PatientMedicationsPage() {
 
   return (
     <div className="med-page-container">
+      {/* Header */}
       <div style={{ marginBottom: "var(--space-6)" }}>
-        <button
-          type="button"
-          onClick={() => navigate({ to: `/patients/${patientId}/edit` as any })}
-          style={backBtnStyle}
-        >
+        <button type="button" onClick={() => navigate({ to: "/patients/$patientId/edit", params: { patientId } })} style={backBtnStyle}>
           <i className="ph-duotone ph-arrow-left" aria-hidden="true" />
           Voltar para edição do paciente
         </button>
-        <p className="eyebrow" style={{ marginBottom: "var(--space-1)", color: "var(--ink-3)" }}>
-          {APP_NAME}
-        </p>
-        <h1
-          style={{
-            fontFamily: "var(--font-sans)",
-            fontSize: "var(--text-2xl)",
-            fontWeight: 700,
-            color: "var(--ink)",
-            lineHeight: "var(--leading-heading)",
-            margin: 0,
-          }}
-        >
+        <p className="eyebrow" style={{ marginBottom: "var(--space-1)", color: "var(--ink-3)" }}>{APP_NAME}</p>
+        <h1 style={{ fontFamily: "var(--font-sans)", fontSize: "var(--text-2xl)", fontWeight: 700, color: "var(--ink)", lineHeight: "var(--leading-heading)", margin: 0 }}>
           Medicamentos e posologia
         </h1>
         <p style={{ marginTop: "var(--space-2)", color: "var(--ink-3)", fontSize: "var(--text-sm)" }}>
           Gerenciar medicamentos de <strong>{patientName}</strong>.
+          {" "}Cada célula do calendário corresponde a um slot físico do dispensador (21 slots = 7 dias × 3 períodos).
         </p>
       </div>
 
-      {/* Medication list */}
+      {/* Form */}
+      {showForm && (
+        <Card style={{ marginBottom: "var(--space-5)" }}>
+          <CardContent>
+            <h2 style={{ fontFamily: "var(--font-sans)", fontSize: "var(--text-lg)", fontWeight: 600, margin: "0 0 var(--space-5)" }}>
+              {editingId ? "Editar medicamento" : "Adicionar medicamento"}
+            </h2>
+            <form onSubmit={handleSubmit} noValidate>
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "var(--space-4)", marginBottom: "var(--space-4)" }}>
+                <div>
+                  <label style={{ display: "block", marginBottom: "var(--space-1)", fontSize: "var(--text-sm)", fontWeight: 600, color: "var(--ink)" }}>
+                    Nome do medicamento *
+                  </label>
+                  <Input
+                    placeholder="Ex: Ritalina"
+                    value={form.nome}
+                    onChange={(e) => { setForm((p) => ({ ...p, nome: e.target.value })); setErrors((p) => ({ ...p, nome: undefined })); }}
+                    aria-invalid={!!errors.nome}
+                  />
+                  {errors.nome && <p style={{ margin: "4px 0 0", color: "var(--error, #dc2626)", fontSize: "var(--text-xs)" }}>{errors.nome}</p>}
+                </div>
+                <div>
+                  <label style={{ display: "block", marginBottom: "var(--space-1)", fontSize: "var(--text-sm)", fontWeight: 600, color: "var(--ink)" }}>
+                    Dosagem *
+                  </label>
+                  <Input
+                    placeholder="Ex: 10mg"
+                    value={form.dosagem}
+                    onChange={(e) => { setForm((p) => ({ ...p, dosagem: e.target.value })); setErrors((p) => ({ ...p, dosagem: undefined })); }}
+                    aria-invalid={!!errors.dosagem}
+                  />
+                  {errors.dosagem && <p style={{ margin: "4px 0 0", color: "var(--error, #dc2626)", fontSize: "var(--text-xs)" }}>{errors.dosagem}</p>}
+                </div>
+              </div>
+
+              <div style={{ marginBottom: "var(--space-4)" }}>
+                <label style={{ display: "block", marginBottom: "var(--space-2)", fontSize: "var(--text-sm)", fontWeight: 600, color: "var(--ink)" }}>
+                  Quando tomar? *
+                  <span style={{ fontWeight: 400, color: "var(--ink-3)", marginLeft: "var(--space-2)" }}>
+                    Clique nas células para selecionar os dias e períodos. O número mostra o slot físico correspondente.
+                  </span>
+                </label>
+                <ScheduleGrid
+                  value={form.horarios}
+                  onChange={(v) => { setForm((p) => ({ ...p, horarios: v })); setErrors((p) => ({ ...p, horarios: undefined })); }}
+                  error={errors.horarios}
+                />
+              </div>
+
+              <div style={{ marginBottom: "var(--space-5)" }}>
+                <label style={{ display: "block", marginBottom: "var(--space-1)", fontSize: "var(--text-sm)", fontWeight: 600, color: "var(--ink)" }}>
+                  Observações
+                </label>
+                <Input
+                  placeholder="Ex: Tomar com água"
+                  value={form.observacoes}
+                  onChange={(e) => setForm((p) => ({ ...p, observacoes: e.target.value }))}
+                />
+              </div>
+
+              <div style={{ display: "flex", gap: "var(--space-3)", justifyContent: "flex-end" }}>
+                <Button type="button" variant="secondary" onClick={() => setShowForm(false)} disabled={submitting}>
+                  Cancelar
+                </Button>
+                <Button type="submit" loading={submitting} leftIcon={submitting ? undefined : "ph-duotone ph-floppy-disk"}>
+                  {submitting ? "Salvando…" : "Salvar medicamento"}
+                </Button>
+              </div>
+            </form>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* List */}
       {medications.length === 0 && !showForm ? (
         <Card>
           <CardContent>
-            <div
-              style={{
-                display: "flex",
-                flexDirection: "column",
-                alignItems: "center",
-                gap: "var(--space-4)",
-                padding: "var(--space-8) 0",
-                color: "var(--ink-3)",
-              }}
-            >
-              <i className="ph-duotone ph-pill" style={{ fontSize: "3rem" }} aria-hidden="true" />
-              <p style={{ fontFamily: "var(--font-sans)", fontSize: "var(--text-base)", margin: 0 }}>
-                Nenhum medicamento cadastrado.
-              </p>
-              <Button leftIcon="ph-duotone ph-plus" onClick={openAdd}>
-                Adicionar medicamento
-              </Button>
+            <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: "var(--space-3)", color: "var(--ink-3)", padding: "var(--space-8) var(--space-4)", textAlign: "center" }}>
+              <i className="ph-duotone ph-pill" style={{ fontSize: "2.5rem" }} aria-hidden="true" />
+              <div>
+                <p style={{ margin: 0, fontWeight: 600, color: "var(--ink)" }}>Nenhum medicamento cadastrado</p>
+                <p style={{ margin: "var(--space-1) 0 0", fontSize: "var(--text-sm)" }}>
+                  Adicione os medicamentos do paciente e escolha em quais dias e períodos devem ser dispensados.
+                </p>
+              </div>
+              <Button leftIcon="ph-duotone ph-plus" onClick={openAdd}>Adicionar medicamento</Button>
             </div>
           </CardContent>
         </Card>
       ) : (
-        <>
-          <div style={{ display: "flex", flexDirection: "column", gap: "var(--space-3)", marginBottom: "var(--space-4)" }}>
-            {medications.map((med) => (
-              <MedicationCard
-                key={med.id}
-                medication={med}
-                onEdit={() => openEdit(med)}
-                onDelete={() => setDeleteTarget(med)}
-              />
-            ))}
-          </div>
-
-          {!showForm && (
-            <Button variant="secondary" leftIcon="ph-duotone ph-plus" onClick={openAdd}>
-              Adicionar medicamento
-            </Button>
-          )}
-        </>
+        <div style={{ display: "flex", flexDirection: "column", gap: "var(--space-3)" }}>
+          {medications.map((med) => (
+            <MedicationCard key={med.id} med={med} onEdit={() => openEdit(med)} onDelete={() => setDeleteTarget(med)} />
+          ))}
+        </div>
       )}
 
-      {/* Add/Edit form */}
-      {showForm && (
+      {!showForm && (
         <div style={{ marginTop: "var(--space-5)" }}>
-          <h2
-            style={{
-              fontFamily: "var(--font-sans)",
-              fontSize: "var(--text-lg)",
-              fontWeight: 600,
-              color: "var(--ink)",
-              margin: "0 0 var(--space-4) 0",
-            }}
-          >
-            {editingId ? "Editar medicamento" : "Novo medicamento"}
-          </h2>
-          <Card>
-            <form onSubmit={handleSubmit} noValidate>
-              <CardContent>
-                <div style={{ display: "flex", flexDirection: "column", gap: "var(--space-5)" }}>
-                  <div className="med-form-grid">
-                    <Input
-                      label="Nome do medicamento"
-                      placeholder="Ex.: Ritalina"
-                      icon="ph-duotone ph-pill"
-                      value={form.nome}
-                      onChange={(e) => updateField("nome", e.target.value)}
-                      error={errors.nome}
-                      required
-                    />
-                    <Input
-                      label="Dosagem"
-                      placeholder="Ex.: 10 mg"
-                      icon="ph-duotone ph-scales"
-                      value={form.dosagem}
-                      onChange={(e) => updateField("dosagem", e.target.value)}
-                      error={errors.dosagem}
-                      required
-                    />
-                  </div>
-
-                  <div className="pillar-input-wrapper">
-                    <span className="pillar-input__label">Frequência</span>
-                    <div role="radiogroup" aria-label="Frequência da medicação" className="med-chip-group">
-                      {(["diaria", "semanal", "mensal"] as Frequency[]).map((f) => {
-                        const checked = form.frequencia === f;
-                        return (
-                          <label key={f} style={radioLabelStyle(checked)}>
-                            <input
-                              type="radio"
-                              name="frequencia"
-                              value={f}
-                              checked={checked}
-                              onChange={() => updateField("frequencia", f)}
-                              style={{ position: "absolute", opacity: 0 }}
-                            />
-                            {FREQUENCY_LABELS[f]}
-                          </label>
-                        );
-                      })}
-                    </div>
-                  </div>
-
-                  <div className="pillar-input-wrapper">
-                    <span className="pillar-input__label">
-                      Horários de administração
-                      {errors.horarios && (
-                        <span style={{ color: "var(--error)", fontSize: "var(--text-xs)", marginLeft: "var(--space-2)" }}>
-                          {errors.horarios}
-                        </span>
-                      )}
-                    </span>
-                    <div
-                      role="group"
-                      aria-label="Horários de administração"
-                      className="med-chip-group"
-                    >
-                      {TIME_OPTIONS.map(({ value, label, icon }) => {
-                        const checked = form.horarios.includes(value);
-                        return (
-                          <label key={value} style={checkLabelStyle(checked, !!errors.horarios)}>
-                            <input
-                              type="checkbox"
-                              value={value}
-                              checked={checked}
-                              onChange={() => toggleHorario(value)}
-                              style={{ position: "absolute", opacity: 0 }}
-                            />
-                            <i className={icon} aria-hidden="true" />
-                            {label}
-                          </label>
-                        );
-                      })}
-                    </div>
-                  </div>
-
-                  <Input
-                    label="Observações"
-                    placeholder="Ex.: Tomar com água, antes das refeições."
-                    icon="ph-duotone ph-note"
-                    value={form.observacoes}
-                    onChange={(e) => updateField("observacoes", e.target.value)}
-                    helperText="Campo opcional."
-                  />
-                </div>
-              </CardContent>
-
-              <CardFooter align="right">
-                <div style={{ display: "flex", gap: "var(--space-3)", flexWrap: "wrap" }}>
-                  <Button
-                    type="button"
-                    variant="secondary"
-                    onClick={() => setShowForm(false)}
-                    disabled={submitting}
-                  >
-                    Cancelar
-                  </Button>
-                  <Button
-                    type="submit"
-                    loading={submitting}
-                    leftIcon={submitting ? undefined : "ph-duotone ph-check"}
-                  >
-                    {submitting ? "Salvando…" : editingId ? "Salvar alterações" : "Adicionar"}
-                  </Button>
-                </div>
-              </CardFooter>
-            </form>
-          </Card>
+          <Button leftIcon="ph-duotone ph-plus" onClick={openAdd}>Adicionar medicamento</Button>
         </div>
       )}
 
       <ConfirmModal
         open={!!deleteTarget}
         title="Remover medicamento"
-        description={
-          deleteTarget
-            ? `Tem certeza que deseja remover ${deleteTarget.nome} ${deleteTarget.dosagem} da lista de medicamentos?`
-            : ""
-        }
+        description={`Tem certeza que deseja remover ${deleteTarget?.nome}? Os slots e horários configurados no dispensador também serão liberados.`}
         confirmLabel="Remover"
+        loading={deleting}
         onConfirm={handleDelete}
         onCancel={() => setDeleteTarget(null)}
-        loading={deleting}
       />
     </div>
   );
-}
-
-function MedicationCard({
-  medication,
-  onEdit,
-  onDelete,
-}: {
-  medication: Medication;
-  onEdit: () => void;
-  onDelete: () => void;
-}) {
-  return (
-    <Card>
-      <CardContent>
-        <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: "var(--space-4)" }}>
-          <div style={{ flex: 1, minWidth: 0 }}>
-            <div style={{ display: "flex", alignItems: "center", gap: "var(--space-3)", marginBottom: "var(--space-2)" }}>
-              <i className="ph-duotone ph-pill" style={{ fontSize: "1.25rem", color: "var(--primary)", flexShrink: 0 }} aria-hidden="true" />
-              <span
-                style={{
-                  fontFamily: "var(--font-sans)",
-                  fontSize: "var(--text-base)",
-                  fontWeight: 600,
-                  color: "var(--ink)",
-                }}
-              >
-                {medication.nome}
-              </span>
-              <span
-                style={{
-                  padding: "2px 10px",
-                  borderRadius: "999px",
-                  background: "var(--primary-soft)",
-                  color: "var(--primary)",
-                  fontFamily: "var(--font-sans)",
-                  fontSize: "var(--text-xs)",
-                  fontWeight: 600,
-                }}
-              >
-                {medication.dosagem}
-              </span>
-            </div>
-
-            <div style={{ display: "flex", flexWrap: "wrap", gap: "var(--space-3)", marginLeft: "calc(1.25rem + var(--space-3))" }}>
-              <MetaItem icon="ph-duotone ph-clock-clockwise" label={FREQUENCY_LABELS[medication.frequencia]} />
-              <MetaItem
-                icon="ph-duotone ph-sun"
-                label={medication.horarios
-                  .map((h) => TIME_OPTIONS.find((t) => t.value === h)?.label ?? h)
-                  .join(", ")}
-              />
-              {medication.observacoes && (
-                <MetaItem icon="ph-duotone ph-note" label={medication.observacoes} />
-              )}
-            </div>
-          </div>
-
-          <div style={{ display: "flex", gap: "var(--space-2)", flexShrink: 0 }}>
-            <button
-              type="button"
-              onClick={onEdit}
-              aria-label={`Editar ${medication.nome}`}
-              style={iconBtnStyle}
-            >
-              <i className="ph-duotone ph-pencil-simple" aria-hidden="true" />
-            </button>
-            <button
-              type="button"
-              onClick={onDelete}
-              aria-label={`Remover ${medication.nome}`}
-              style={{ ...iconBtnStyle, color: "var(--error)" }}
-            >
-              <i className="ph-duotone ph-trash" aria-hidden="true" />
-            </button>
-          </div>
-        </div>
-      </CardContent>
-    </Card>
-  );
-}
-
-function MetaItem({ icon, label }: { icon: string; label: string }) {
-  return (
-    <span
-      style={{
-        display: "inline-flex",
-        alignItems: "center",
-        gap: "var(--space-1)",
-        color: "var(--ink-3)",
-        fontFamily: "var(--font-sans)",
-        fontSize: "var(--text-sm)",
-      }}
-    >
-      <i className={icon} aria-hidden="true" />
-      {label}
-    </span>
-  );
-}
-
-const backBtnStyle: React.CSSProperties = {
-  display: "inline-flex",
-  alignItems: "center",
-  gap: "var(--space-2)",
-  background: "transparent",
-  border: "none",
-  padding: "var(--space-1) 0",
-  color: "var(--ink-3)",
-  fontFamily: "var(--font-sans)",
-  fontSize: "var(--text-sm)",
-  cursor: "pointer",
-  marginBottom: "var(--space-6)",
-};
-
-const iconBtnStyle: React.CSSProperties = {
-  display: "inline-flex",
-  alignItems: "center",
-  justifyContent: "center",
-  width: "32px",
-  height: "32px",
-  borderRadius: "var(--radius)",
-  border: "1.5px solid var(--border)",
-  background: "transparent",
-  color: "var(--ink-3)",
-  cursor: "pointer",
-  fontSize: "1rem",
-  transition: "all 0.15s ease-out",
-};
-
-function radioLabelStyle(checked: boolean): React.CSSProperties {
-  return {
-    display: "inline-flex",
-    alignItems: "center",
-    gap: "var(--space-2)",
-    padding: "10px 16px",
-    borderRadius: "var(--radius)",
-    border: `1.5px solid ${checked ? "var(--primary)" : "var(--border)"}`,
-    background: checked ? "var(--primary-soft)" : "var(--surface)",
-    color: checked ? "var(--primary)" : "var(--ink)",
-    fontFamily: "var(--font-sans)",
-    fontSize: "var(--text-sm)",
-    fontWeight: 600,
-    cursor: "pointer",
-    transition: "all 0.15s ease-out",
-  };
-}
-
-function checkLabelStyle(checked: boolean, hasError: boolean): React.CSSProperties {
-  return {
-    display: "inline-flex",
-    alignItems: "center",
-    gap: "var(--space-2)",
-    padding: "10px 16px",
-    borderRadius: "var(--radius)",
-    border: `1.5px solid ${hasError && !checked ? "var(--error)" : checked ? "var(--primary)" : "var(--border)"}`,
-    background: checked ? "var(--primary-soft)" : "var(--surface)",
-    color: checked ? "var(--primary)" : "var(--ink)",
-    fontFamily: "var(--font-sans)",
-    fontSize: "var(--text-sm)",
-    fontWeight: 600,
-    cursor: "pointer",
-    transition: "all 0.15s ease-out",
-  };
 }

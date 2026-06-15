@@ -1,30 +1,40 @@
 """Patient medications endpoints."""
 
 import json
-from typing import List
+from typing import List, Literal, Optional
+
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
-from typing import Optional
-
-from app.core.security import get_current_user
-from app.core.database import get_db
 from sqlalchemy.orm import Session
+
+from app.core.database import get_db
+from app.core.security import get_current_user
 from app.crud.patient import get_patient
 from app.crud.patient_medication import (
-    get_patient_medications,
     create_patient_medication,
-    update_patient_medication,
     delete_patient_medication,
+    get_patient_medications,
+    update_patient_medication,
+)
+from app.services.patient_medication_sync import (
+    sync_patient_medication,
+    unsync_patient_medication,
 )
 
 router = APIRouter(prefix="/api/patients/{patient_id}/medications", tags=["patient-medications"])
 
 
+# ── Schemas ───────────────────────────────────────────────────────────────────
+
+class DayPeriodItem(BaseModel):
+    day: int                                          # 0=Monday … 6=Sunday
+    period: Literal["morning", "afternoon", "night"]
+
+
 class PatientMedicationIn(BaseModel):
     nome: str
     dosagem: str
-    frequencia: str
-    horarios: List[str]
+    horarios: List[DayPeriodItem]
     observacoes: Optional[str] = ""
 
 
@@ -32,24 +42,33 @@ class PatientMedicationOut(BaseModel):
     id: str
     nome: str
     dosagem: str
-    frequencia: str
-    horarios: List[str]
+    horarios: List[DayPeriodItem]
     observacoes: str
+    configured_slots: Optional[List[int]] = None
+    warning: Optional[str] = None
 
 
-def _format(med) -> dict:
-    horarios = med.horarios
+# ── Helpers ───────────────────────────────────────────────────────────────────
+
+def _parse_horarios(raw: str) -> list[dict]:
     try:
-        horarios = json.loads(horarios)
-    except Exception:
-        horarios = [horarios] if horarios else []
+        items = json.loads(raw or "[]")
+    except (ValueError, TypeError):
+        return []
+    if not items or not isinstance(items[0], dict):
+        return []   # old string-array format — return empty
+    return items
+
+
+def _format(med, configured_slots=None, warning=None) -> dict:
     return {
         "id": str(med.id),
         "nome": med.nome,
         "dosagem": med.dosagem,
-        "frequencia": med.frequencia,
-        "horarios": horarios,
+        "horarios": _parse_horarios(med.horarios),
         "observacoes": med.observacoes or "",
+        "configured_slots": configured_slots,
+        "warning": warning,
     }
 
 
@@ -61,6 +80,8 @@ def _authorize(db: Session, patient_id: str, current_user):
         raise HTTPException(status_code=403, detail="Not authorized")
     return patient
 
+
+# ── Endpoints ─────────────────────────────────────────────────────────────────
 
 @router.get("", response_model=List[PatientMedicationOut])
 async def list_medications(
@@ -80,9 +101,20 @@ async def add_medication(
     current_user=Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
-    _authorize(db, patient_id, current_user)
-    med = create_patient_medication(db, patient_id, body.model_dump())
-    return _format(med)
+    patient = _authorize(db, patient_id, current_user)
+
+    horarios_json = json.dumps([h.model_dump() for h in body.horarios])
+    med = create_patient_medication(db, patient_id, {
+        "nome": body.nome,
+        "dosagem": body.dosagem,
+        "frequencia": "custom",      # kept for DB compat, not used
+        "horarios": horarios_json,
+        "observacoes": body.observacoes or "",
+    })
+
+    slots = sync_patient_medication(db, med, patient)
+    warning = None if slots or not body.horarios else "Paciente sem dispensador pareado — a configuração será aplicada ao parear"
+    return _format(med, configured_slots=slots, warning=warning)
 
 
 @router.put("/{med_id}", response_model=PatientMedicationOut)
@@ -93,11 +125,29 @@ async def update_medication(
     current_user=Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
-    _authorize(db, patient_id, current_user)
-    med = update_patient_medication(db, med_id, body.model_dump())
+    patient = _authorize(db, patient_id, current_user)
+
+    from app.crud.patient_medication import get_patient_medication
+    old_med = get_patient_medication(db, med_id)
+    if not old_med:
+        raise HTTPException(status_code=404, detail="Medication not found")
+
+    unsync_patient_medication(db, old_med, patient)
+
+    horarios_json = json.dumps([h.model_dump() for h in body.horarios])
+    med = update_patient_medication(db, med_id, {
+        "nome": body.nome,
+        "dosagem": body.dosagem,
+        "frequencia": "custom",
+        "horarios": horarios_json,
+        "observacoes": body.observacoes or "",
+    })
     if not med:
         raise HTTPException(status_code=404, detail="Medication not found")
-    return _format(med)
+
+    slots = sync_patient_medication(db, med, patient)
+    warning = None if slots or not body.horarios else "Paciente sem dispensador pareado"
+    return _format(med, configured_slots=slots, warning=warning)
 
 
 @router.delete("/{med_id}", status_code=204)
@@ -107,6 +157,13 @@ async def remove_medication(
     current_user=Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
-    _authorize(db, patient_id, current_user)
+    patient = _authorize(db, patient_id, current_user)
+
+    from app.crud.patient_medication import get_patient_medication
+    med = get_patient_medication(db, med_id)
+    if not med:
+        raise HTTPException(status_code=404, detail="Medication not found")
+
+    unsync_patient_medication(db, med, patient)
     if not delete_patient_medication(db, med_id):
         raise HTTPException(status_code=404, detail="Medication not found")

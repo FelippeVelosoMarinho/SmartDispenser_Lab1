@@ -1,6 +1,7 @@
 """Medication CRUD operations (database store)."""
 
 from typing import List, Optional
+from sqlalchemy import func
 from sqlalchemy.orm import Session
 from app.models.domain import Medication
 
@@ -16,6 +17,16 @@ def create_medication(db: Session, data: dict) -> Medication:
     db.commit()
     db.refresh(db_medication)
     return db_medication
+
+
+def get_or_create_medication(db: Session, name: str, dosage: str = "") -> Medication:
+    """Return existing medication by name (case-insensitive) or create a new one."""
+    med = db.query(Medication).filter(func.lower(Medication.name) == name.lower()).first()
+    if not med:
+        med = Medication(name=name, dosage=dosage or None)
+        db.add(med)
+        db.flush()
+    return med
 
 
 def get_all_medications(db: Session, search: Optional[str] = None) -> List[Medication]:
