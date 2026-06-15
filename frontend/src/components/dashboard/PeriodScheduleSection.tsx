@@ -13,10 +13,37 @@ interface PeriodScheduleSectionProps {
   dispenser: DispenserDetails;
 }
 
+const PERIODS = [
+  {
+    key: "morning" as const,
+    label: "Manhã",
+    icon: "ph-sun-horizon",
+    color: "#f59e0b",
+    bg: "rgba(245, 158, 11, 0.08)",
+    border: "rgba(245, 158, 11, 0.25)",
+  },
+  {
+    key: "afternoon" as const,
+    label: "Tarde",
+    icon: "ph-sun",
+    color: "#ef7c22",
+    bg: "rgba(239, 124, 34, 0.08)",
+    border: "rgba(239, 124, 34, 0.25)",
+  },
+  {
+    key: "night" as const,
+    label: "Noite",
+    icon: "ph-moon-stars",
+    color: "#6366f1",
+    bg: "rgba(99, 102, 241, 0.08)",
+    border: "rgba(99, 102, 241, 0.25)",
+  },
+];
+
 export function PeriodScheduleSection({ dispenser }: PeriodScheduleSectionProps) {
-  const [morning, setMorning] = useState("21:00");
-  const [afternoon, setAfternoon] = useState("21:01");
-  const [night, setNight] = useState("21:02");
+  const [morning, setMorning] = useState("08:00");
+  const [afternoon, setAfternoon] = useState("14:00");
+  const [night, setNight] = useState("21:00");
   const [silentMode, setSilentMode] = useState(false);
   const [hwStatus, setHwStatus] = useState<HardwareStatus | null>(null);
   const [loading, setLoading] = useState(true);
@@ -29,11 +56,15 @@ export function PeriodScheduleSection({ dispenser }: PeriodScheduleSectionProps)
   const hardwareId = dispenser.hardware_id;
   const patientId = dispenser.patient_id;
 
+  const values: Record<"morning" | "afternoon" | "night", string> = { morning, afternoon, night };
+  const setters: Record<"morning" | "afternoon" | "night", (v: string) => void> = {
+    morning: setMorning,
+    afternoon: setAfternoon,
+    night: setNight,
+  };
+
   const refreshHardware = useCallback(async () => {
-    if (!dispenser.is_online) {
-      setHwStatus(null);
-      return;
-    }
+    if (!dispenser.is_online) { setHwStatus(null); return; }
     try {
       const status = await getHardwareStatus(hardwareId, dispenser.ip_address);
       setHwStatus(status);
@@ -61,9 +92,7 @@ export function PeriodScheduleSection({ dispenser }: PeriodScheduleSectionProps)
         if (!cancelled) setLoading(false);
       }
     })();
-    return () => {
-      cancelled = true;
-    };
+    return () => { cancelled = true; };
   }, [hardwareId]);
 
   useEffect(() => {
@@ -79,10 +108,7 @@ export function PeriodScheduleSection({ dispenser }: PeriodScheduleSectionProps)
 
   async function handleSave(e: React.FormEvent) {
     e.preventDefault();
-    if (!patientId) {
-      setError("Dispensador sem paciente vinculado.");
-      return;
-    }
+    if (!patientId) { setError("Dispensador sem paciente vinculado."); return; }
     setSaving(true);
     setError(null);
     try {
@@ -114,11 +140,6 @@ export function PeriodScheduleSection({ dispenser }: PeriodScheduleSectionProps)
     }
   }
 
-  const currentCompartment =
-    hwStatus != null ? Math.min(hwStatus.current_slot + 1, Math.min(hwStatus.total_slots, 21)) : null;
-  const nextCompartment =
-    hwStatus != null ? Math.min(hwStatus.current_slot + 1, hwStatus.total_slots) : null;
-
   return (
     <section
       style={{
@@ -130,169 +151,165 @@ export function PeriodScheduleSection({ dispenser }: PeriodScheduleSectionProps)
       }}
       aria-labelledby="period-schedule-heading"
     >
-      <h2
-        id="period-schedule-heading"
-        style={{
-          margin: "0 0 var(--space-2)",
-          fontSize: "var(--text-xl)",
-          fontWeight: 700,
-          color: "var(--ink)",
-        }}
-      >
-        Horários de dispensação (manhã / tarde / noite)
-      </h2>
-      <p style={{ margin: "0 0 var(--space-4)", color: "var(--ink-2)", fontSize: "var(--text-sm)", lineHeight: 1.6 }}>
-        Cada horário avança a roleta uma posição na sequência. Após reabastecer os compartimentos 1–21,
-        use <strong>Iniciar ciclo</strong> para calibrar automaticamente.
-      </p>
+      {/* Header */}
+      <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: "var(--space-4)", flexWrap: "wrap", marginBottom: "var(--space-4)" }}>
+        <div>
+          <h2
+            id="period-schedule-heading"
+            style={{ margin: "0 0 var(--space-1)", fontSize: "var(--text-xl)", fontWeight: 700, color: "var(--ink)" }}
+          >
+            Horários de dispensação
+          </h2>
+          <p style={{ margin: 0, color: "var(--ink-3)", fontSize: "var(--text-sm)" }}>
+            A roleta avança uma posição a cada período.
+            {hwStatus && (
+              <span style={{ marginLeft: 8, color: "var(--ink-2)" }}>
+                Posição atual: <strong>{Math.min(hwStatus.current_slot + 1, hwStatus.total_slots)}</strong>
+                {" · "}Próximo: <strong style={{ color: "var(--primary)" }}>{nextPeriodLabel(scheduleMeta, now)}</strong>
+                {hwStatus.awaiting_confirm && (
+                  <span style={{ marginLeft: 8, color: "var(--warning)", fontWeight: 600 }}>· Aguardando confirmação</span>
+                )}
+              </span>
+            )}
+          </p>
+        </div>
+
+        <button
+          type="button"
+          onClick={handleStartCycle}
+          disabled={starting || !dispenser.is_online}
+          style={{
+            flexShrink: 0,
+            background: dispenser.is_online ? "var(--primary)" : "var(--surface-dim)",
+            color: dispenser.is_online ? "var(--primary-on)" : "var(--ink-3)",
+            border: "none",
+            borderRadius: "var(--radius-md)",
+            padding: "10px 18px",
+            fontWeight: 600,
+            fontSize: "var(--text-sm)",
+            cursor: dispenser.is_online && !starting ? "pointer" : "not-allowed",
+            whiteSpace: "nowrap",
+          }}
+        >
+          <i className="ph-duotone ph-play-circle" style={{ marginRight: 6 }} />
+          {starting ? "Calibrando…" : "Concluir reabastecimento e iniciar ciclo"}
+        </button>
+      </div>
 
       {scheduleMeta?.source === "defaults" && !loading && <UnsavedScheduleBanner />}
 
-      {hwStatus && (
-        <div
-          style={{
-            display: "grid",
-            gridTemplateColumns: "repeat(auto-fit, minmax(160px, 1fr))",
-            gap: "var(--space-3)",
-            marginBottom: "var(--space-4)",
-            padding: "var(--space-3)",
-            background: "var(--canvas)",
-            borderRadius: "var(--radius-md)",
-          }}
-        >
-          <div>
-            <span style={{ fontSize: "var(--text-xs)", color: "var(--ink-3)" }}>Compartimento atual</span>
-            <p style={{ margin: 0, fontWeight: 600, color: "var(--ink)" }}>
-              {currentCompartment ?? "—"}
-            </p>
-          </div>
-          <div>
-            <span style={{ fontSize: "var(--text-xs)", color: "var(--ink-3)" }}>Índice roleta (0–{hwStatus.total_slots - 1})</span>
-            <p style={{ margin: 0, fontWeight: 600, color: "var(--ink-2)", fontSize: "var(--text-sm)" }}>
-              {hwStatus.current_slot}
-            </p>
-          </div>
-          <div>
-            <span style={{ fontSize: "var(--text-xs)", color: "var(--ink-3)" }}>Próximo compartimento</span>
-            <p style={{ margin: 0, fontWeight: 600, color: "var(--ink)" }}>
-              {nextCompartment ?? "—"}
-            </p>
-          </div>
-          <div>
-            <span style={{ fontSize: "var(--text-xs)", color: "var(--ink-3)" }}>Próximo período</span>
-            <p style={{ margin: 0, fontWeight: 600, color: "var(--ink)" }}>
-              {nextPeriodLabel(scheduleMeta, now)}
-            </p>
-          </div>
-          <div>
-            <span style={{ fontSize: "var(--text-xs)", color: "var(--ink-3)" }}>Confirmação pendente</span>
-            <p style={{ margin: 0, fontWeight: 600, color: hwStatus.awaiting_confirm ? "var(--warning)" : "var(--ink)" }}>
-              {hwStatus.awaiting_confirm ? "Sim" : "Não"}
-            </p>
-          </div>
-        </div>
-      )}
-
       {!dispenser.is_online && (
-        <p style={{ color: "var(--warning)", fontSize: "var(--text-sm)", marginBottom: "var(--space-3)" }}>
-          Dispensador offline — telemetria da roleta indisponível.
+        <p style={{ color: "var(--warning)", fontSize: "var(--text-sm)", marginBottom: "var(--space-3)", margin: "0 0 var(--space-3)" }}>
+          <i className="ph-duotone ph-warning" style={{ marginRight: 4 }} />
+          Dispensador offline — horários serão enviados quando reconectar.
         </p>
       )}
 
-      <button
-        type="button"
-        onClick={handleStartCycle}
-        disabled={starting || !dispenser.is_online}
-        style={{
-          marginBottom: "var(--space-4)",
-          background: "var(--primary)",
-          color: "var(--primary-on)",
-          border: "none",
-          borderRadius: "var(--radius-md)",
-          padding: "12px 20px",
-          fontWeight: 600,
-          cursor: dispenser.is_online && !starting ? "pointer" : "not-allowed",
-          opacity: dispenser.is_online ? 1 : 0.6,
-        }}
-      >
-        {starting ? "Calibrando…" : "Concluir reabastecimento e iniciar ciclo"}
-      </button>
-
+      {/* Period cards */}
       {loading ? (
         <p style={{ color: "var(--ink-3)" }}>Carregando horários…</p>
       ) : (
         <form onSubmit={handleSave}>
-          <div
-            style={{
-              display: "grid",
-              gridTemplateColumns: "repeat(auto-fit, minmax(140px, 1fr))",
-              gap: "var(--space-4)",
-              marginBottom: "var(--space-4)",
-            }}
-          >
-            <label style={{ display: "flex", flexDirection: "column", gap: "6px", fontSize: "var(--text-sm)" }}>
-              Manhã
-              <input type="time" value={morning} onChange={(e) => setMorning(e.target.value)} required />
-            </label>
-            <label style={{ display: "flex", flexDirection: "column", gap: "6px", fontSize: "var(--text-sm)" }}>
-              Tarde
-              <input type="time" value={afternoon} onChange={(e) => setAfternoon(e.target.value)} required />
-            </label>
-            <label style={{ display: "flex", flexDirection: "column", gap: "6px", fontSize: "var(--text-sm)" }}>
-              Noite
-              <input type="time" value={night} onChange={(e) => setNight(e.target.value)} required />
-            </label>
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: "var(--space-3)", marginBottom: "var(--space-4)" }}>
+            {PERIODS.map((p) => (
+              <label
+                key={p.key}
+                style={{
+                  display: "flex",
+                  flexDirection: "column",
+                  gap: "var(--space-2)",
+                  background: p.bg,
+                  border: `1.5px solid ${p.border}`,
+                  borderRadius: "var(--radius-lg)",
+                  padding: "var(--space-4)",
+                  cursor: "pointer",
+                }}
+              >
+                <div style={{ display: "flex", alignItems: "center", gap: "var(--space-2)" }}>
+                  <i
+                    className={`ph-duotone ${p.icon}`}
+                    style={{ fontSize: "1.25rem", color: p.color }}
+                  />
+                  <span style={{ fontWeight: 600, fontSize: "var(--text-sm)", color: "var(--ink-2)", textTransform: "uppercase", letterSpacing: "0.05em" }}>
+                    {p.label}
+                  </span>
+                </div>
+                <input
+                  type="time"
+                  value={values[p.key]}
+                  onChange={(e) => setters[p.key](e.target.value)}
+                  required
+                  style={{
+                    fontFamily: "var(--font-mono)",
+                    fontSize: "var(--text-2xl)",
+                    fontWeight: 700,
+                    color: p.color,
+                    background: "transparent",
+                    border: "none",
+                    outline: "none",
+                    width: "100%",
+                    cursor: "pointer",
+                    padding: 0,
+                  }}
+                />
+              </label>
+            ))}
           </div>
-          <label
-            style={{
-              display: "flex",
-              alignItems: "center",
-              gap: "var(--space-2)",
-              marginBottom: "var(--space-4)",
-              fontSize: "var(--text-sm)",
-              cursor: "pointer",
-              userSelect: "none",
-            }}
-          >
-            <input
-              type="checkbox"
-              checked={silentMode}
-              onChange={(e) => setSilentMode(e.target.checked)}
-              style={{ width: 16, height: 16, cursor: "pointer" }}
-            />
-            <span>
-              Modo silencioso{" "}
-              <span style={{ color: "var(--ink-3)", fontWeight: 400 }}>
-                — sem alarme sonoro
+
+          {/* Silent mode + save */}
+          <div style={{ display: "flex", alignItems: "center", gap: "var(--space-4)", flexWrap: "wrap" }}>
+            <label
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: "var(--space-2)",
+                fontSize: "var(--text-sm)",
+                cursor: "pointer",
+                userSelect: "none",
+                color: "var(--ink-2)",
+              }}
+            >
+              <input
+                type="checkbox"
+                checked={silentMode}
+                onChange={(e) => setSilentMode(e.target.checked)}
+                style={{ width: 16, height: 16, cursor: "pointer", accentColor: "var(--primary)" }}
+              />
+              <i className="ph-duotone ph-speaker-x" style={{ fontSize: "1rem" }} />
+              Modo silencioso
+            </label>
+
+            <button
+              type="submit"
+              disabled={saving || !patientId}
+              style={{
+                background: "var(--primary)",
+                color: "var(--primary-on)",
+                border: "none",
+                borderRadius: "var(--radius-md)",
+                padding: "10px 20px",
+                fontWeight: 600,
+                fontSize: "var(--text-sm)",
+                cursor: saving ? "wait" : "pointer",
+                opacity: !patientId ? 0.5 : 1,
+              }}
+            >
+              <i className="ph-duotone ph-floppy-disk" style={{ marginRight: 6 }} />
+              {saving ? "Salvando…" : "Salvar horários"}
+            </button>
+
+            {scheduleMeta?.source === "database" && !saving && (
+              <span style={{ fontSize: "var(--text-xs)", color: "var(--primary)", display: "flex", alignItems: "center", gap: 4 }}>
+                <i className="ph-duotone ph-check-circle" />
+                Horários salvos
               </span>
-            </span>
-          </label>
-          <button
-            type="submit"
-            disabled={saving || !patientId}
-            style={{
-              background: "var(--surface)",
-              color: "var(--ink)",
-              border: "1px solid var(--border)",
-              borderRadius: "var(--radius-md)",
-              padding: "10px 18px",
-              fontWeight: 600,
-              cursor: saving ? "wait" : "pointer",
-            }}
-          >
-            {saving ? "Salvando…" : "Salvar horários"}
-          </button>
+            )}
+          </div>
+
+          {error && (
+            <p style={{ marginTop: "var(--space-3)", color: "var(--danger)", fontSize: "var(--text-sm)" }}>{error}</p>
+          )}
         </form>
-      )}
-
-      {scheduleMeta?.source === "database" && !loading && (
-        <p style={{ marginTop: "var(--space-3)", fontSize: "var(--text-xs)", color: "var(--success-ink, var(--primary))" }}>
-          Horários salvos — o servidor disparará a dispensação automaticamente nos horários configurados.
-        </p>
-      )}
-
-      {error && (
-        <p style={{ marginTop: "var(--space-3)", color: "var(--danger)", fontSize: "var(--text-sm)" }}>{error}</p>
       )}
     </section>
   );
@@ -306,25 +323,15 @@ export function useHardwareStatus(
   const [status, setStatus] = useState<HardwareStatus | null>(null);
 
   useEffect(() => {
-    if (!isOnline) {
-      setStatus(null);
-      return;
-    }
+    if (!isOnline) { setStatus(null); return; }
     let cancelled = false;
     const load = () =>
       getHardwareStatus(hardwareId, ipAddress)
-        .then((s) => {
-          if (!cancelled) setStatus(s);
-        })
-        .catch(() => {
-          if (!cancelled) setStatus(null);
-        });
+        .then((s) => { if (!cancelled) setStatus(s); })
+        .catch(() => { if (!cancelled) setStatus(null); });
     load();
     const id = setInterval(load, 3000);
-    return () => {
-      cancelled = true;
-      clearInterval(id);
-    };
+    return () => { cancelled = true; clearInterval(id); };
   }, [hardwareId, isOnline, ipAddress]);
 
   return status;
