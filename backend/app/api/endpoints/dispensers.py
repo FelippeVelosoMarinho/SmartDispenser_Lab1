@@ -219,7 +219,8 @@ async def get_dispenser_details(
                 joinedload(Dispenser.patient),
                 joinedload(Dispenser.drawers)
                 .joinedload(Drawer.slots)
-                .joinedload(Slot.medication),
+                .joinedload(Slot.slot_medications)
+                .joinedload(SlotMedication.medication),
             )
             .filter(Dispenser.id == dispenser_id)
             .first()
@@ -252,8 +253,10 @@ async def pair_dispenser(
         is_new = True
 
     dispenser.patient_id = patient.id
-    # Online only after a real heartbeat from the hardware (not at pair time).
-    dispenser.is_online = False
+    # Only reset online state if no heartbeat has arrived yet.
+    # If the ESP was already sending heartbeats before pairing, preserve is_online/last_sync.
+    if not dispenser.last_sync:
+        dispenser.is_online = False
     db.add(dispenser)
     db.commit()
     db.refresh(dispenser)

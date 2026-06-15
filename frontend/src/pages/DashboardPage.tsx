@@ -24,8 +24,9 @@ export function DashboardPage() {
       const dispList = await listDispensers();
       setDispensers(dispList);
       if (dispList.length > 0) {
-        // Fetch details for the first dispenser
-        const details = await getDispenserDetails(dispList[0].id);
+        // Prefer an online dispenser; fall back to first in list
+        const preferred = dispList.find(d => d.is_online) ?? dispList[0];
+        const details = await getDispenserDetails(preferred.id);
         setActiveDispenser(details);
       }
     } catch (err) {
@@ -43,8 +44,23 @@ export function DashboardPage() {
       listDispensers().then(async (dispList) => {
         setDispensers(dispList);
         if (dispList.length > 0) {
-          const details = await getDispenserDetails(dispList[0].id);
-          setActiveDispenser(details);
+          // Keep the currently active dispenser if it's still in the list;
+          // otherwise prefer an online one so we don't flip to a stale offline ESP.
+          setActiveDispenser(prev => {
+            const keepCurrent = prev && dispList.some(d => d.id === prev.id);
+            if (keepCurrent) {
+              // Refresh details for the same dispenser in the background
+              getDispenserDetails(prev.id)
+                .then(details => setActiveDispenser(details))
+                .catch(() => {});
+              return prev;
+            }
+            const preferred = dispList.find(d => d.is_online) ?? dispList[0];
+            getDispenserDetails(preferred.id)
+              .then(details => setActiveDispenser(details))
+              .catch(() => {});
+            return prev;
+          });
         }
       }).catch(err => console.error("Telemetry polling error:", err));
     }, 5000);
