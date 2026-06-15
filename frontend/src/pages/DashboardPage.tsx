@@ -10,11 +10,13 @@ import {
   useHardwareStatus,
 } from "../components/dashboard/PeriodScheduleSection";
 import { APP_NAME } from "../lib/brand";
+import { HelpModal } from "../components/dashboard/HelpModal";
 
 export function DashboardPage() {
   const [dispensers, setDispensers] = useState<any[]>([]);
   const [activeDispenser, setActiveDispenser] = useState<DispenserDetails | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [showHelp, setShowHelp] = useState(false);
   const navigate = useNavigate();
 
   const fetchDashboardData = async () => {
@@ -244,6 +246,24 @@ export function DashboardPage() {
           >
             Painel Principal
           </h1>
+          <div style={{ display: "flex", alignItems: "center", gap: "var(--space-2)" }}>
+            <button
+              type="button"
+              onClick={() => setShowHelp(true)}
+              title="Ajuda — como usar o dispensador"
+              style={{
+                width: 36, height: 36,
+                borderRadius: "50%",
+                border: "1px solid var(--border)",
+                background: "var(--surface)",
+                color: "var(--ink-3)",
+                cursor: "pointer",
+                display: "flex", alignItems: "center", justifyContent: "center",
+                fontSize: "1rem",
+              }}
+            >
+              <i className="ph-duotone ph-question" />
+            </button>
           {dispensers.length > 1 && (
             <select
               onChange={(e) => {
@@ -263,8 +283,11 @@ export function DashboardPage() {
               ))}
             </select>
           )}
+          </div>
         </div>
       </div>
+
+      <HelpModal open={showHelp} onClose={() => setShowHelp(false)} />
 
       <NextDispenseCountdown
         hardwareId={activeDispenser.hardware_id}

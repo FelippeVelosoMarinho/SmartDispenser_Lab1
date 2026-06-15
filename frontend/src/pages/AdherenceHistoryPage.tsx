@@ -28,7 +28,9 @@ function resolveStatus(log: DispensationLog): AdherenceStatus {
 }
 
 function formatTimestamp(ts: string): string {
-  const d = new Date(ts);
+  // Backend returns naive UTC datetimes without 'Z' — append it so JS parses as UTC, not local
+  const utc = ts.endsWith("Z") || ts.includes("+") ? ts : ts + "Z";
+  const d = new Date(utc);
   const date = d.toLocaleDateString("pt-BR", {
     day: "2-digit",
     month: "2-digit",
