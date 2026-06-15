@@ -4,7 +4,7 @@ import datetime
 
 from sqlalchemy.orm import Session
 
-from app.models.domain import DispensationLog, PendingCommand, Schedule
+from app.models.domain import DispensationLog, PendingCommand, Schedule, Slot
 
 
 def record_schedule_dispensation_log(
@@ -18,11 +18,20 @@ def record_schedule_dispensation_log(
     if command.schedule_id:
         schedule = db.query(Schedule).filter(Schedule.id == command.schedule_id).first()
 
+    medication_name: str | None = None
+    if schedule and schedule.slot_id:
+        slot = db.query(Slot).filter(Slot.id == schedule.slot_id).first()
+        if slot and slot.slot_medications:
+            first_med = slot.slot_medications[0].medication
+            if first_med:
+                medication_name = first_med.name
+
     log = DispensationLog(
         schedule_id_legacy=str(command.schedule_id) if command.schedule_id else None,
         patient_id_legacy=str(schedule.patient_id) if schedule and schedule.patient_id else None,
         dispenser_id_legacy=command.hardware_id,
-        slot_id=None,
+        slot_id=schedule.slot_id if schedule else None,
+        medication_name_snapshot=medication_name,
         actual_execution_time=datetime.datetime.utcnow(),
         success=success,
         error_message=error,
