@@ -120,16 +120,12 @@ export function CompartmentsSection({ dispenser, onDispenserChange }: Compartmen
     const visualIndex = (13 - index + totalSlices) % totalSlices;
     const startAngle = visualIndex * anglePerSlice;
     const endAngle = (visualIndex + 1) * anglePerSlice;
+    const hasMedication = (slot.medications?.length ?? 0) > 0;
     const totalPills = slot.medications?.reduce((sum: number, item: any) => sum + item.quantity, 0) || 0;
-    const fillPercentage = slot.max_pill_capacity > 0 ? (totalPills / slot.max_pill_capacity) * 100 : 0;
-    
-    let fill = "var(--surface-dim)";
-    if (isUnprogrammable) {
-       fill = "var(--surface-dim)";
-    } else if (slot.max_pill_capacity > 0) {
-      if (fillPercentage >= 80) fill = "var(--danger)";
-      else if (fillPercentage >= 40) fill = "var(--warning)";
-      else fill = "var(--success, #10b981)";
+
+    let fill = "var(--surface-dim)"; // not configured
+    if (!isUnprogrammable && hasMedication) {
+      fill = totalPills > 0 ? "var(--success, #10b981)" : "var(--danger)";
     }
 
     const isNextDose =
@@ -220,17 +216,15 @@ export function CompartmentsSection({ dispenser, onDispenserChange }: Compartmen
                   Posição {displaySlot.display_number}
                 </div>
                 <div style={{ fontSize: "var(--text-lg)", color: "var(--ink)", fontWeight: 700, marginBottom: "4px", lineHeight: 1.2 }}>
-                  {displaySlot.medications?.length > 0 
-                     ? (displaySlot.medications.length === 1 ? displaySlot.medications[0].medication.name : `${displaySlot.medications.length} Medicamentos`) 
-                     : "Vazio"}
+                  {displaySlot.medications?.length > 0
+                    ? (displaySlot.medications.length === 1 ? displaySlot.medications[0].medication.name : `${displaySlot.medications.length} Medicamentos`)
+                    : "Sem medicamento"}
                 </div>
-                <div style={{ fontSize: "var(--text-sm)", color: "var(--ink-2)", fontWeight: 500 }}>
-                  {displayTotalPills} / {displaySlot.max_pill_capacity} unid.
-                </div>
-                {displayTotalPills > 0 && displaySlot.max_pill_capacity > 0 && (
-                   <div style={{ fontSize: "var(--text-xs)", color: "var(--ink-3)", marginTop: "4px" }}>
-                     {Math.round((displayTotalPills / displaySlot.max_pill_capacity) * 100)}% Cheio
-                   </div>
+                {displaySlot.medications?.length > 0 && (
+                  <div style={{ fontSize: "var(--text-sm)", fontWeight: 500, color: displayTotalPills === 0 ? "var(--danger)" : "var(--ink-2)" }}>
+                    {displayTotalPills} / {displaySlot.max_pill_capacity} unid.
+                    {displayTotalPills === 0 && " — Reabastecer"}
+                  </div>
                 )}
               </>
             ) : (
@@ -248,15 +242,11 @@ export function CompartmentsSection({ dispenser, onDispenserChange }: Compartmen
         }}>
           <div style={{ display: "flex", alignItems: "center", gap: "8px", fontSize: "var(--text-sm)", color: "var(--ink-2)" }}>
             <div style={{ width: 12, height: 12, borderRadius: "50%", background: "var(--success, #10b981)" }} />
-            Vazio / Disponível
-          </div>
-          <div style={{ display: "flex", alignItems: "center", gap: "8px", fontSize: "var(--text-sm)", color: "var(--ink-2)" }}>
-            <div style={{ width: 12, height: 12, borderRadius: "50%", background: "var(--warning, #f59e0b)" }} />
-            Enchendo
+            Com medicamento
           </div>
           <div style={{ display: "flex", alignItems: "center", gap: "8px", fontSize: "var(--text-sm)", color: "var(--ink-2)" }}>
             <div style={{ width: 12, height: 12, borderRadius: "50%", background: "var(--danger)" }} />
-            Cheio / Atenção
+            Precisa Reabastecer
           </div>
           <div style={{ display: "flex", alignItems: "center", gap: "8px", fontSize: "var(--text-sm)", color: "var(--ink-2)" }}>
             <div style={{ width: 12, height: 12, borderRadius: "50%", background: "var(--surface-dim)" }} />

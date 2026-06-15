@@ -36,6 +36,26 @@ export function DashboardPage() {
     }
   };
 
+  // Silent refresh: re-fetches dispenser details without triggering the loading screen.
+  // Used by the slot modal so it can update quantities without unmounting itself.
+  const silentRefresh = async () => {
+    try {
+      const dispList = await listDispensers();
+      setDispensers(dispList);
+      if (dispList.length > 0) {
+        setActiveDispenser(prev => {
+          const target = (prev && dispList.some(d => d.id === prev.id))
+            ? prev
+            : (dispList.find(d => d.is_online) ?? dispList[0]);
+          getDispenserDetails(target.id).then(setActiveDispenser).catch(() => {});
+          return prev;
+        });
+      }
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
   useEffect(() => {
     fetchDashboardData();
 
@@ -256,7 +276,7 @@ export function DashboardPage() {
       <PeriodScheduleSection dispenser={activeDispenser} />
       <CompartmentsSection
         dispenser={activeDispenser}
-        onDispenserChange={fetchDashboardData}
+        onDispenserChange={silentRefresh}
       />
       <DispenserGuideSection dispenser={activeDispenser} />
 
