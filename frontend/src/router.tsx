@@ -19,6 +19,7 @@ import { RegisterPage } from "./pages/RegisterPage";
 import { ForgotPasswordPage } from "./pages/ForgotPasswordPage";
 import { ResetPasswordPage } from "./pages/ResetPasswordPage";
 import { NotFoundPage } from "./pages/NotFoundPage";
+import { AdherenceHistoryPage } from "./pages/AdherenceHistoryPage";
 
 interface RouterContext {
   auth: AuthContextValue;
@@ -103,6 +104,12 @@ const pairDispenserRoute = createRoute({
   component: PairDispenserPage,
 });
 
+const adherenceHistoryRoute = createRoute({
+  getParentRoute: () => authenticatedRoute,
+  path: "/historico",
+  component: AdherenceHistoryPage,
+});
+
 const forgotPasswordRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: "/forgot-password",
@@ -136,6 +143,7 @@ const routeTree = rootRoute.addChildren([
     patientMedicationsRoute,
     dispensersRoute,
     pairDispenserRoute,
+    adherenceHistoryRoute,
   ]),
 ]);
 

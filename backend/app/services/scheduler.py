@@ -26,6 +26,7 @@ from app.core.config import (
 )
 from app.core.database import SessionLocal
 from app.crud import command_queue as crud_command_queue
+from app.crud import log as crud_log
 from app.models.domain import DispensationLog, Dispenser, Schedule
 from app.services.schedule_utils import carousel_slot_after_sequential
 from app.services.scheduler_clock import scheduler_now
@@ -341,6 +342,40 @@ async def _process_period_schedule(
         _mark_schedule_triggered(db, schedule, now)
 
 
+def expire_unconfirmed_dispensations(db: Session) -> None:
+    """Mark dispensations as missed when patient didn't confirm within the grace period."""
+    cutoff = datetime.datetime.utcnow() - datetime.timedelta(
+        seconds=SCHEDULER_AWAITING_CONFIRM_GRACE_SECONDS
+    )
+    dispensers = db.query(Dispenser).filter(Dispenser.awaiting_confirm == True).all()  # noqa: E712
+    changed = False
+    for dispenser in dispensers:
+        latest_log = crud_log.get_latest_dispensation_log_for_dispenser(
+            db, dispenser.hardware_id
+        )
+        if latest_log and latest_log.actual_execution_time < cutoff:
+            missed_log = DispensationLog(
+                schedule_id_legacy=latest_log.schedule_id_legacy,
+                patient_id_legacy=latest_log.patient_id_legacy,
+                dispenser_id_legacy=dispenser.hardware_id,
+                medication_name_snapshot=latest_log.medication_name_snapshot,
+                actual_execution_time=datetime.datetime.utcnow(),
+                success=False,
+                status="missed",
+                error_message="patient did not confirm within timeout",
+            )
+            db.add(missed_log)
+            dispenser.awaiting_confirm = False
+            changed = True
+            logger.info(
+                "[Scheduler] Marked dispensation as missed for dispenser %s (no confirmation after %ds)",
+                dispenser.hardware_id,
+                SCHEDULER_AWAITING_CONFIRM_GRACE_SECONDS,
+            )
+    if changed:
+        db.commit()
+
+
 async def run_dispense_scheduler() -> None:
     """Async background task: poll DB and fire due period schedules."""
     logger.info(
@@ -357,6 +392,7 @@ async def run_dispense_scheduler() -> None:
 
             db: Session = SessionLocal()
             try:
+                expire_unconfirmed_dispensations(db)
                 crud_command_queue.expire_stale_delivered(
                     db, COMMAND_ACK_TIMEOUT_SECONDS
                 )

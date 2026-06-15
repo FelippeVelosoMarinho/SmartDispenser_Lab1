@@ -66,14 +66,23 @@ void setup() {
     ssid = getStoredSsid();
     pass = getStoredPassword();
     globalBackendUrl = getStoredBackendUrl();
-    // Se secrets.h tiver uma URL definida, ela sempre prevalece sobre a NVS.
-    // Isso permite trocar de rede sem factory reset: basta editar secrets.h e reflashear.
+
+    // Se secrets.h divergir da NVS, secrets.h prevalece — permite trocar rede/URL
+    // sem factory reset: basta editar secrets.h e reflashear.
+    bool needsSave = false;
+    if (strlen(WIFI_SSID) > 0 && ssid != String(WIFI_SSID)) {
+      ssid = String(WIFI_SSID);
+      pass = String(WIFI_PASSWORD);
+      needsSave = true;
+      Serial.println("📝 Credenciais WiFi atualizadas via secrets.h: " + ssid);
+    }
     if (strlen(BACKEND_URL) > 0 && globalBackendUrl != String(BACKEND_URL)) {
       globalBackendUrl = String(BACKEND_URL);
-      saveCredentials(ssid, pass, globalBackendUrl);
+      needsSave = true;
       Serial.println("📝 URL do backend atualizada via secrets.h: " + globalBackendUrl);
     }
-    Serial.println("📁 Credenciais carregadas da NVS. SSID: " + ssid);
+    if (needsSave) saveCredentials(ssid, pass, globalBackendUrl);
+    Serial.println("📁 Credenciais carregadas. SSID: " + ssid);
 
   } else if (strlen(WIFI_SSID) > 0) {
     // Primeira vez com secrets.h preenchido: salva na NVS para boots futuros

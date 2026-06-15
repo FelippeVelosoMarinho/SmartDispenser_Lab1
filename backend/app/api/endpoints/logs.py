@@ -19,9 +19,11 @@ def _format_dispensation_log(log) -> dict:
         "patient_id": log.patient_id_legacy or "",
         "dispenser_id": log.dispenser_id_legacy or "",
         "medication_id": log.medication_id_legacy or "",
+        "medication_name": log.medication_name_snapshot or None,
         "timestamp": log.actual_execution_time,
         "success": log.success or False,
-        "error_message": log.error_message
+        "status": log.status or None,
+        "error_message": log.error_message,
     }
 
 

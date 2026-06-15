@@ -12,8 +12,10 @@ class DispensationLogPublic(BaseModel):
     patient_id: str
     dispenser_id: str
     medication_id: str
+    medication_name: Optional[str] = None
     timestamp: datetime
     success: bool
+    status: Optional[str] = None
     error_message: Optional[str] = None
 
 

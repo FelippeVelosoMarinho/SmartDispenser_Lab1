@@ -36,6 +36,13 @@ export function AppLayout() {
       active: pathname.startsWith("/dispensers"),
       onClick: () => navigate({ to: "/dispensers" }),
     },
+    {
+      id: "historico",
+      label: "Histórico",
+      icon: "ph-duotone ph-calendar-check",
+      active: pathname.startsWith("/historico"),
+      onClick: () => navigate({ to: "/historico" }),
+    },
   ];
 
   const sidebarHeader = (

@@ -30,7 +30,20 @@ def get_dispensation_logs(db: Session, patient_id: Optional[str] = None, dispens
         query = query.filter(DispensationLog.patient_id_legacy == patient_id)
     if dispenser_id:
         query = query.filter(DispensationLog.dispenser_id_legacy == dispenser_id)
-    return query.all()
+    return query.order_by(DispensationLog.actual_execution_time.desc()).all()
+
+
+def get_latest_dispensation_log_for_dispenser(
+    db: Session, hardware_id: str
+) -> Optional[DispensationLog]:
+    """Get the most recent dispensation log for a dispenser, excluding 'missed' entries."""
+    return (
+        db.query(DispensationLog)
+        .filter(DispensationLog.dispenser_id_legacy == hardware_id)
+        .filter(DispensationLog.status != "missed")
+        .order_by(DispensationLog.actual_execution_time.desc())
+        .first()
+    )
 
 
 def create_refill_log(db: Session, data: dict) -> RefillHistory:
