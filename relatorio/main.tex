@@ -325,7 +325,7 @@ As notificações por e-mail são enviadas via SMTP nos seguintes eventos: cadas
 
 O frontend é uma \emph{Single Page Application} (SPA) em \textbf{React 19} com \textbf{Vite} como ferramenta de build e \textbf{TypeScript}. O gerenciador de pacotes é exclusivamente o \textbf{Bun} (versão $\geq$ 1.3.13), que substitui npm/yarn por oferecer melhor desempenho e suporte nativo a TypeScript.
 
-As principais páginas são: autenticação (login), painel de controle, gestão de pacientes e gestão de dispensers. O design segue o \textbf{Pillar Design System} com estilo glassmorfismo, priorizando acessibilidade visual.
+As principais páginas são: autenticação (login), painel de controle (\emph{dashboard}), gestão de pacientes, gestão de dispensers e histórico de adesão (\texttt{/historico}). O dashboard foi redesenhado com uma seção de horários em três cartões visuais (Manhã, Tarde e Noite), cada um com botões de ajuste $\pm15$~min, e com uma roleta colorida que exibe o status de cada slot (dispensado, atual ou futuro). Um modal de ajuda acessível por botão visível orienta o cuidador no uso do painel. A tela de medicamentos do paciente permite vincular cada medicamento a um slot físico do dispensador. O design segue o \textbf{Pillar Design System} com estilo glassmorfismo, priorizando acessibilidade visual.
 
 Em desenvolvimento, as requisições ao prefixo \texttt{/api} são redirecionadas ao backend via proxy configurado no \texttt{vite.config.ts}. Em produção, o Nginx realiza o mesmo roteamento. O linting e a formatação utilizam \textbf{Biome} (substituto unificado de ESLint e Prettier).
 
@@ -820,7 +820,7 @@ Para um projeto de sistema embarcado com componentes de hardware e software tão
     CRUD pacientes e medicamentos       & Sim  & Modelos e endpoints implementados \\
     Agendamentos de dispensação         & Sim  & Disparo automático validado em integração \\
     Notificações por e-mail             & Sim  & Boas-vindas, estoque crítico e falha de dispensação \\
-    Histórico de adesão (logs)          & Sim  & Endpoint de logs implementado; visualização no frontend não implementada \\
+    Histórico de adesão (logs)          & Sim  & Endpoint de logs + página \texttt{/historico} implementados; marcação automática de doses perdidas no scheduler \\
     Frontend React (dashboard)          & Sim  & Countdown, agendas, telemetria, modo silencioso, gestão de pacientes \\
     Docker Compose (dev/prod)           & Sim  & Perfis configurados e funcionais \\
     Notificações push (Firebase)        & Não  & Firebase não integrado \\
@@ -851,7 +851,6 @@ As principais limitações da versão atual são a ausência de notificações p
 \begin{itemize}
     \item \textbf{Descoberta automática do ESP (mDNS):} o firmware anunciaria o dispositivo como \texttt{eco-dispenser.local} na rede local, eliminando a configuração manual da URL do backend no firmware;
     \item \textbf{Notificações push:} integração com Firebase Cloud Messaging (ou similar) para alertar cuidadores em tempo real em caso de não adesão, complementando as notificações por e-mail já implementadas;
-    \item \textbf{Visualização do histórico no frontend:} página de logs de dispensação e adesão, cujos dados já são coletados pelo backend;
     \item \textbf{Testes físicos completos:} execução dos casos de teste de hardware (TC04, TC07, TC12, TC13, TC14) com o dispositivo montado;
     \item \textbf{Operação offline:} firmware com alertas físicos mesmo sem conectividade ao backend, garantindo funcionamento básico em queda de rede;
     \item \textbf{Modo reabastecimento:} implementação da interface e do fluxo completo de reabastecimento semanal;
