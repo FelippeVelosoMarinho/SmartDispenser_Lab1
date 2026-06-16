@@ -465,7 +465,7 @@ export function PatientMedicationsPage() {
         </h1>
         <p style={{ marginTop: "var(--space-2)", color: "var(--ink-3)", fontSize: "var(--text-sm)" }}>
           Gerenciar medicamentos de <strong>{patientName}</strong>.
-          {" "}Cada célula do calendário corresponde a um slot físico do dispensador (21 slots = 7 dias × 3 períodos).
+          {" "}Cada célula do calendário corresponde a um slot físico do dispensador (30 slots = 10 dias × 3 períodos).
         </p>
       </div>
 

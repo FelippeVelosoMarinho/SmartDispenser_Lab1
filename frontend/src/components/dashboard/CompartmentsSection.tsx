@@ -111,7 +111,9 @@ export function CompartmentsSection({ dispenser, onDispenserChange }: Compartmen
   const outerRadius = 198;
   const innerRadius = 112;
 
-  const displaySlot = allSlots.find(s => s.id === hoveredSlotId) || editingSlot || allSlots[0];
+  const currentSlotNumber = hwStatus?.current_slot ?? 1;
+  const defaultSlot = allSlots.find(s => s.display_number === currentSlotNumber) ?? allSlots[0];
+  const displaySlot = allSlots.find(s => s.id === hoveredSlotId) || editingSlot || defaultSlot;
 
   const renderSlice = (slot: any, index: number) => {
     const isUnprogrammable = slot.display_number === 31;

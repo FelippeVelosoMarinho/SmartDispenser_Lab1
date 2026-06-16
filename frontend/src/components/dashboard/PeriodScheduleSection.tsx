@@ -57,6 +57,7 @@ export function PeriodScheduleSection({ dispenser }: PeriodScheduleSectionProps)
   const [starting, setStarting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [scheduleMeta, setScheduleMeta] = useState<PeriodSchedule | null>(null);
+  const [hoveredBtn, setHoveredBtn] = useState<string | null>(null);
   const [now, setNow] = useState(() => new Date());
 
   const hardwareId = dispenser.hardware_id;
@@ -239,24 +240,31 @@ export function PeriodScheduleSection({ dispenser }: PeriodScheduleSectionProps)
                     {p.label}
                   </span>
                 </div>
-                <label style={{ display: "flex", alignItems: "center", gap: "var(--space-2)" }}>
+                <div style={{ display: "flex", alignItems: "center", gap: "var(--space-2)" }}>
                   <button
                     type="button"
                     onClick={() => setters[p.key](adjustTime(values[p.key], -15))}
+                    onMouseEnter={() => setHoveredBtn(`${p.key}-minus`)}
+                    onMouseLeave={() => setHoveredBtn(null)}
                     title="-15 min"
                     style={{
                       flexShrink: 0,
                       width: 28, height: 28,
                       borderRadius: "50%",
                       border: `1.5px solid ${p.border}`,
-                      background: "transparent",
+                      background: hoveredBtn === `${p.key}-minus` ? p.bg : "transparent",
                       color: p.color,
                       cursor: "pointer",
                       display: "flex", alignItems: "center", justifyContent: "center",
-                      fontSize: "1rem",
+                      fontSize: "1.1rem",
+                      fontWeight: 600,
+                      appearance: "none",
+                      outline: "none",
+                      padding: 0,
+                      transition: "background 0.15s",
                     }}
                   >
-                    <i className="ph-duotone ph-minus" />
+                    −
                   </button>
                   <input
                     type="time"
@@ -272,6 +280,7 @@ export function PeriodScheduleSection({ dispenser }: PeriodScheduleSectionProps)
                       background: "transparent",
                       border: "none",
                       outline: "none",
+                      boxShadow: "none",
                       cursor: "pointer",
                       padding: 0,
                       minWidth: 0,
@@ -280,22 +289,29 @@ export function PeriodScheduleSection({ dispenser }: PeriodScheduleSectionProps)
                   <button
                     type="button"
                     onClick={() => setters[p.key](adjustTime(values[p.key], 15))}
+                    onMouseEnter={() => setHoveredBtn(`${p.key}-plus`)}
+                    onMouseLeave={() => setHoveredBtn(null)}
                     title="+15 min"
                     style={{
                       flexShrink: 0,
                       width: 28, height: 28,
                       borderRadius: "50%",
                       border: `1.5px solid ${p.border}`,
-                      background: "transparent",
+                      background: hoveredBtn === `${p.key}-plus` ? p.bg : "transparent",
                       color: p.color,
                       cursor: "pointer",
                       display: "flex", alignItems: "center", justifyContent: "center",
-                      fontSize: "1rem",
+                      fontSize: "1.1rem",
+                      fontWeight: 600,
+                      appearance: "none",
+                      outline: "none",
+                      padding: 0,
+                      transition: "background 0.15s",
                     }}
                   >
-                    <i className="ph-duotone ph-plus" />
+                    +
                   </button>
-                </label>
+                </div>
               </div>
             ))}
           </div>
