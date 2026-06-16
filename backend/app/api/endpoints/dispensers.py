@@ -21,8 +21,7 @@ from app.crud.dispenser import (
     update_dispenser_status,
 )
 from app.crud.patient import get_patient, get_patients_by_caregiver
-from app.models.domain import Dispenser, Drawer, Slot, SlotMedication, DispensationLog
-from sqlalchemy import func
+from app.models.domain import Dispenser, Drawer, Slot, SlotMedication
 from app.crud import command_queue as crud_command_queue
 from app.crud.schedule import get_period_schedules, upsert_period_schedules
 from app.core.config import TOTAL_CAROUSEL_SLOTS
@@ -227,45 +226,9 @@ async def get_dispenser_details(
             .first()
         )
 
-    # Build slot_statuses: position_number → "taken" | "missed" | "error"
-    all_slots_flat = [slot for drawer in dispenser.drawers for slot in drawer.slots]
-    slot_statuses: dict[str, str] = {}
-    if all_slots_flat:
-        slot_ids = [s.id for s in all_slots_flat]
-        subq = (
-            db.query(
-                DispensationLog.slot_id,
-                func.max(DispensationLog.actual_execution_time).label("max_time"),
-            )
-            .filter(DispensationLog.slot_id.in_(slot_ids))
-            .group_by(DispensationLog.slot_id)
-            .subquery()
-        )
-        recent_logs = (
-            db.query(DispensationLog)
-            .join(
-                subq,
-                (DispensationLog.slot_id == subq.c.slot_id)
-                & (DispensationLog.actual_execution_time == subq.c.max_time),
-            )
-            .all()
-        )
-        id_to_pos = {s.id: s.position_number for s in all_slots_flat}
-        for log in recent_logs:
-            if log.slot_id not in id_to_pos:
-                continue
-            pos = id_to_pos[log.slot_id]
-            if log.success:
-                slot_statuses[str(pos)] = "taken"
-            elif log.status == "missed":
-                slot_statuses[str(pos)] = "missed"
-            else:
-                slot_statuses[str(pos)] = "error"
-
     return {
         **_format_dispenser(dispenser, db),
         "drawers": [_format_drawer(drawer) for drawer in sorted(dispenser.drawers, key=lambda item: item.id)],
-        "slot_statuses": slot_statuses,
     }
 
 

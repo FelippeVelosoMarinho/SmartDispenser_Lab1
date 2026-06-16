@@ -123,14 +123,15 @@ export function CompartmentsSection({ dispenser, onDispenserChange }: Compartmen
     const hasMedication = (slot.medications?.length ?? 0) > 0;
     const totalPills = slot.medications?.reduce((sum: number, item: any) => sum + item.quantity, 0) || 0;
 
-    const slotStatus = dispenser.slot_statuses?.[String(slot.display_number)];
+    const isPast =
+      hwStatus != null &&
+      slot.display_number <= hwStatus.current_slot &&
+      !isUnprogrammable;
 
     let fill = "var(--surface-dim)"; // not configured
     if (!isUnprogrammable) {
-      if (slotStatus === "taken") {
-        fill = "#6366f1"; // indigo — already dispensed and taken
-      } else if (slotStatus === "missed") {
-        fill = "#f59e0b"; // amber — dispensed but patient didn't take it
+      if (isPast) {
+        fill = hasMedication ? "#7fa88a" : "var(--surface-dim)"; // muted green = past+med, grey = past+no med
       } else if (hasMedication) {
         fill = totalPills > 0 ? "var(--success, #10b981)" : "var(--danger)";
       }
@@ -162,7 +163,6 @@ export function CompartmentsSection({ dispenser, onDispenserChange }: Compartmen
   };
 
   const displayTotalPills = displaySlot.medications?.reduce((sum: number, item: any) => sum + item.quantity, 0) || 0;
-  const displayStatus = dispenser.slot_statuses?.[String(displaySlot.display_number)];
 
   return (
     <div style={{ marginBottom: "var(--space-8)" }}>
@@ -235,18 +235,6 @@ export function CompartmentsSection({ dispenser, onDispenserChange }: Compartmen
                     {displayTotalPills === 0 && " — Reabastecer"}
                   </div>
                 )}
-                {displayStatus === "taken" && (
-                  <div style={{ marginTop: 4, fontSize: "var(--text-xs)", fontWeight: 600, color: "#6366f1", display: "flex", alignItems: "center", gap: 4 }}>
-                    <i className="ph-duotone ph-check-circle" />
-                    Dispensado — tomou
-                  </div>
-                )}
-                {displayStatus === "missed" && (
-                  <div style={{ marginTop: 4, fontSize: "var(--text-xs)", fontWeight: 600, color: "#f59e0b", display: "flex", alignItems: "center", gap: 4 }}>
-                    <i className="ph-duotone ph-warning" />
-                    Dispensado — não tomou
-                  </div>
-                )}
               </>
             ) : (
               <div style={{ color: "var(--ink-3)" }}>Selecione uma posição</div>
@@ -262,16 +250,12 @@ export function CompartmentsSection({ dispenser, onDispenserChange }: Compartmen
           justifyContent: "center",
         }}>
           <div style={{ display: "flex", alignItems: "center", gap: "8px", fontSize: "var(--text-sm)", color: "var(--ink-2)" }}>
-            <div style={{ width: 12, height: 12, borderRadius: "50%", background: "#6366f1" }} />
-            Dispensado (tomou)
-          </div>
-          <div style={{ display: "flex", alignItems: "center", gap: "8px", fontSize: "var(--text-sm)", color: "var(--ink-2)" }}>
-            <div style={{ width: 12, height: 12, borderRadius: "50%", background: "#f59e0b" }} />
-            Dispensado (não tomou)
-          </div>
-          <div style={{ display: "flex", alignItems: "center", gap: "8px", fontSize: "var(--text-sm)", color: "var(--ink-2)" }}>
             <div style={{ width: 12, height: 12, borderRadius: "50%", background: "var(--success, #10b981)" }} />
             Com medicamento
+          </div>
+          <div style={{ display: "flex", alignItems: "center", gap: "8px", fontSize: "var(--text-sm)", color: "var(--ink-2)" }}>
+            <div style={{ width: 12, height: 12, borderRadius: "50%", background: "#7fa88a" }} />
+            Já dispensado neste ciclo
           </div>
           <div style={{ display: "flex", alignItems: "center", gap: "8px", fontSize: "var(--text-sm)", color: "var(--ink-2)" }}>
             <div style={{ width: 12, height: 12, borderRadius: "50%", background: "var(--danger)" }} />

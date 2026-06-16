@@ -24,22 +24,16 @@ const SECTIONS = [
         desc: "Medicamento configurado e com pílulas carregadas. Pronto para dispensar.",
       },
       {
+        color: "#7fa88a",
+        border: "#7fa88a",
+        label: "Verde apagado",
+        desc: "Slot já passou neste ciclo — a roleta avançou além desta posição. Veja o histórico para saber se foi tomado.",
+      },
+      {
         color: "var(--danger, #ef4444)",
         border: "var(--danger, #ef4444)",
         label: "Vermelho",
         desc: "Medicamento configurado, mas sem pílulas registradas. Clique no slot e informe quantas pílulas colocou fisicamente.",
-      },
-      {
-        color: "#6366f1",
-        border: "#6366f1",
-        label: "Roxo",
-        desc: "Slot já dispensado neste ciclo e o paciente confirmou que tomou (pressionou o botão físico).",
-      },
-      {
-        color: "#f59e0b",
-        border: "#f59e0b",
-        label: "Âmbar",
-        desc: "Slot dispensado mas o paciente NÃO confirmou que tomou. Verifique com o paciente.",
       },
     ],
   },
