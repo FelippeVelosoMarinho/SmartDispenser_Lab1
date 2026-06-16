@@ -15,7 +15,8 @@
 // ── Servo (roleta) ────────────────────────────────────────────────────
 const int SERVO_PIN      = 18;
 const int SERVO_REST     = 0;
-const int SERVO_ADVANCE  = 90;
+const int SERVO_ADVANCE  = 198;
+const int SERVO_ADVANCE_WRITES = 2;
 const int SERVO_DELAY_MS = 400;
 
 // ── LEDs de período do dia ────────────────────────────────────────────

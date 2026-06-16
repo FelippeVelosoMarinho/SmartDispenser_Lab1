@@ -39,11 +39,13 @@ void carouselSetup() {
 }
 
 // Avança a roleta uma posição usando mecanismo de catraca:
-// servo vai de repouso → avanço → repouso, e a catraca física
+// servo vai de repouso → avanço (N impulsos) → repouso, e a catraca física
 // converte esse movimento em exatamente 1/21 de volta na roleta.
 void advanceCarousel() {
-  servo.write(SERVO_ADVANCE);
-  delay(SERVO_DELAY_MS);
+  for (int i = 0; i < SERVO_ADVANCE_WRITES; i++) {
+    servo.write(SERVO_ADVANCE);
+    delay(SERVO_DELAY_MS);
+  }
   servo.write(SERVO_REST);
   delay(SERVO_DELAY_MS);
 
