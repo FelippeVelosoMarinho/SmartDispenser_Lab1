@@ -48,6 +48,32 @@ def has_active_dispense(db: Session, hardware_id: str) -> bool:
     return _existing_active_dispense(db, hardware_id) is not None
 
 
+def _existing_active_confirm(db: Session, hardware_id: str) -> Optional[PendingCommand]:
+    return (
+        db.query(PendingCommand)
+        .filter(PendingCommand.hardware_id == hardware_id)
+        .filter(PendingCommand.command_type == "confirm")
+        .filter(PendingCommand.status.in_(ACTIVE_STATUSES))
+        .first()
+    )
+
+
+def enqueue_confirm(db: Session, hardware_id: str) -> PendingCommand:
+    """Enqueue a confirm command so the ESP clears its awaiting_confirm state."""
+    existing = _existing_active_confirm(db, hardware_id)
+    if existing:
+        return existing
+    command = PendingCommand(
+        hardware_id=hardware_id,
+        command_type="confirm",
+        status="pending",
+    )
+    db.add(command)
+    db.commit()
+    db.refresh(command)
+    return command
+
+
 def enqueue_calibrate(db: Session, hardware_id: str) -> PendingCommand:
     """Enqueue carousel calibration (start-cycle) for heartbeat delivery."""
     existing = _existing_active_calibrate(db, hardware_id)
@@ -124,7 +150,7 @@ def process_command_ack(
     if not command:
         return None
     if command.status in TERMINAL_STATUSES:
-        return command
+        return None  # already processed — don't re-record log
 
     command.completed_at = datetime.datetime.utcnow()
     if success:

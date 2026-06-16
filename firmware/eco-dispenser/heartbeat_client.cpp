@@ -91,7 +91,7 @@ static void processHeartbeatCommand(const String& responseBody, const String& ma
   String cmdId = extractJsonField(responseBody, "id");
   String cmdType = extractJsonField(responseBody, "type");
   if (cmdId.length() == 0) return;
-  if (cmdType != "dispense" && cmdType != "calibrate") return;
+  if (cmdType != "dispense" && cmdType != "calibrate" && cmdType != "confirm") return;
 
   if (cmdId == lastExecutedCommandId) {
     Serial.println("[Heartbeat] command already executed — re-ACK " + cmdId);
@@ -102,7 +102,11 @@ static void processHeartbeatCommand(const String& responseBody, const String& ma
   bool success = false;
   String errMsg = "";
 
-  if (cmdType == "calibrate") {
+  if (cmdType == "confirm") {
+    Serial.println("[Heartbeat] ▶ comando recebido: CONFIRMAR (timeout backend) — limpando awaiting_confirm");
+    clearAlerts();
+    success = true;
+  } else if (cmdType == "calibrate") {
     Serial.println("[Heartbeat] ▶ comando recebido: CALIBRAR roleta");
     calibrateCarousel();
     clearAlerts();
@@ -136,6 +140,12 @@ static void processHeartbeatCommand(const String& responseBody, const String& ma
 
   Serial.println("[Heartbeat] ACK enfileirado: " + cmdId +
                  " success=" + String(success ? "true" : "false"));
+}
+
+void sendPatientConfirmEvent() {
+  String mac = getHardwareId();
+  Serial.println("[Event] Paciente confirmou — enviando /api/event success=true");
+  sendIotEvent(mac, true, "");
 }
 
 void sendHeartbeat() {

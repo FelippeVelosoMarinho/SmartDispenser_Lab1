@@ -157,14 +157,16 @@ def _record_log(
     success: bool,
     error: str | None,
 ) -> None:
+    # Log as "dispatched" — history is only finalized when patient confirms or timeout expires
     log = DispensationLog(
         schedule_id_legacy=str(schedule.id),
         patient_id_legacy=str(schedule.patient_id) if schedule.patient_id else None,
         dispenser_id_legacy=schedule.dispenser_id,
         slot_id=schedule.slot_id,
         actual_execution_time=datetime.datetime.utcnow(),
-        success=success,
-        error_message=error,
+        success=None,
+        status="dispatched",
+        error_message=error if not success else None,
     )
     db.add(log)
 
@@ -354,19 +356,28 @@ def expire_unconfirmed_dispensations(db: Session) -> None:
             db, dispenser.hardware_id
         )
         if latest_log and latest_log.actual_execution_time < cutoff:
-            missed_log = DispensationLog(
-                schedule_id_legacy=latest_log.schedule_id_legacy,
-                patient_id_legacy=latest_log.patient_id_legacy,
-                dispenser_id_legacy=dispenser.hardware_id,
-                medication_name_snapshot=latest_log.medication_name_snapshot,
-                slot_id=latest_log.slot_id,
-                actual_execution_time=datetime.datetime.utcnow(),
-                success=False,
-                status="missed",
-                error_message="patient did not confirm within timeout",
-            )
-            db.add(missed_log)
+            # Update the dispatched log in-place instead of creating a duplicate
+            if latest_log.status == "dispatched":
+                latest_log.success = False
+                latest_log.status = "missed"
+                latest_log.error_message = "patient did not confirm within timeout"
+                latest_log.actual_execution_time = datetime.datetime.utcnow()
+            else:
+                # Fallback: create a new missed log if the dispatched log was not found
+                db.add(DispensationLog(
+                    schedule_id_legacy=latest_log.schedule_id_legacy,
+                    patient_id_legacy=latest_log.patient_id_legacy,
+                    dispenser_id_legacy=dispenser.hardware_id,
+                    medication_name_snapshot=latest_log.medication_name_snapshot,
+                    slot_id=latest_log.slot_id,
+                    actual_execution_time=datetime.datetime.utcnow(),
+                    success=False,
+                    status="missed",
+                    error_message="patient did not confirm within timeout",
+                ))
             dispenser.awaiting_confirm = False
+            # Enqueue a confirm command so the ESP clears its awaiting_confirm state
+            crud_command_queue.enqueue_confirm(db, dispenser.hardware_id)
             changed = True
             logger.info(
                 "[Scheduler] Marked dispensation as missed for dispenser %s (no confirmation after %ds)",

@@ -1,5 +1,6 @@
 """IoT/Hardware endpoints."""
 
+import datetime
 import time
 import uuid
 
@@ -19,7 +20,7 @@ from app.crud import log as crud_log
 from app.crud import dispenser as crud_dispenser
 from app.services.dispensation_log import record_schedule_dispensation_log
 from app.services.schedule_utils import carousel_slot_after_sequential
-from app.models.domain import User, Patient, Dispenser, Medication, Schedule
+from app.models.domain import User, Patient, Dispenser, Medication, Schedule, DispensationLog
 from app.services.notifier import send_email_notification
 from app.services.templates import (
     get_dispensation_success_template,
@@ -213,8 +214,24 @@ async def process_iot_event(
         "slot_id": slot_id,
     }
     
-    # Store the dispensation log using the crud operation
-    created_log = crud_log.create_dispensation_log(db, log_data)
+    # Update the existing dispatched log in-place, or create a new one if not found
+    dispatched = (
+        db.query(DispensationLog)
+        .filter(DispensationLog.dispenser_id_legacy == event.dispenser_id)
+        .filter(DispensationLog.status == "dispatched")
+        .order_by(DispensationLog.actual_execution_time.desc())
+        .first()
+    )
+    if dispatched:
+        dispatched.success = event.success
+        dispatched.status = None  # clear "dispatched" — resolveStatus uses success field
+        dispatched.error_message = event.error_message
+        dispatched.actual_execution_time = datetime.datetime.utcnow()
+        db.commit()
+        db.refresh(dispatched)
+        created_log = dispatched
+    else:
+        created_log = crud_log.create_dispensation_log(db, log_data)
     
     # Resolve Patient
     patient = None
@@ -335,7 +352,7 @@ async def process_heartbeat(
                 heartbeat.command_ack.success,
                 heartbeat.command_ack.error,
             )
-            if ack_command:
+            if ack_command and ack_command.command_type == "dispense":
                 record_schedule_dispensation_log(
                     db,
                     ack_command,

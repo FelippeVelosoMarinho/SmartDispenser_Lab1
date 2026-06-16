@@ -31,7 +31,9 @@ const int BUZZER_FREQ = 1000;
 const int VIB_PIN = 22;
 
 // ── Botão de confirmação (INPUT_PULLUP — repouso HIGH, pressionado LOW) ──
-const int BTN_CONFIRM  = 15;
+// GPIO0 = botão BOOT onboard do DevKit (sem protoboard necessária).
+// Cuidado: segurar BOOT + pressionar EN entra em modo download — normal.
+const int BTN_CONFIRM  = 0;
 
 // ── LED onboard (diagnóstico) ─────────────────────────────────────────
 const int LED_ONBOARD = 2;

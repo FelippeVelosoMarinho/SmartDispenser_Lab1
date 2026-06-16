@@ -53,6 +53,7 @@ void checkButtons() {
     if (isAwaitingConfirmation()) {
       lastConfirmedSlot = getCurrentSlot();
       clearAlerts();
+      sendPatientConfirmEvent();
       requestEarlyHeartbeat();
       Serial.printf("✅ Confirmado pelo paciente — slot %d\n", lastConfirmedSlot);
     }

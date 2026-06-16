@@ -27,6 +27,10 @@ function resolveStatus(log: DispensationLog): AdherenceStatus {
   return "erro";
 }
 
+function isFinalized(log: DispensationLog): boolean {
+  return log.status !== "dispatched" && log.success !== null && log.success !== undefined;
+}
+
 function formatTimestamp(ts: string): string {
   // Backend returns naive UTC datetimes without 'Z' — append it so JS parses as UTC, not local
   const utc = ts.endsWith("Z") || ts.includes("+") ? ts : ts + "Z";
@@ -149,9 +153,10 @@ export function AdherenceHistoryPage() {
     return m;
   }, [patients]);
 
-  const totalPages = Math.max(1, Math.ceil(logs.length / PAGE_SIZE));
+  const finalizedLogs = logs.filter(isFinalized);
+  const totalPages = Math.max(1, Math.ceil(finalizedLogs.length / PAGE_SIZE));
   const page = Math.min(currentPage, totalPages);
-  const pageItems = logs.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
+  const pageItems = finalizedLogs.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
 
   return (
     <div
@@ -352,7 +357,7 @@ export function AdherenceHistoryPage() {
         )}
       </Card>
 
-      {!loading && logs.length > 0 && (
+      {!loading && finalizedLogs.length > 0 && (
         <p
           style={{
             marginTop: "var(--space-3)",
@@ -361,7 +366,7 @@ export function AdherenceHistoryPage() {
             textAlign: "center",
           }}
         >
-          {logs.length} registro{logs.length !== 1 ? "s" : ""} no total
+          {finalizedLogs.length} registro{finalizedLogs.length !== 1 ? "s" : ""} no total
         </p>
       )}
     </div>

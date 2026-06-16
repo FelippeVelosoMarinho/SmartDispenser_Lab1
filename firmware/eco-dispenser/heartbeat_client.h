@@ -7,5 +7,6 @@ void setBackendUrl(const String& url);
 void sendHeartbeat();
 void requestEarlyHeartbeat();
 bool consumeEarlyHeartbeat();
+void sendPatientConfirmEvent();
 
 #endif
