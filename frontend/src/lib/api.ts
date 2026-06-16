@@ -469,6 +469,7 @@ export interface Drawer {
 
 export interface DispenserDetails extends Dispenser {
   drawers: Drawer[];
+  slot_statuses?: Record<string, string>; // slot_number → "taken" | "missed" | "error"
 }
 
 export interface Schedule {

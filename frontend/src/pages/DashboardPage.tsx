@@ -252,17 +252,19 @@ export function DashboardPage() {
               onClick={() => setShowHelp(true)}
               title="Ajuda — como usar o dispensador"
               style={{
-                width: 36, height: 36,
-                borderRadius: "50%",
-                border: "1px solid var(--border)",
-                background: "var(--surface)",
-                color: "var(--ink-3)",
+                display: "flex", alignItems: "center", gap: "6px",
+                padding: "8px 16px",
+                borderRadius: "var(--radius-md)",
+                border: "1.5px solid #6366f1",
+                background: "rgba(99,102,241,0.08)",
+                color: "#6366f1",
                 cursor: "pointer",
-                display: "flex", alignItems: "center", justifyContent: "center",
-                fontSize: "1rem",
+                fontSize: "var(--text-sm)",
+                fontWeight: 600,
               }}
             >
-              <i className="ph-duotone ph-question" />
+              <i className="ph-duotone ph-question" style={{ fontSize: "1.1rem" }} />
+              Ajuda
             </button>
           {dispensers.length > 1 && (
             <select
