@@ -18,27 +18,33 @@ const PERIODS = [
     key: "morning" as const,
     label: "Manhã",
     icon: "ph-sun-horizon",
-    color: "#f59e0b",
-    bg: "rgba(245, 158, 11, 0.08)",
-    border: "rgba(245, 158, 11, 0.25)",
+    color: "var(--warning)",
+    bg: "color-mix(in srgb, var(--warning) 10%, transparent)",
+    border: "color-mix(in srgb, var(--warning) 30%, transparent)",
   },
   {
     key: "afternoon" as const,
     label: "Tarde",
     icon: "ph-sun",
-    color: "#ef7c22",
-    bg: "rgba(239, 124, 34, 0.08)",
-    border: "rgba(239, 124, 34, 0.25)",
+    color: "var(--accent)",
+    bg: "color-mix(in srgb, var(--accent) 10%, transparent)",
+    border: "color-mix(in srgb, var(--accent) 30%, transparent)",
   },
   {
     key: "night" as const,
     label: "Noite",
     icon: "ph-moon-stars",
-    color: "#6366f1",
-    bg: "rgba(99, 102, 241, 0.08)",
-    border: "rgba(99, 102, 241, 0.25)",
+    color: "var(--period-night)",
+    bg: "color-mix(in srgb, var(--period-night) 10%, transparent)",
+    border: "color-mix(in srgb, var(--period-night) 30%, transparent)",
   },
 ];
+
+function adjustTime(current: string, deltaMinutes: number): string {
+  const [h, m] = current.split(":").map(Number);
+  const total = ((h * 60 + m + deltaMinutes) % (24 * 60) + 24 * 60) % (24 * 60);
+  return `${String(Math.floor(total / 60)).padStart(2, "0")}:${String(total % 60).padStart(2, "0")}`;
+}
 
 export function PeriodScheduleSection({ dispenser }: PeriodScheduleSectionProps) {
   const [morning, setMorning] = useState("08:00");
@@ -212,7 +218,7 @@ export function PeriodScheduleSection({ dispenser }: PeriodScheduleSectionProps)
         <form onSubmit={handleSave}>
           <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: "var(--space-3)", marginBottom: "var(--space-4)" }}>
             {PERIODS.map((p) => (
-              <label
+              <div
                 key={p.key}
                 style={{
                   display: "flex",
@@ -222,7 +228,6 @@ export function PeriodScheduleSection({ dispenser }: PeriodScheduleSectionProps)
                   border: `1.5px solid ${p.border}`,
                   borderRadius: "var(--radius-lg)",
                   padding: "var(--space-4)",
-                  cursor: "pointer",
                 }}
               >
                 <div style={{ display: "flex", alignItems: "center", gap: "var(--space-2)" }}>
@@ -234,25 +239,64 @@ export function PeriodScheduleSection({ dispenser }: PeriodScheduleSectionProps)
                     {p.label}
                   </span>
                 </div>
-                <input
-                  type="time"
-                  value={values[p.key]}
-                  onChange={(e) => setters[p.key](e.target.value)}
-                  required
-                  style={{
-                    fontFamily: "var(--font-mono)",
-                    fontSize: "var(--text-2xl)",
-                    fontWeight: 700,
-                    color: p.color,
-                    background: "transparent",
-                    border: "none",
-                    outline: "none",
-                    width: "100%",
-                    cursor: "pointer",
-                    padding: 0,
-                  }}
-                />
-              </label>
+                <label style={{ display: "flex", alignItems: "center", gap: "var(--space-2)" }}>
+                  <button
+                    type="button"
+                    onClick={() => setters[p.key](adjustTime(values[p.key], -15))}
+                    title="-15 min"
+                    style={{
+                      flexShrink: 0,
+                      width: 28, height: 28,
+                      borderRadius: "50%",
+                      border: `1.5px solid ${p.border}`,
+                      background: "transparent",
+                      color: p.color,
+                      cursor: "pointer",
+                      display: "flex", alignItems: "center", justifyContent: "center",
+                      fontSize: "1rem",
+                    }}
+                  >
+                    <i className="ph-duotone ph-minus" />
+                  </button>
+                  <input
+                    type="time"
+                    value={values[p.key]}
+                    onChange={(e) => setters[p.key](e.target.value)}
+                    required
+                    style={{
+                      flex: 1,
+                      fontFamily: "var(--font-mono)",
+                      fontSize: "var(--text-2xl)",
+                      fontWeight: 700,
+                      color: p.color,
+                      background: "transparent",
+                      border: "none",
+                      outline: "none",
+                      cursor: "pointer",
+                      padding: 0,
+                      minWidth: 0,
+                    }}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setters[p.key](adjustTime(values[p.key], 15))}
+                    title="+15 min"
+                    style={{
+                      flexShrink: 0,
+                      width: 28, height: 28,
+                      borderRadius: "50%",
+                      border: `1.5px solid ${p.border}`,
+                      background: "transparent",
+                      color: p.color,
+                      cursor: "pointer",
+                      display: "flex", alignItems: "center", justifyContent: "center",
+                      fontSize: "1rem",
+                    }}
+                  >
+                    <i className="ph-duotone ph-plus" />
+                  </button>
+                </label>
+              </div>
             ))}
           </div>
 

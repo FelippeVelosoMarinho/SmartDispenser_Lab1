@@ -65,6 +65,9 @@
   --accent-ink: #8a5f1d; /* 6.9:1 */
   --accent-soft: #f6ecd7;
 
+  /* Period scheduling accent (not a semantic signal — decorative only) */
+  --period-night: #5b6af0;
+
   /* =========================================================
      SEMANTIC STATES — each pair includes BOTH a color AND an icon
      cue in the components layer, so we never signal by color alone.
@@ -223,6 +226,7 @@
     --success: #70c291;
     --warning: #e6a25f;
     --danger: #f08b83;
+    --period-night: #8b94f5;
   }
 }
 
@@ -249,6 +253,7 @@
   --success: #70c291;
   --warning: #e6a25f;
   --danger: #f08b83;
+  --period-night: #8b94f5;
 }
 
 /* =========================================================
