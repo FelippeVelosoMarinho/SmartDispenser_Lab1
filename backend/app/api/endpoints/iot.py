@@ -19,7 +19,7 @@ from app.crud import log as crud_log
 from app.crud import dispenser as crud_dispenser
 from app.services.dispensation_log import record_schedule_dispensation_log
 from app.services.schedule_utils import carousel_slot_after_sequential
-from app.models.domain import User, Patient, Dispenser, Medication
+from app.models.domain import User, Patient, Dispenser, Medication, Schedule
 from app.services.notifier import send_email_notification
 from app.services.templates import (
     get_dispensation_success_template,
@@ -193,12 +193,24 @@ async def process_iot_event(
     """
     O hardware avisa ao servidor que um comprimido foi liberado ou que o paciente não confirmou a ingestão.
     """
+    # Resolve slot_id from the Schedule so the dashboard can color the slot
+    slot_id = None
+    if event.schedule_id and event.schedule_id not in ("unknown", ""):
+        try:
+            sched_uuid = uuid.UUID(event.schedule_id)
+            schedule = db.query(Schedule).filter(Schedule.id == sched_uuid).first()
+            if schedule:
+                slot_id = schedule.slot_id
+        except (ValueError, AttributeError):
+            pass
+
     log_data = {
         "schedule_id": event.schedule_id or "unknown",
         "patient_id": event.patient_id or "unknown",
         "dispenser_id": event.dispenser_id,
         "success": event.success,
         "error_message": event.error_message,
+        "slot_id": slot_id,
     }
     
     # Store the dispensation log using the crud operation
