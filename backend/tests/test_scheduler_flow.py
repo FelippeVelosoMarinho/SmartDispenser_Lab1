@@ -56,7 +56,7 @@ def test_period_sequence_enqueues_morning_afternoon_night():
     db = MagicMock()
     db.query.side_effect = query_side_effect
 
-    def fake_enqueue(db_sess, hardware_id, period, expected_slot, schedule_id):
+    def fake_enqueue(db_sess, hardware_id, period, expected_slot, schedule_id, *, silent_mode=False):
         enqueue_calls.append((period, expected_slot))
         dispenser.current_slot = expected_slot
         cmd = MagicMock()
@@ -67,11 +67,15 @@ def test_period_sequence_enqueues_morning_afternoon_night():
     async def run_all():
         with patch("app.services.scheduler.SCHEDULER_MODE", "queue"):
             with patch(
-                "app.services.scheduler.crud_command_queue.enqueue_dispense",
-                side_effect=fake_enqueue,
+                "app.services.scheduler.crud_command_queue.has_active_dispense",
+                return_value=False,
             ):
-                for s in schedules:
-                    await _process_period_schedule(db, s, now)
+                with patch(
+                    "app.services.scheduler.crud_command_queue.enqueue_dispense",
+                    side_effect=fake_enqueue,
+                ):
+                    for s in schedules:
+                        await _process_period_schedule(db, s, now)
 
     asyncio.run(run_all())
 

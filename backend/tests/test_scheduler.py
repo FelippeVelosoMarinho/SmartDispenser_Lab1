@@ -168,6 +168,7 @@ def test_process_period_schedule_enqueues_in_queue_mode():
                         "morning",
                         1,
                         schedule.id,
+                        silent_mode=False,
                     )
 
     asyncio.run(run())

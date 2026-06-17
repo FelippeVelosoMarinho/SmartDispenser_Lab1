@@ -84,6 +84,8 @@ def _effective_scheduled_at(schedule: Schedule) -> datetime.datetime | None:
 
 def _due_window_seconds(dispenser: Dispenser | None) -> int:
     """Late-side window after scheduled time (heartbeat delivery slack)."""
+    if dispenser and dispenser.awaiting_confirm:
+        return SCHEDULER_AWAITING_CONFIRM_GRACE_SECONDS
     return SCHEDULER_DUE_WINDOW_SECONDS
 
 
@@ -109,11 +111,7 @@ def _is_due(
 
     if signed < -SCHEDULER_EARLY_SLACK_SECONDS:
         return False
-    if signed <= late_window:
-        return True
-    if dispenser and dispenser.awaiting_confirm:
-        return signed <= SCHEDULER_AWAITING_CONFIRM_GRACE_SECONDS
-    return False
+    return signed <= late_window
 
 
 async def _get_status(ip: str) -> dict[str, Any] | None:
