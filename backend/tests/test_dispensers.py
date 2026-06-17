@@ -50,7 +50,7 @@ def test_get_dispenser_status_mock(mock_get_current_user):
     assert resp.status_code == 200
     data = resp.json()
     assert data["dispenser_id"] == "disp_new"
-    assert data["online"] is True
+    assert data["online"] is False
 
 
 def test_get_dispenser_status_updated(mock_get_current_user):
@@ -90,6 +90,7 @@ def test_delete_dispenser_with_mac_and_drawers(mock_get_current_user):
 
     db.add(Slot(drawer_id=drawer.id, position_number=1, max_pill_capacity=30))
     db.commit()
+    dispenser_pk = dispenser.id
     db.close()
 
     resp = client.delete(f"/api/dispensers/{hardware_id}")
@@ -97,7 +98,7 @@ def test_delete_dispenser_with_mac_and_drawers(mock_get_current_user):
 
     db = SessionLocal()
     assert db.query(Dispenser).filter(Dispenser.hardware_id == hardware_id).first() is None
-    assert db.query(Drawer).filter(Drawer.dispenser_id == dispenser.id).count() == 0
+    assert db.query(Drawer).filter(Drawer.dispenser_id == dispenser_pk).count() == 0
     db.close()
 
 

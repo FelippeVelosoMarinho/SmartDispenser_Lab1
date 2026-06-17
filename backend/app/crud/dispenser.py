@@ -85,6 +85,9 @@ def mark_dispenser_disconnected_after_wifi_reset(db: Session, dispenser: Dispens
     db.commit()
     db.refresh(dispenser)
     return dispenser
+
+
+def _slot_ids_for_dispenser(db: Session, dispenser: Dispenser) -> list:
     drawer_ids = [
         row[0]
         for row in db.query(Drawer.id).filter(Drawer.dispenser_id == dispenser.id).all()

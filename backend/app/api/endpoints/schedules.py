@@ -76,6 +76,8 @@ async def register_schedule(
         schedule = create_schedule(db, schedule_in.model_dump())
         logger.info("Agendamento criado com sucesso: %s", schedule.id)
         return format_schedule_response(schedule)
+    except HTTPException:
+        raise
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
     except Exception as e:
