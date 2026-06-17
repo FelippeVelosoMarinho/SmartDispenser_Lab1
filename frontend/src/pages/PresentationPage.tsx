@@ -4,6 +4,7 @@ import {
   getDispenserDetails,
   listDispensers,
   resetCalibrationDemo,
+  type Dispenser,
   type DispensationLog,
   type DispenserDetails,
 } from "../lib/api";
@@ -22,6 +23,23 @@ import { TelemetryGrid } from "../components/dashboard/TelemetryGrid";
 import { CalibrationDemoSection } from "../components/dashboard/CalibrationDemoSection";
 
 const HARDWARE_ID = "C0:CD:D6:CE:4A:AC";
+
+function lastSyncMs(dispenser: Dispenser): number {
+  if (!dispenser.last_sync) return 0;
+  const parsed = new Date(dispenser.last_sync).getTime();
+  return Number.isNaN(parsed) ? 0 : parsed;
+}
+
+function selectPresentationDispenser(dispensers: Dispenser[]): Dispenser | undefined {
+  const preferred = dispensers.find((d) => d.hardware_id === HARDWARE_ID);
+  if (preferred?.is_online && preferred.ip_address) return preferred;
+
+  const live = dispensers
+    .filter((d) => d.is_online && d.ip_address)
+    .sort((a, b) => lastSyncMs(b) - lastSyncMs(a))[0];
+
+  return live ?? preferred ?? dispensers[0];
+}
 
 function formatTimestamp(ts: string): string {
   const utc = ts.endsWith("Z") || ts.includes("+") ? ts : ts + "Z";
@@ -98,7 +116,7 @@ export function PresentationPage() {
   async function fetchData() {
     try {
       const all = await listDispensers();
-      const target = all.find((d) => d.hardware_id === HARDWARE_ID) ?? all[0];
+      const target = selectPresentationDispenser(all);
       if (target) {
         const details = await getDispenserDetails(target.id);
         setDispenser(details);
