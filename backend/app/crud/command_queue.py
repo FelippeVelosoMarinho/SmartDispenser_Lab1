@@ -33,6 +33,16 @@ def _existing_active_calibrate(db: Session, hardware_id: str) -> Optional[Pendin
     )
 
 
+def _existing_active_demo(db: Session, hardware_id: str) -> Optional[PendingCommand]:
+    return (
+        db.query(PendingCommand)
+        .filter(PendingCommand.hardware_id == hardware_id)
+        .filter(PendingCommand.command_type == "demo")
+        .filter(PendingCommand.status.in_(ACTIVE_STATUSES))
+        .first()
+    )
+
+
 def _existing_active_dispense(db: Session, hardware_id: str) -> Optional[PendingCommand]:
     return (
         db.query(PendingCommand)
@@ -83,6 +93,23 @@ def enqueue_calibrate(db: Session, hardware_id: str) -> PendingCommand:
     command = PendingCommand(
         hardware_id=hardware_id,
         command_type="calibrate",
+        status="pending",
+    )
+    db.add(command)
+    db.commit()
+    db.refresh(command)
+    return command
+
+
+def enqueue_demo(db: Session, hardware_id: str) -> PendingCommand:
+    """Enqueue demo command for heartbeat delivery."""
+    existing = _existing_active_demo(db, hardware_id)
+    if existing:
+        return existing
+
+    command = PendingCommand(
+        hardware_id=hardware_id,
+        command_type="demo",
         status="pending",
     )
     db.add(command)

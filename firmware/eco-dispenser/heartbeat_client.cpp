@@ -7,6 +7,7 @@
 #include "json_utils.h"
 
 #include "carousel.h"
+#include "api_server.h"
 
 #include <WiFi.h>
 #include <HTTPClient.h>
@@ -114,6 +115,10 @@ static void processHeartbeatCommand(const String& responseBody, const String& ma
     Serial.println("[Heartbeat] ▶ comando recebido: CALIBRAR roleta");
     calibrateCarousel();
     clearAlerts();
+    success = true;
+  } else if (cmdType == "demo") {
+    Serial.println("[Heartbeat] ▶ comando recebido: INICIAR DEMO");
+    startDemo();
     success = true;
   } else {
     String period = extractJsonField(responseBody, "period");

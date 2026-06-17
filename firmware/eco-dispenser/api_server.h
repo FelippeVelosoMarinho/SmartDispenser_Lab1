@@ -5,6 +5,7 @@
 
 void setupApiServer(AsyncWebServer& server);
 void demoTick();
+void startDemo();
 bool isDemoRunning();
 int  getDemoStep();
 

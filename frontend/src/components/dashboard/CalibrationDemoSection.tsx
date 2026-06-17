@@ -148,9 +148,15 @@ export function CalibrationDemoSection({ dispenser }: CalibrationDemoSectionProp
     setCountdown(0);
 
     try {
-      await startCalibrationDemo(dispenser.hardware_id, ip);
-      setDemoState("running");
-      startPolling();
+      const res = await startCalibrationDemo(dispenser.hardware_id, ip);
+      if (res && res.message && res.message.includes("enfileirada")) {
+        setDemoState("done");
+        setCurrentPhase("done");
+        setError(res.message); // Usar a caixa de erro para mostrar a info de sucesso/enfileiramento por enquanto
+      } else {
+        setDemoState("running");
+        startPolling();
+      }
     } catch (err) {
       setError(err instanceof Error ? err.message : "Falha ao iniciar demo");
       setDemoState("error");

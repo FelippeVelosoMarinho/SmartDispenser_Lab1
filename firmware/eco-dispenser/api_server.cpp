@@ -39,6 +39,14 @@ void demoTick() {
   demoNextAt = millis() + 30000;
 }
 
+void startDemo() {
+  if (demoRunning) return;
+  demoRunning = true;
+  demoStep = 0;
+  demoNextAt = millis();
+  Serial.println("🧪 Demo de calibração iniciada via comando!");
+}
+
 bool isDemoRunning() {
   return demoRunning;
 }
@@ -164,10 +172,7 @@ void setupApiServer(AsyncWebServer& server) {
         sendJson(request, 409, "{\"success\":false,\"error\":\"demo_already_running\"}");
         return;
       }
-      demoRunning = true;
-      demoStep = 0;
-      demoNextAt = millis();   // começa imediatamente
-      Serial.println("🧪 Demo de calibração iniciada!");
+      startDemo();
       sendJson(request, 200, "{\"success\":true,\"message\":\"Demo iniciada\"}");
     },
     NULL,
@@ -177,10 +182,7 @@ void setupApiServer(AsyncWebServer& server) {
           sendJson(request, 409, "{\"success\":false,\"error\":\"demo_already_running\"}");
           return;
         }
-        demoRunning = true;
-        demoStep = 0;
-        demoNextAt = millis();
-        Serial.println("🧪 Demo de calibração iniciada!");
+        startDemo();
         sendJson(request, 200, "{\"success\":true,\"message\":\"Demo iniciada\"}");
       }
     }

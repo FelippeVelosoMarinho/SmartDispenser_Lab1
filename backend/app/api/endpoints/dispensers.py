@@ -537,11 +537,12 @@ async def start_demo_cycle(
     dispenser = _get_dispenser_for_caregiver(db, hardware_id, current_user.username)
     ip = _require_dispenser_ip(dispenser)
 
-    if not _is_private_lan_ip(ip):
-        raise HTTPException(
-            status_code=503,
-            detail=_unreachable_detail(ip, reason="demo"),
-        )
+    if _is_private_lan_ip(ip):
+        crud_command_queue.enqueue_demo(db, hardware_id)
+        return {
+            "success": True,
+            "message": "Demonstração enfileirada — o dispensador executará no próximo heartbeat (~30s)."
+        }
 
     ok, _ = await post_demo(ip)
     if not ok:
@@ -565,7 +566,7 @@ async def read_demo_status(
     dispenser = _get_dispenser_for_caregiver(db, hardware_id, current_user.username)
     ip = _require_dispenser_ip(dispenser)
 
-    if not _is_private_lan_ip(ip):
+    if _is_private_lan_ip(ip):
         raise HTTPException(
             status_code=503,
             detail=_unreachable_detail(ip, reason="demo-status"),
@@ -593,7 +594,7 @@ async def stop_demo_cycle(
     dispenser = _get_dispenser_for_caregiver(db, hardware_id, current_user.username)
     ip = _require_dispenser_ip(dispenser)
 
-    if not _is_private_lan_ip(ip):
+    if _is_private_lan_ip(ip):
         raise HTTPException(
             status_code=503,
             detail=_unreachable_detail(ip, reason="demo-stop"),
