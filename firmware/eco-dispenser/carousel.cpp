@@ -45,9 +45,9 @@ void advanceCarousel() {
   for (int i = 0; i < SERVO_ADVANCE_WRITES; i++) {
     servo.write(SERVO_ADVANCE);
     delay(SERVO_DELAY_MS);
+    servo.write(SERVO_REST);
+    delay(SERVO_DELAY_MS);
   }
-  servo.write(SERVO_REST);
-  delay(SERVO_DELAY_MS);
 
   currentSlot = (currentSlot + 1) % TOTAL_SLOTS;
   saveSlot(currentSlot);

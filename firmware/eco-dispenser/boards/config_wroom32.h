@@ -20,7 +20,7 @@ const int SERVO_ADVANCE_WRITES = 2;
 const int SERVO_DELAY_MS = 400;
 
 // ── LEDs de período do dia ────────────────────────────────────────────
-const int LED_MORNING   = 17;
+const int LED_MORNING   = 23;
 const int LED_AFTERNOON = 4;
 const int LED_NIGHT     = 5;
 
@@ -32,9 +32,9 @@ const int BUZZER_FREQ = 1000;
 const int VIB_PIN = 22;
 
 // ── Botão de confirmação (INPUT_PULLUP — repouso HIGH, pressionado LOW) ──
-// GPIO0 = botão BOOT onboard do DevKit (sem protoboard necessária).
-// Cuidado: segurar BOOT + pressionar EN entra em modo download — normal.
-const int BTN_CONFIRM  = 0;
+// O botão externo será ligado no pino 13.
+// Ele funciona com INPUT_PULLUP (liga no pino 13 e a outra ponta no GND).
+const int BTN_CONFIRM  = 13;
 
 // ── LED onboard (diagnóstico) ─────────────────────────────────────────
 const int LED_ONBOARD = 2;
