@@ -453,6 +453,24 @@ async def read_hardware_status(
     )
 
 
+@router.post("/{hardware_id}/start-refill", response_model=StartCycleResult)
+async def start_refill_mode(
+    hardware_id: str,
+    current_user=Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Enter refill mode — blocks dispense commands until start-cycle is called."""
+    dispenser = _get_dispenser_for_caregiver(db, hardware_id, current_user.username)
+    dispenser.is_refilling = True
+    db.commit()
+    return StartCycleResult(
+        success=True,
+        message="Modo reabastecimento ativado — dispensações bloqueadas até concluir.",
+        current_slot=dispenser.current_slot or 0,
+        hardware_id=hardware_id,
+    )
+
+
 @router.post("/{hardware_id}/start-cycle", response_model=StartCycleResult)
 async def start_dispenser_cycle(
     hardware_id: str,
@@ -461,6 +479,8 @@ async def start_dispenser_cycle(
 ):
     """Calibrate carousel (slot 0) after refill — LAN direct or heartbeat queue."""
     dispenser = _get_dispenser_for_caregiver(db, hardware_id, current_user.username)
+    dispenser.is_refilling = False
+    db.commit()
     ip = _require_dispenser_ip(dispenser)
 
     if _is_private_lan_ip(ip):

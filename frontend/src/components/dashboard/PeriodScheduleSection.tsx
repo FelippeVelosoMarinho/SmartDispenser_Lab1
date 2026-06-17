@@ -5,6 +5,7 @@ import {
   getPeriodSchedule,
   savePeriodSchedule,
   startDispenserCycle,
+  startRefillMode,
 } from "../../lib/api";
 import { nextPeriodLabel, toTimeInputValue } from "../../lib/periodSchedule";
 import { UnsavedScheduleBanner } from "./UnsavedScheduleBanner";
@@ -55,6 +56,7 @@ export function PeriodScheduleSection({ dispenser }: PeriodScheduleSectionProps)
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [starting, setStarting] = useState(false);
+  const [startingRefill, setStartingRefill] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [scheduleMeta, setScheduleMeta] = useState<PeriodSchedule | null>(null);
   const [hoveredBtn, setHoveredBtn] = useState<string | null>(null);
@@ -135,6 +137,18 @@ export function PeriodScheduleSection({ dispenser }: PeriodScheduleSectionProps)
     }
   }
 
+  async function handleStartRefill() {
+    setStartingRefill(true);
+    setError(null);
+    try {
+      await startRefillMode(hardwareId);
+      window.location.reload();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Falha ao ativar modo reabastecimento");
+      setStartingRefill(false);
+    }
+  }
+
   async function handleStartCycle() {
     setStarting(true);
     setError(null);
@@ -181,27 +195,74 @@ export function PeriodScheduleSection({ dispenser }: PeriodScheduleSectionProps)
           </p>
         </div>
 
-        <button
-          type="button"
-          onClick={handleStartCycle}
-          disabled={starting || !dispenser.is_online}
+        <div style={{ display: "flex", gap: "var(--space-2)", flexWrap: "wrap", flexShrink: 0 }}>
+          {!dispenser.is_refilling && (
+            <button
+              type="button"
+              onClick={handleStartRefill}
+              disabled={startingRefill || !dispenser.is_online}
+              style={{
+                background: "transparent",
+                color: dispenser.is_online ? "var(--warning)" : "var(--ink-3)",
+                border: `1.5px solid ${dispenser.is_online ? "color-mix(in srgb, var(--warning) 40%, transparent)" : "var(--border)"}`,
+                borderRadius: "var(--radius-md)",
+                padding: "10px 18px",
+                fontWeight: 600,
+                fontSize: "var(--text-sm)",
+                cursor: dispenser.is_online && !startingRefill ? "pointer" : "not-allowed",
+                whiteSpace: "nowrap",
+              }}
+            >
+              <i className="ph-duotone ph-package" style={{ marginRight: 6 }} />
+              {startingRefill ? "Ativando…" : "Iniciar reabastecimento"}
+            </button>
+          )}
+          <button
+            type="button"
+            onClick={handleStartCycle}
+            disabled={starting || !dispenser.is_online}
+            style={{
+              background: dispenser.is_online ? (dispenser.is_refilling ? "var(--warning)" : "var(--primary)") : "var(--surface-dim)",
+              color: dispenser.is_online ? (dispenser.is_refilling ? "white" : "var(--primary-on)") : "var(--ink-3)",
+              border: "none",
+              borderRadius: "var(--radius-md)",
+              padding: "10px 18px",
+              fontWeight: 600,
+              fontSize: "var(--text-sm)",
+              cursor: dispenser.is_online && !starting ? "pointer" : "not-allowed",
+              whiteSpace: "nowrap",
+            }}
+          >
+            <i className="ph-duotone ph-play-circle" style={{ marginRight: 6 }} />
+            {starting ? "Calibrando…" : "Concluir reabastecimento e iniciar ciclo"}
+          </button>
+        </div>
+      </div>
+
+      {dispenser.is_refilling && (
+        <div
           style={{
-            flexShrink: 0,
-            background: dispenser.is_online ? "var(--primary)" : "var(--surface-dim)",
-            color: dispenser.is_online ? "var(--primary-on)" : "var(--ink-3)",
-            border: "none",
-            borderRadius: "var(--radius-md)",
-            padding: "10px 18px",
-            fontWeight: 600,
+            display: "flex",
+            alignItems: "center",
+            gap: "var(--space-3)",
+            background: "color-mix(in srgb, var(--warning) 12%, transparent)",
+            border: "1.5px solid color-mix(in srgb, var(--warning) 35%, transparent)",
+            borderRadius: "var(--radius-lg)",
+            padding: "var(--space-3) var(--space-4)",
+            marginBottom: "var(--space-4)",
+            color: "var(--warning)",
             fontSize: "var(--text-sm)",
-            cursor: dispenser.is_online && !starting ? "pointer" : "not-allowed",
-            whiteSpace: "nowrap",
+            fontWeight: 500,
           }}
         >
-          <i className="ph-duotone ph-play-circle" style={{ marginRight: 6 }} />
-          {starting ? "Calibrando…" : "Concluir reabastecimento e iniciar ciclo"}
-        </button>
-      </div>
+          <i className="ph-duotone ph-warning" style={{ fontSize: "1.25rem", flexShrink: 0 }} />
+          <span>
+            <strong>Modo reabastecimento ativo.</strong>{" "}
+            Dispensações bloqueadas — reabastece a roleta e clique em{" "}
+            <strong>Concluir reabastecimento e iniciar ciclo</strong> para retomar.
+          </span>
+        </div>
+      )}
 
       {scheduleMeta?.source === "defaults" && !loading && <UnsavedScheduleBanner />}
 

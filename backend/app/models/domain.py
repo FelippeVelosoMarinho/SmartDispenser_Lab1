@@ -63,6 +63,7 @@ class Dispenser(Base):
     critical_stock = Column(Boolean, default=False)
     current_slot = Column(Integer, nullable=True)
     awaiting_confirm = Column(Boolean, default=False)
+    is_refilling = Column(Boolean, default=False)
 
     patient = relationship('Patient', back_populates='dispensers')
     drawers = relationship('Drawer', back_populates='dispenser')

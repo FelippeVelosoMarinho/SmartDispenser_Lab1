@@ -21,6 +21,7 @@ class IotEventCreate(BaseModel):
     dispenser_id: str
     schedule_id: Optional[str] = None
     patient_id: Optional[str] = None
+    medication_id: Optional[str] = None
     event_type: str  # e.g., "dispensed", "missed"
     success: bool
     error_message: Optional[str] = None
@@ -63,6 +64,7 @@ class HeartbeatResponse(BaseModel):
     """Server response to a heartbeat."""
     message: str
     command: Optional[PendingCommandPublic] = None
+    refill_mode: bool = False
 
 class LedCommand(BaseModel):
     """Payload to toggle the LED."""

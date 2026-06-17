@@ -34,6 +34,7 @@ export interface Dispenser {
   patient_name: string | null;
   is_online: boolean;
   critical_stock: boolean;
+  is_refilling: boolean;
   last_sync: string | null;
   ip_address?: string | null;
 }
@@ -407,6 +408,12 @@ export async function getHardwareStatus(
     }
   }
   return requestJson<HardwareStatus>(`${dispenserPath(hardwareId)}/hardware-status`);
+}
+
+export async function startRefillMode(hardwareId: string) {
+  return requestJson<StartCycleResult>(`${dispenserPath(hardwareId)}/start-refill`, {
+    method: "POST",
+  });
 }
 
 export async function startDispenserCycle(

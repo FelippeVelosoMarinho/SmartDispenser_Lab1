@@ -39,6 +39,7 @@ class DispenserPublic(BaseModel):
     patient_name: Optional[str] = None
     is_online: bool
     critical_stock: bool
+    is_refilling: bool = False
     last_sync: Optional[datetime] = None
     ip_address: Optional[str] = None
 

@@ -58,10 +58,8 @@ def create_refill_dependencies() -> None:
             Slot(
                 id=1,
                 drawer_id=drawer.id,
-                medication_id=1,
                 position_number=1,
                 max_pill_capacity=10,
-                current_pill_count=0,
             )
         )
     elif not db.query(Slot).filter(Slot.id == 1).first():
@@ -75,10 +73,8 @@ def create_refill_dependencies() -> None:
             Slot(
                 id=1,
                 drawer_id=drawer.id,
-                medication_id=1,
                 position_number=1,
                 max_pill_capacity=10,
-                current_pill_count=0,
             )
         )
     db.commit()

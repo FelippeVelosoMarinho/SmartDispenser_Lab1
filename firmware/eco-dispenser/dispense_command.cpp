@@ -18,6 +18,11 @@ DispenseResult executeDispense(
 ) {
   DispenseResult result = {false, nullptr, getCurrentSlot()};
 
+  if (isRefillMode()) {
+    result.error = "refill_mode_active";
+    return result;
+  }
+
 #if REQUIRE_PATIENT_CONFIRM
   if (isAwaitingConfirmation()) {
     result.error = "awaiting_confirm";

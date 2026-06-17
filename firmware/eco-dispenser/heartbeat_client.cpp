@@ -79,6 +79,10 @@ static void queueCommandAck(const String& commandId, bool success, const String&
 }
 
 static void processHeartbeatCommand(const String& responseBody, const String& mac) {
+  String refillStr = extractJsonField(responseBody, "refill_mode");
+  if (refillStr == "true") setRefillMode(true);
+  else if (refillStr == "false") setRefillMode(false);
+
   if (responseBody.indexOf("\"command\":null") >= 0) {
     Serial.println("[Heartbeat] OK — nenhum comando na fila (command: null)");
     return;
@@ -185,6 +189,7 @@ void sendHeartbeat() {
                   "\"online\":true,"
                   "\"critical_stock\":" + String(isCriticalStock() ? "true" : "false") + ","
                   "\"awaiting_confirm\":" + String(isAwaitingConfirmation() ? "true" : "false") + ","
+                  "\"refill_mode\":" + String(isRefillMode() ? "true" : "false") + ","
                   "\"ip_address\":\"" + ip + "\"";
 
     if (pendingAckCommandId.length() > 0) {

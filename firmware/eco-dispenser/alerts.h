@@ -8,5 +8,7 @@ void triggerDispenseAlert(bool silentMode, const String& period);
 void clearAlerts();
 void alertsTick(unsigned long nowMs);
 bool isAwaitingConfirmation();
+void setRefillMode(bool enabled);
+bool isRefillMode();
 
 #endif

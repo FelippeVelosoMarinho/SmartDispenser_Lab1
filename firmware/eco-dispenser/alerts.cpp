@@ -2,6 +2,7 @@
 #include "config.h"
 
 static bool awaitingConfirmation = false;
+static bool refillMode = false;
 
 // Vibração persistente (modo silencioso)
 static bool  sVibratingAlert  = false;
@@ -101,4 +102,12 @@ void alertsTick(unsigned long nowMs) {
 
 bool isAwaitingConfirmation() {
   return awaitingConfirmation;
+}
+
+void setRefillMode(bool enabled) {
+  refillMode = enabled;
+}
+
+bool isRefillMode() {
+  return refillMode;
 }

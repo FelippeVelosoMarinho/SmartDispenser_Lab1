@@ -67,6 +67,8 @@ def update_dispenser_status(db: Session, hardware_id: str, status: dict) -> dict
             dispenser.current_slot = status["current_slot"]
         if "awaiting_confirm" in status and status["awaiting_confirm"] is not None:
             dispenser.awaiting_confirm = status["awaiting_confirm"]
+        if "is_refilling" in status and status["is_refilling"] is not None:
+            dispenser.is_refilling = status["is_refilling"]
         dispenser.last_sync = now
         
     db.commit()
@@ -79,6 +81,7 @@ def mark_dispenser_disconnected_after_wifi_reset(db: Session, dispenser: Dispens
     dispenser.is_online = False
     dispenser.ip_address = None
     dispenser.awaiting_confirm = False
+    dispenser.is_refilling = False
     db.commit()
     db.refresh(dispenser)
     return dispenser

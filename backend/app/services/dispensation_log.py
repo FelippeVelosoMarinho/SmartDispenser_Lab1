@@ -56,8 +56,8 @@ def record_schedule_dispensation_log(
         slot_id=schedule.slot_id if schedule else None,
         medication_name_snapshot=medication_name,
         actual_execution_time=datetime.datetime.utcnow(),
-        success=None,
-        status="dispatched",
+        success=success,
+        status=None,
         error_message=error if not success else None,
     )
     db.add(log)

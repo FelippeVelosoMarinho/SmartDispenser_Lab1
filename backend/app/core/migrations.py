@@ -313,6 +313,10 @@ _MIGRATIONS: list[tuple[str, str]] = [
         "ALTER TABLE dispensers ADD COLUMN IF NOT EXISTS awaiting_confirm BOOLEAN DEFAULT false;",
     ),
     (
+        "dispensers: add is_refilling",
+        "ALTER TABLE dispensers ADD COLUMN IF NOT EXISTS is_refilling BOOLEAN DEFAULT false;",
+    ),
+    (
         "pending_commands: create table",
         """
         CREATE TABLE IF NOT EXISTS pending_commands (

@@ -173,7 +173,7 @@ async def sync_dispenser(hardware_id: str, db: Session = Depends(get_db)):
             continue
         time_val = sched.time_legacy or ""
         if sched.scheduled_at:
-            time_val = sched.scheduled_at.strftime("%Y-%m-%dT%H:%M")
+            time_val = sched.scheduled_at.strftime("%H:%M")
         slot_configs.append(SlotConfig(
             slot_id=sched.slot_id or 0,
             time=time_val,
@@ -415,9 +415,14 @@ async def process_heartbeat(
             silent_mode=bool(pending.silent_mode),
         )
 
+    refill_mode = False
+    if dispenser and dispenser.is_refilling:
+        refill_mode = True
+
     return HeartbeatResponse(
         message="Heartbeat recorded successfully.",
         command=command_public,
+        refill_mode=refill_mode,
     )
 
 
