@@ -75,6 +75,54 @@ def test_get_dispenser_status_updated(mock_get_current_user):
     assert data["critical_stock"] is True
 
 
+def test_stale_dispenser_clears_ip_address(mock_get_current_user):
+    db = SessionLocal()
+    stale = Dispenser(
+        hardware_id="disp_stale",
+        is_online=True,
+        ip_address="192.168.0.12",
+        last_sync=datetime.datetime.utcnow() - datetime.timedelta(minutes=5),
+    )
+    db.add(stale)
+    db.commit()
+    db.close()
+
+    resp = client.get("/api/dispensers/disp_stale/status")
+    assert resp.status_code == 200
+    data = resp.json()
+    assert data["online"] is False
+    assert data["ip_address"] is None
+
+    db = SessionLocal()
+    refreshed = db.query(Dispenser).filter(Dispenser.hardware_id == "disp_stale").first()
+    assert refreshed.ip_address is None
+    db.close()
+
+
+def test_offline_dispenser_with_stale_ip_clears_ip_address(mock_get_current_user):
+    db = SessionLocal()
+    stale = Dispenser(
+        hardware_id="disp_offline_stale",
+        is_online=False,
+        ip_address="192.168.0.12",
+        last_sync=datetime.datetime.utcnow() - datetime.timedelta(minutes=5),
+    )
+    db.add(stale)
+    db.commit()
+    db.close()
+
+    resp = client.get("/api/dispensers/disp_offline_stale/status")
+    assert resp.status_code == 200
+    data = resp.json()
+    assert data["online"] is False
+    assert data["ip_address"] is None
+
+    db = SessionLocal()
+    refreshed = db.query(Dispenser).filter(Dispenser.hardware_id == "disp_offline_stale").first()
+    assert refreshed.ip_address is None
+    db.close()
+
+
 def test_delete_dispenser_with_mac_and_drawers(mock_get_current_user):
     hardware_id = "8C:D0:B2:A9:17:4B"
     db = SessionLocal()

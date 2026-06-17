@@ -35,8 +35,11 @@ def refresh_dispenser_online_state(
 ) -> bool:
     """Recompute online flag; optionally persist when stale."""
     online = is_dispenser_online(dispenser)
-    if persist and dispenser.is_online != online:
+    should_clear_ip = not online and dispenser.ip_address is not None
+    if persist and (dispenser.is_online != online or should_clear_ip):
         dispenser.is_online = online
+        if should_clear_ip:
+            dispenser.ip_address = None
         db.commit()
         db.refresh(dispenser)
     return online
