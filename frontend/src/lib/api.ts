@@ -734,6 +734,7 @@ export interface IotEventCreate {
   success: boolean;
   error_message?: string | null;
   medication_id?: string | null;
+  period?: string | null;
   event_type?: string;
 }
 
@@ -743,5 +744,4 @@ export async function processIotEvent(input: IotEventCreate) {
     body: JSON.stringify(input),
   });
 }
-
 

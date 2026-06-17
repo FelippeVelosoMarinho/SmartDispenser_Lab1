@@ -1,9 +1,10 @@
 import pytest
+import datetime
 from fastapi.testclient import TestClient
 
 from app.main import app
 from app.core.database import SessionLocal
-from app.models.domain import User, Dispenser, Patient, Drawer, Slot
+from app.models.domain import User, Dispenser, Patient, Drawer, Slot, PendingCommand, DispensationLog
 
 client = TestClient(app)
 
@@ -14,6 +15,8 @@ class MockUser:
 @pytest.fixture(autouse=True)
 def clear_db():
     db = SessionLocal()
+    db.query(DispensationLog).delete()
+    db.query(PendingCommand).delete()
     db.query(Slot).delete()
     db.query(Drawer).delete()
     db.query(Dispenser).delete()
@@ -27,6 +30,8 @@ def clear_db():
     db.close()
     yield
     db = SessionLocal()
+    db.query(DispensationLog).delete()
+    db.query(PendingCommand).delete()
     db.query(Slot).delete()
     db.query(Drawer).delete()
     db.query(Dispenser).delete()
@@ -154,3 +159,38 @@ def test_delete_dispenser_blocked_when_configured(mock_get_current_user):
 
     del_resp2 = client.delete(f"/api/dispensers/{hardware_id}")
     assert del_resp2.status_code == 204
+
+
+def test_reset_demo_clears_logs_and_supersedes_active_commands(mock_get_current_user):
+    hardware_id = "AA:BB:CC:DD:EE:11"
+    db = SessionLocal()
+    patient = Patient(full_name="Paciente Teste", caregiver_username="testuser")
+    db.add(patient)
+    db.commit()
+    db.refresh(patient)
+    dispenser = Dispenser(hardware_id=hardware_id, patient_id=patient.id, awaiting_confirm=True)
+    db.add(dispenser)
+    db.commit()
+    db.add(
+        DispensationLog(
+            dispenser_id_legacy=hardware_id,
+            actual_execution_time=datetime.datetime.utcnow(),
+            success=True,
+        )
+    )
+    command = PendingCommand(hardware_id=hardware_id, command_type="demo", status="pending")
+    db.add(command)
+    db.commit()
+    command_id = command.id
+    db.close()
+
+    resp = client.post(f"/api/dispensers/{hardware_id}/reset-demo")
+    assert resp.status_code == 200
+
+    db = SessionLocal()
+    assert db.query(DispensationLog).filter(DispensationLog.dispenser_id_legacy == hardware_id).count() == 0
+    refreshed_command = db.query(PendingCommand).filter(PendingCommand.id == command_id).first()
+    assert refreshed_command.status == "superseded"
+    refreshed_dispenser = db.query(Dispenser).filter(Dispenser.hardware_id == hardware_id).first()
+    assert refreshed_dispenser.awaiting_confirm is False
+    db.close()

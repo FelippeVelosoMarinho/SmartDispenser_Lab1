@@ -22,6 +22,7 @@ class IotEventCreate(BaseModel):
     schedule_id: Optional[str] = None
     patient_id: Optional[str] = None
     medication_id: Optional[str] = None
+    period: Optional[str] = None
     event_type: str  # e.g., "dispensed", "missed"
     success: bool
     error_message: Optional[str] = None

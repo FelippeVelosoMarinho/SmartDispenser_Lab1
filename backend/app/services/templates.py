@@ -1,7 +1,15 @@
 """HTML templates for email notifications."""
 
-def get_dispensation_success_template(patient_name: str, medication_name: str, time_str: str) -> str:
+def get_dispensation_success_template(patient_name: str, medication_name: str, time_str: str, period_label: str | None = None) -> str:
     """HTML template for successful medication intake."""
+    period_row = ""
+    if period_label:
+        period_row = f"""
+                        <tr>
+                            <td style="padding: 4px 0; font-size: 14px; color: #475569;"><strong>Período:</strong></td>
+                            <td style="padding: 4px 0; font-size: 14px; color: #1e293b;">{period_label}</td>
+                        </tr>
+        """
     return f"""
     <!DOCTYPE html>
     <html>
@@ -29,6 +37,7 @@ def get_dispensation_success_template(patient_name: str, medication_name: str, t
                             <td style="padding: 4px 0; font-size: 14px; color: #475569;"><strong>Medicamento:</strong></td>
                             <td style="padding: 4px 0; font-size: 14px; color: #1e293b;">{medication_name}</td>
                         </tr>
+                        {period_row}
                         <tr>
                             <td style="padding: 4px 0; font-size: 14px; color: #475569;"><strong>Horário Ingestão:</strong></td>
                             <td style="padding: 4px 0; font-size: 14px; color: #1e293b;">{time_str}</td>
@@ -48,9 +57,17 @@ def get_dispensation_success_template(patient_name: str, medication_name: str, t
     </html>
     """
 
-def get_dispensation_failure_template(patient_name: str, medication_name: str, scheduled_time: str, error_message: str) -> str:
+def get_dispensation_failure_template(patient_name: str, medication_name: str, scheduled_time: str, error_message: str, period_label: str | None = None) -> str:
     """HTML template for missed or failed medication intake."""
     detail_error = f"<p style='color: #dc2626;'><strong>Motivo/Erro:</strong> {error_message}</p>" if error_message else ""
+    period_row = ""
+    if period_label:
+        period_row = f"""
+                        <tr>
+                            <td style="padding: 4px 0; font-size: 14px; color: #475569;"><strong>Período:</strong></td>
+                            <td style="padding: 4px 0; font-size: 14px; color: #1e293b;">{period_label}</td>
+                        </tr>
+        """
     return f"""
     <!DOCTYPE html>
     <html>
@@ -78,6 +95,7 @@ def get_dispensation_failure_template(patient_name: str, medication_name: str, s
                             <td style="padding: 4px 0; font-size: 14px; color: #475569;"><strong>Medicamento:</strong></td>
                             <td style="padding: 4px 0; font-size: 14px; color: #1e293b;">{medication_name}</td>
                         </tr>
+                        {period_row}
                         <tr>
                             <td style="padding: 4px 0; font-size: 14px; color: #475569;"><strong>Horário Agendado:</strong></td>
                             <td style="padding: 4px 0; font-size: 14px; color: #1e293b;">{scheduled_time}</td>

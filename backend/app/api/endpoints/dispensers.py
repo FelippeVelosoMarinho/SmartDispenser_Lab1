@@ -21,7 +21,7 @@ from app.crud.dispenser import (
     update_dispenser_status,
 )
 from app.crud.patient import get_patient, get_patients_by_caregiver
-from app.models.domain import Dispenser, Drawer, Slot, SlotMedication
+from app.models.domain import Dispenser, Drawer, Slot, SlotMedication, PendingCommand
 from app.crud import command_queue as crud_command_queue
 from app.crud.schedule import get_period_schedules, upsert_period_schedules
 from app.core.config import TOTAL_CAROUSEL_SLOTS
@@ -624,6 +624,18 @@ async def reset_demo_logs(
     # 1. Limpar logs
     from app.models.domain import DispensationLog
     db.query(DispensationLog).filter(DispensationLog.dispenser_id_legacy == hardware_id).delete(synchronize_session=False)
+    db.query(PendingCommand).filter(
+        PendingCommand.hardware_id == hardware_id,
+        PendingCommand.status.in_(crud_command_queue.ACTIVE_STATUSES),
+    ).update(
+        {
+            PendingCommand.status: "superseded",
+            PendingCommand.completed_at: datetime.datetime.utcnow(),
+            PendingCommand.error_message: "demo reset",
+        },
+        synchronize_session=False,
+    )
+    dispenser.awaiting_confirm = False
     db.commit()
     
     # 2. Tentar parar a demo na placa se estiver online

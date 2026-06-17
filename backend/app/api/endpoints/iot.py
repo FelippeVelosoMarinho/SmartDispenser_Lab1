@@ -44,6 +44,142 @@ from app.schemas.iot import (
 router = APIRouter(prefix="/api", tags=["iot"])
 
 
+PERIOD_LABELS = {
+    "morning": "Manhã",
+    "afternoon": "Tarde",
+    "night": "Noite",
+}
+
+
+def _period_label(period: str | None) -> str | None:
+    if not period:
+        return None
+    return PERIOD_LABELS.get(period, period)
+
+
+def _resolve_patient_for_log(
+    db: Session,
+    *,
+    patient_id: str | None,
+    dispenser_id: str,
+) -> Patient | None:
+    if patient_id and patient_id != "unknown":
+        try:
+            patient_uuid = uuid.UUID(patient_id)
+            patient = db.query(Patient).filter(Patient.id == patient_uuid).first()
+            if patient:
+                return patient
+        except ValueError:
+            pass
+
+    dispenser = db.query(Dispenser).filter(Dispenser.hardware_id == dispenser_id).first()
+    if dispenser and dispenser.patient_id:
+        return db.query(Patient).filter(Patient.id == dispenser.patient_id).first()
+
+    return None
+
+
+def _resolve_medication_name(
+    db: Session,
+    *,
+    medication_id: str | None,
+    schedule: Schedule | None,
+    fallback: str | None,
+) -> str:
+    if medication_id and medication_id != "unknown":
+        try:
+            med_id = int(medication_id)
+            medication = db.query(Medication).filter(Medication.id == med_id).first()
+            if medication:
+                return medication.name
+        except ValueError:
+            return medication_id
+
+    if fallback:
+        return fallback
+
+    if schedule and schedule.slot and schedule.slot.slot_medications:
+        medication = schedule.slot.slot_medications[0].medication
+        if medication:
+            return medication.name
+
+    return "Medicamento"
+
+
+def _schedule_from_log(db: Session, log: DispensationLog) -> Schedule | None:
+    if not log.schedule_id_legacy:
+        return None
+    try:
+        schedule_id = uuid.UUID(log.schedule_id_legacy)
+    except ValueError:
+        return None
+    return db.query(Schedule).filter(Schedule.id == schedule_id).first()
+
+
+def _enqueue_dispensation_notification(
+    *,
+    background_tasks: BackgroundTasks,
+    db: Session,
+    log: DispensationLog,
+    patient: Patient | None,
+    medication_name: str,
+    period: str | None,
+) -> None:
+    if log.caregiver_notified:
+        return
+
+    if not patient and log.patient_id_legacy:
+        patient = _resolve_patient_for_log(
+            db,
+            patient_id=log.patient_id_legacy,
+            dispenser_id=log.dispenser_id_legacy or "",
+        )
+    elif not patient and log.dispenser_id_legacy:
+        patient = _resolve_patient_for_log(
+            db,
+            patient_id=None,
+            dispenser_id=log.dispenser_id_legacy,
+        )
+
+    caregiver_user = None
+    if patient and patient.caregiver_username:
+        caregiver_user = db.query(User).filter(User.username == patient.caregiver_username).first()
+
+    if not (caregiver_user and caregiver_user.notifications_enabled and caregiver_user.email):
+        return
+
+    patient_name = patient.full_name or patient.name or "Paciente"
+    period_label = _period_label(period)
+    subject_period = f" ({period_label})" if period_label else ""
+
+    if log.success:
+        html_body = get_dispensation_success_template(
+            patient_name=patient_name,
+            medication_name=medication_name,
+            time_str=log.actual_execution_time.strftime("%d/%m/%Y %H:%M:%S"),
+            period_label=period_label,
+        )
+        subject = f"SmartDispenser: Ingestão de {patient_name}{subject_period} confirmada"
+    else:
+        html_body = get_dispensation_failure_template(
+            patient_name=patient_name,
+            medication_name=medication_name,
+            scheduled_time=period_label or "Dose programada",
+            error_message=log.error_message or "Não confirmado pelo paciente",
+            period_label=period_label,
+        )
+        subject = f"Alerta SmartDispenser: Medicação NÃO confirmada para {patient_name}{subject_period}"
+
+    background_tasks.add_task(
+        send_email_notification,
+        to_email=caregiver_user.email,
+        subject=subject,
+        html_body=html_body,
+    )
+    log.caregiver_notified = True
+    db.commit()
+
+
 @router.get("/health", response_model=HealthResponse)
 async def health_check(request: Request):
     """Health check — also pings ESP32 to verify connectivity."""
@@ -233,70 +369,43 @@ async def process_iot_event(
     else:
         created_log = crud_log.create_dispensation_log(db, log_data)
     
-    # Resolve Patient
-    patient = None
-    if event.patient_id and event.patient_id != "unknown":
+    patient = _resolve_patient_for_log(
+        db,
+        patient_id=event.patient_id,
+        dispenser_id=event.dispenser_id,
+    )
+        
+    schedule_for_notification = None
+    if event.schedule_id and event.schedule_id not in ("unknown", ""):
         try:
-            from uuid import UUID
-            patient_uuid = UUID(event.patient_id)
-            patient = db.query(Patient).filter(Patient.id == patient_uuid).first()
+            schedule_for_notification = (
+                db.query(Schedule)
+                .filter(Schedule.id == uuid.UUID(event.schedule_id))
+                .first()
+            )
         except ValueError:
             pass
-            
-    if not patient:
-        # Fallback to looking up the patient by dispenser hardware_id
-        dispenser = db.query(Dispenser).filter(Dispenser.hardware_id == event.dispenser_id).first()
-        if dispenser and dispenser.patient_id:
-            patient = db.query(Patient).filter(Patient.id == dispenser.patient_id).first()
-            
-    # Resolve Caregiver User
-    caregiver_user = None
-    if patient and patient.caregiver_username:
-        caregiver_user = db.query(User).filter(User.username == patient.caregiver_username).first()
-        
-    # Resolve Medication Name
-    medication_name = "Medicamento"
-    if event.medication_id and event.medication_id != "unknown":
-        try:
-            med_id = int(event.medication_id)
-            medication = db.query(Medication).filter(Medication.id == med_id).first()
-            if medication:
-                medication_name = medication.name
-        except ValueError:
-            medication_name = event.medication_id
-            
-    # Trigger notifications if caregiver exists, has notifications enabled, and has an email
-    if caregiver_user and caregiver_user.notifications_enabled and caregiver_user.email:
-        patient_name = patient.full_name or patient.name or "Paciente"
-        if event.success:
-            html_body = get_dispensation_success_template(
-                patient_name=patient_name,
-                medication_name=medication_name,
-                time_str=created_log.actual_execution_time.strftime("%d/%m/%Y %H:%M:%S")
-            )
-            background_tasks.add_task(
-                send_email_notification,
-                to_email=caregiver_user.email,
-                subject=f"🟢 SmartDispenser: Ingestão de {patient_name} confirmada",
-                html_body=html_body
-            )
-        else:
-            html_body = get_dispensation_failure_template(
-                patient_name=patient_name,
-                medication_name=medication_name,
-                scheduled_time="Dose programada",
-                error_message=event.error_message or "Não confirmado pelo paciente"
-            )
-            background_tasks.add_task(
-                send_email_notification,
-                to_email=caregiver_user.email,
-                subject=f"⚠️ Alerta SmartDispenser: Medicação NÃO confirmada para {patient_name}",
-                html_body=html_body
-            )
-            
-        # Update log to mark caregiver as notified
-        created_log.caregiver_notified = True
+
+    medication_name = _resolve_medication_name(
+        db,
+        medication_id=event.medication_id,
+        schedule=schedule_for_notification,
+        fallback=created_log.medication_name_snapshot,
+    )
+    if not created_log.medication_name_snapshot:
+        created_log.medication_name_snapshot = medication_name
         db.commit()
+        db.refresh(created_log)
+    period = event.period or (schedule_for_notification.period if schedule_for_notification else None)
+
+    _enqueue_dispensation_notification(
+        background_tasks=background_tasks,
+        db=db,
+        log=created_log,
+        patient=patient,
+        medication_name=medication_name,
+        period=period,
+    )
     
     return IotEventResponse(
         message=f"Event '{event.event_type}' processed successfully.",
@@ -353,11 +462,32 @@ async def process_heartbeat(
                 heartbeat.command_ack.error,
             )
             if ack_command and ack_command.command_type == "dispense":
-                record_schedule_dispensation_log(
+                log = record_schedule_dispensation_log(
                     db,
                     ack_command,
                     heartbeat.command_ack.success,
                     heartbeat.command_ack.error,
+                )
+                schedule = _schedule_from_log(db, log)
+                patient = _resolve_patient_for_log(
+                    db,
+                    patient_id=log.patient_id_legacy,
+                    dispenser_id=ack_command.hardware_id,
+                )
+                medication_name = _resolve_medication_name(
+                    db,
+                    medication_id=log.medication_id_legacy,
+                    schedule=schedule,
+                    fallback=log.medication_name_snapshot,
+                )
+                period = ack_command.period or (schedule.period if schedule else None)
+                _enqueue_dispensation_notification(
+                    background_tasks=background_tasks,
+                    db=db,
+                    log=log,
+                    patient=patient,
+                    medication_name=medication_name,
+                    period=period,
                 )
         except ValueError:
             pass

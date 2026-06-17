@@ -117,6 +117,7 @@ export function CalibrationDemoSection({ dispenser }: CalibrationDemoSectionProp
               patient_id: dispenser.patient_id,
               success: true,
               medication_id: finalMedName,
+              period: PHASES[status.step - 1]?.key ?? null,
               event_type: "demo",
             }).catch(err => console.error("Failed to mock demo event:", err));
           }

@@ -13,6 +13,7 @@ def create_dispensation_log(db: Session, data: dict) -> DispensationLog:
         patient_id_legacy=data.get("patient_id"),
         dispenser_id_legacy=data.get("dispenser_id"),
         medication_id_legacy=data.get("medication_id"),
+        medication_name_snapshot=data.get("medication_name"),
         slot_id=data.get("slot_id"),
         actual_execution_time=data.get("timestamp", datetime.now()),
         success=data.get("success"),

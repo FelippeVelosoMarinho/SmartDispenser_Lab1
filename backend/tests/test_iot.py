@@ -16,6 +16,7 @@ from app.models.domain import (
     Slot,
     Medication,
     PendingCommand,
+    SlotMedication,
 )
 from app.crud import command_queue as crud_command_queue
 
@@ -27,6 +28,7 @@ def clear_db():
     db.query(DispensationLog).delete()
     db.query(PendingCommand).delete()
     db.query(Schedule).delete()
+    db.query(SlotMedication).delete()
     db.query(Slot).delete()
     db.query(Drawer).delete()
     db.query(Dispenser).delete()
@@ -42,6 +44,7 @@ def clear_db():
     db.query(DispensationLog).delete()
     db.query(PendingCommand).delete()
     db.query(Schedule).delete()
+    db.query(SlotMedication).delete()
     db.query(Slot).delete()
     db.query(Drawer).delete()
     db.query(Dispenser).delete()
@@ -137,6 +140,63 @@ def test_process_iot_event():
     assert len(logs) == 1
     assert logs[0].success is True
 
+
+def test_process_iot_event_notifies_caregiver_with_period(monkeypatch):
+    sent = []
+
+    def fake_send_email_notification(to_email, subject, html_body):
+        sent.append((to_email, subject, html_body))
+
+    monkeypatch.setattr(
+        "app.api.endpoints.iot.send_email_notification",
+        fake_send_email_notification,
+    )
+
+    db = SessionLocal()
+    caregiver = User(
+        username="caregiver",
+        hashed_password="pwd",
+        tax_id="12345678901234",
+        full_name="Caregiver",
+        email="caregiver@example.com",
+        notifications_enabled=True,
+    )
+    db.add(caregiver)
+    db.commit()
+    patient = Patient(caregiver_username="caregiver", full_name="Professor", name="Professor")
+    db.add(patient)
+    db.commit()
+    db.refresh(patient)
+    db.add(Dispenser(hardware_id="disp_iot", patient_id=patient.id))
+    db.commit()
+    patient_id = str(patient.id)
+    db.close()
+
+    resp = client.post(
+        "/api/event",
+        json={
+            "dispenser_id": "disp_iot",
+            "patient_id": patient_id,
+            "event_type": "dispensed",
+            "success": True,
+            "medication_id": "Amor",
+            "period": "morning",
+        },
+    )
+    assert resp.status_code == 200
+    assert sent
+    assert sent[0][0] == "caregiver@example.com"
+    assert "Professor" in sent[0][1]
+    assert "Manhã" in sent[0][1]
+    assert "Amor" in sent[0][2]
+    assert "Manhã" in sent[0][2]
+
+    db = SessionLocal()
+    logs = get_dispensation_logs(db, dispenser_id="disp_iot")
+    assert logs[0].caregiver_notified is True
+    assert logs[0].medication_name_snapshot == "Amor"
+    db.close()
+
 def test_process_heartbeat():
     payload = {
         "dispenser_id": "disp_iot",
@@ -231,6 +291,90 @@ def test_heartbeat_command_ack_persists_telemetry_and_log():
     logs = get_dispensation_logs(db, dispenser_id="disp_iot")
     assert len(logs) == 1
     assert logs[0].success is True
+    db.close()
+
+
+def test_heartbeat_command_ack_notifies_caregiver_with_period(monkeypatch):
+    sent = []
+
+    def fake_send_email_notification(to_email, subject, html_body):
+        sent.append((to_email, subject, html_body))
+
+    monkeypatch.setattr(
+        "app.api.endpoints.iot.send_email_notification",
+        fake_send_email_notification,
+    )
+
+    db = SessionLocal()
+    caregiver = User(
+        username="caregiver",
+        hashed_password="pwd",
+        tax_id="12345678901234",
+        full_name="Caregiver",
+        email="caregiver@example.com",
+        notifications_enabled=True,
+    )
+    db.add(caregiver)
+    db.commit()
+    patient = Patient(caregiver_username="caregiver", full_name="Professor", name="Professor")
+    db.add(patient)
+    db.commit()
+    db.refresh(patient)
+    dispenser = Dispenser(hardware_id="disp_iot", patient_id=patient.id)
+    db.add(dispenser)
+    db.commit()
+    db.refresh(dispenser)
+    drawer = Drawer(dispenser_id=dispenser.id, label="Drawer 1")
+    db.add(drawer)
+    db.commit()
+    db.refresh(drawer)
+    slot = Slot(drawer_id=drawer.id, position_number=1, max_pill_capacity=10)
+    db.add(slot)
+    medication = Medication(name="Sabedoria", dosage="1 unidade")
+    db.add(medication)
+    db.commit()
+    db.refresh(slot)
+    db.refresh(medication)
+    db.add(SlotMedication(slot_id=slot.id, medication_id=medication.id, quantity=10))
+    schedule = Schedule(
+        dispenser_id="disp_iot",
+        patient_id=patient.id,
+        slot_id=slot.id,
+        period="night",
+        is_active=True,
+        time_legacy="20:00",
+    )
+    db.add(schedule)
+    db.commit()
+    db.refresh(schedule)
+    cmd = crud_command_queue.enqueue_dispense(db, "disp_iot", "night", 1, schedule.id)
+    crud_command_queue.mark_delivered(db, cmd)
+    command_id = str(cmd.id)
+    db.close()
+
+    resp = client.post(
+        "/api/heartbeat",
+        json={
+            "dispenser_id": "disp_iot",
+            "online": True,
+            "current_slot": 1,
+            "awaiting_confirm": True,
+            "command_ack": {
+                "command_id": command_id,
+                "success": True,
+            },
+        },
+    )
+    assert resp.status_code == 200
+    assert sent
+    assert sent[0][0] == "caregiver@example.com"
+    assert "Noite" in sent[0][1]
+    assert "Sabedoria" in sent[0][2]
+    assert "Noite" in sent[0][2]
+
+    db = SessionLocal()
+    logs = get_dispensation_logs(db, dispenser_id="disp_iot")
+    assert logs[0].caregiver_notified is True
     db.close()
 
 

@@ -103,7 +103,7 @@ export function PresentationPage() {
         const details = await getDispenserDetails(target.id);
         setDispenser(details);
         
-        const dispensationLogs = await listDispensationLogs(target.id);
+        const dispensationLogs = await listDispensationLogs(target.hardware_id);
         setLogs(dispensationLogs.slice(0, 10));
       }
     } catch (e) {
