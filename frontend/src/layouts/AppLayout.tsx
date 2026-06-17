@@ -43,6 +43,13 @@ export function AppLayout() {
       active: pathname.startsWith("/historico"),
       onClick: () => navigate({ to: "/historico" }),
     },
+    {
+      id: "apresentacao",
+      label: "Demo 🎉",
+      icon: "ph-duotone ph-star",
+      active: pathname.startsWith("/apresentacao"),
+      onClick: () => navigate({ to: "/apresentacao" }),
+    },
   ];
 
   const sidebarHeader = (

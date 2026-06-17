@@ -504,6 +504,30 @@ export async function stopCalibrationDemo(hardwareId: string, ipAddress?: string
   );
 }
 
+export interface DispensationLog {
+  id: string;
+  schedule_id: string;
+  patient_id: string;
+  dispenser_id: string;
+  medication_id: string;
+  medication_name: string | null;
+  timestamp: string;
+  success: boolean;
+  status: string | null;
+  error_message: string | null;
+}
+
+export async function listDispensationLogs(
+  dispenserId?: string,
+  patientId?: string,
+): Promise<DispensationLog[]> {
+  const params = new URLSearchParams();
+  if (dispenserId) params.set("dispenser_id", dispenserId);
+  if (patientId) params.set("patient_id", patientId);
+  const qs = params.toString() ? `?${params.toString()}` : "";
+  return requestJson<DispensationLog[]>(`/logs/dispensation${qs}`);
+}
+
 export function mapPatientStatus(patient: Patient) {
   return patient.dispensers.length > 0 ? "ativo" : "inativo";
 }
