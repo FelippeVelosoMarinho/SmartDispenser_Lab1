@@ -53,7 +53,7 @@ def seed(db: Session):
         db.execute(
             text("""
             INSERT INTO caregivers (id, username, email, full_name, tax_id, hashed_password, notifications_enabled)
-            VALUES (:id, :u, :e, :n, :t, :h, 1)
+            VALUES (:id, :u, :e, :n, :t, :h, true)
             """),
             {"id": new_id, "u": CAREGIVER_USERNAME, "e": CAREGIVER_EMAIL, "n": "Felippe Veloso", "t": "000.000.000-02", "h": hashed}
         )
@@ -61,7 +61,7 @@ def seed(db: Session):
         print(f"[+] Caregiver criado: {CAREGIVER_USERNAME}")
     else:
         db.execute(
-            text("UPDATE caregivers SET email = :e, notifications_enabled = 1 WHERE username = :u"),
+            text("UPDATE caregivers SET email = :e, notifications_enabled = true WHERE username = :u"),
             {"e": CAREGIVER_EMAIL, "u": CAREGIVER_USERNAME}
         )
         db.commit()

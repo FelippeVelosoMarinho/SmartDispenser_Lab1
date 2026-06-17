@@ -714,19 +714,3 @@ export async function deleteSchedule(scheduleId: string) {
   });
 }
 
-export interface DispensationLog {
-  id: string;
-  patient_id: string;
-  dispenser_id: string;
-  medication_id: string;
-  medication_name: string | null;
-  timestamp: string;
-  success: boolean;
-  status: string | null;
-  error_message: string | null;
-}
-
-export async function listDispensationLogs(patientId?: string): Promise<DispensationLog[]> {
-  const params = patientId ? `?patient_id=${encodeURIComponent(patientId)}` : "";
-  return requestJson<DispensationLog[]>(`/logs/dispensation${params}`);
-}
