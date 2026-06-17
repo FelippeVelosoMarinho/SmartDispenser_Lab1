@@ -17,7 +17,7 @@ const PERIODS = [
   {
     key: "morning" as const,
     label: "Manhã",
-    icon: "ph-sun-horizon",
+    icon: "ph-sun",
     color: "var(--warning)",
     bg: "color-mix(in srgb, var(--warning) 10%, transparent)",
     border: "color-mix(in srgb, var(--warning) 30%, transparent)",
@@ -25,7 +25,7 @@ const PERIODS = [
   {
     key: "afternoon" as const,
     label: "Tarde",
-    icon: "ph-sun",
+    icon: "ph-cloud-sun",
     color: "var(--accent)",
     bg: "color-mix(in srgb, var(--accent) 10%, transparent)",
     border: "color-mix(in srgb, var(--accent) 30%, transparent)",
