@@ -166,6 +166,7 @@ void loop() {
   processPendingWifiFactoryReset();
   alertsTick(millis());
   checkButtons();
+  demoTick();
 
   wl_status_t currentWifiStatus = WiFi.status();
   if (currentWifiStatus != lastWifiStatus) {

@@ -440,6 +440,25 @@ export async function startDispenserCycle(
   });
 }
 
+// ── Demo de calibração (comunicação direta com ESP) ───────────────────
+
+export type { DemoStatus } from "./espLocal";
+
+export async function startCalibrationDemo(ipAddress: string) {
+  const { startDemoLocal } = await import("./espLocal");
+  return startDemoLocal(ipAddress);
+}
+
+export async function getCalibrationDemoStatus(ipAddress: string) {
+  const { getDemoStatusLocal } = await import("./espLocal");
+  return getDemoStatusLocal(ipAddress);
+}
+
+export async function stopCalibrationDemo(ipAddress: string) {
+  const { stopDemoLocal } = await import("./espLocal");
+  return stopDemoLocal(ipAddress);
+}
+
 export function mapPatientStatus(patient: Patient) {
   return patient.dispensers.length > 0 ? "ativo" : "inativo";
 }

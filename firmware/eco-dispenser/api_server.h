@@ -4,5 +4,8 @@
 #include <ESPAsyncWebServer.h>
 
 void setupApiServer(AsyncWebServer& server);
+void demoTick();
+bool isDemoRunning();
+int  getDemoStep();
 
 #endif

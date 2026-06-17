@@ -108,3 +108,29 @@ export async function resetWifiLocal(ip: string): Promise<ResetWifiLocalResult> 
   }
   return { success: true, message };
 }
+
+// ── Demo de calibração ────────────────────────────────────────────────
+
+export interface DemoStatus {
+  running: boolean;
+  step: number;       // 0-3
+  phase: string;      // "idle" | "starting" | "morning" | "afternoon" | "night"
+}
+
+export async function startDemoLocal(ip: string): Promise<{ success: boolean }> {
+  const res = await espFetch(ip, "/demo", { method: "POST" });
+  if (!res.ok) throw new Error("Falha ao iniciar demo de calibração.");
+  return (await res.json()) as { success: boolean };
+}
+
+export async function getDemoStatusLocal(ip: string): Promise<DemoStatus> {
+  const res = await espFetch(ip, "/demo-status");
+  if (!res.ok) throw new Error("Falha ao ler status da demo.");
+  return (await res.json()) as DemoStatus;
+}
+
+export async function stopDemoLocal(ip: string): Promise<{ success: boolean }> {
+  const res = await espFetch(ip, "/demo-stop", { method: "POST" });
+  if (!res.ok) throw new Error("Falha ao parar demo.");
+  return (await res.json()) as { success: boolean };
+}

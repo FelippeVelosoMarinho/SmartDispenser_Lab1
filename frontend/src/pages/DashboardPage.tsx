@@ -5,6 +5,7 @@ import type { DispenserDetails } from "../lib/api";
 import { TelemetryGrid } from "../components/dashboard/TelemetryGrid";
 import { NextDispenseCountdown } from "../components/dashboard/NextDispenseCountdown";
 import { CompartmentsSection } from "../components/dashboard/CompartmentsSection";
+import { CalibrationDemoSection } from "../components/dashboard/CalibrationDemoSection";
 import {
   PeriodScheduleSection,
   useHardwareStatus,
@@ -297,6 +298,7 @@ export function DashboardPage() {
         awaitingConfirm={hwStatus?.awaiting_confirm ?? false}
       />
       <TelemetryGrid dispenser={activeDispenser} />
+      <CalibrationDemoSection dispenser={activeDispenser} />
       <PeriodScheduleSection dispenser={activeDispenser} />
       <CompartmentsSection
         dispenser={activeDispenser}

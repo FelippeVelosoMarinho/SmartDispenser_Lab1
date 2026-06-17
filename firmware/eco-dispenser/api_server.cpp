@@ -8,6 +8,45 @@
 #include "json_utils.h"
 #include <WiFi.h>
 
+// ── Demo state machine ───────────────────────────────────────────────
+static bool demoRunning = false;
+static int  demoStep    = 0;           // 0=idle, 1..3=executando
+static unsigned long demoNextAt = 0;
+static const char* DEMO_PERIODS[] = {"morning", "afternoon", "night"};
+
+void demoTick() {
+  if (!demoRunning) return;
+  if ((long)(millis() - demoNextAt) < 0) return;
+
+  if (demoStep >= 3) {
+    demoRunning = false;
+    demoStep = 0;
+    clearAlerts();
+    Serial.println("🧪 Demo concluída!");
+    return;
+  }
+
+  clearAlerts();
+  delay(200);
+
+  String period = String(DEMO_PERIODS[demoStep]);
+  Serial.printf("🧪 Demo etapa %d: %s\n", demoStep + 1, period.c_str());
+
+  advanceCarousel();
+  triggerDispenseAlert(false, period);
+
+  demoStep++;
+  demoNextAt = millis() + 30000;
+}
+
+bool isDemoRunning() {
+  return demoRunning;
+}
+
+int getDemoStep() {
+  return demoStep;
+}
+
 // ── CORS helper ───────────────────────────────────────────────────────
 static void sendJson(AsyncWebServerRequest* request, int code, const String& json) {
   AsyncWebServerResponse* resp = request->beginResponse(code, "application/json", json);
@@ -116,6 +155,43 @@ void setupApiServer(AsyncWebServer& server) {
   server.on("/reset-wifi", HTTP_POST, [](AsyncWebServerRequest* request) {
     sendJson(request, 200, "{\"success\":true,\"message\":\"Reiniciando em modo BLE...\"}");
     scheduleWifiFactoryReset(400);
+  });
+
+  // ── Demo endpoints ────────────────────────────────────────────────
+  server.on("/demo", HTTP_POST, [](AsyncWebServerRequest* request) {
+    if (demoRunning) {
+      sendJson(request, 409, "{\"success\":false,\"error\":\"demo_already_running\"}");
+      return;
+    }
+    demoRunning = true;
+    demoStep = 0;
+    demoNextAt = millis();   // começa imediatamente
+    Serial.println("🧪 Demo de calibração iniciada!");
+    sendJson(request, 200, "{\"success\":true,\"message\":\"Demo iniciada\"}");
+  });
+
+  server.on("/demo-status", HTTP_GET, [](AsyncWebServerRequest* request) {
+    String phase = "idle";
+    if (demoRunning && demoStep == 0) phase = "starting";
+    else if (demoRunning && demoStep == 1) phase = "morning";
+    else if (demoRunning && demoStep == 2) phase = "afternoon";
+    else if (demoRunning && demoStep == 3) phase = "night";
+    else if (!demoRunning && demoStep == 0) phase = "idle";
+
+    String json = "{";
+    json += "\"running\":" + String(demoRunning ? "true" : "false") + ",";
+    json += "\"step\":" + String(demoStep) + ",";
+    json += "\"phase\":\"" + phase + "\"";
+    json += "}";
+    sendJson(request, 200, json);
+  });
+
+  server.on("/demo-stop", HTTP_POST, [](AsyncWebServerRequest* request) {
+    demoRunning = false;
+    demoStep = 0;
+    clearAlerts();
+    Serial.println("🧪 Demo parada manualmente.");
+    sendJson(request, 200, "{\"success\":true,\"message\":\"Demo parada\"}");
   });
 
   server.on("/", HTTP_GET, [](AsyncWebServerRequest* request) {
