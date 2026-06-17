@@ -158,17 +158,33 @@ void setupApiServer(AsyncWebServer& server) {
   });
 
   // ── Demo endpoints ────────────────────────────────────────────────
-  server.on("/demo", HTTP_POST, [](AsyncWebServerRequest* request) {
-    if (demoRunning) {
-      sendJson(request, 409, "{\"success\":false,\"error\":\"demo_already_running\"}");
-      return;
+  server.on("/demo", HTTP_POST,
+    [](AsyncWebServerRequest* request) {
+      if (demoRunning) {
+        sendJson(request, 409, "{\"success\":false,\"error\":\"demo_already_running\"}");
+        return;
+      }
+      demoRunning = true;
+      demoStep = 0;
+      demoNextAt = millis();   // começa imediatamente
+      Serial.println("🧪 Demo de calibração iniciada!");
+      sendJson(request, 200, "{\"success\":true,\"message\":\"Demo iniciada\"}");
+    },
+    NULL,
+    [](AsyncWebServerRequest* request, uint8_t* data, size_t len, size_t index, size_t total) {
+      if (index + len >= total) {
+        if (demoRunning) {
+          sendJson(request, 409, "{\"success\":false,\"error\":\"demo_already_running\"}");
+          return;
+        }
+        demoRunning = true;
+        demoStep = 0;
+        demoNextAt = millis();
+        Serial.println("🧪 Demo de calibração iniciada!");
+        sendJson(request, 200, "{\"success\":true,\"message\":\"Demo iniciada\"}");
+      }
     }
-    demoRunning = true;
-    demoStep = 0;
-    demoNextAt = millis();   // começa imediatamente
-    Serial.println("🧪 Demo de calibração iniciada!");
-    sendJson(request, 200, "{\"success\":true,\"message\":\"Demo iniciada\"}");
-  });
+  );
 
   server.on("/demo-status", HTTP_GET, [](AsyncWebServerRequest* request) {
     String phase = "idle";
@@ -186,13 +202,25 @@ void setupApiServer(AsyncWebServer& server) {
     sendJson(request, 200, json);
   });
 
-  server.on("/demo-stop", HTTP_POST, [](AsyncWebServerRequest* request) {
-    demoRunning = false;
-    demoStep = 0;
-    clearAlerts();
-    Serial.println("🧪 Demo parada manualmente.");
-    sendJson(request, 200, "{\"success\":true,\"message\":\"Demo parada\"}");
-  });
+  server.on("/demo-stop", HTTP_POST,
+    [](AsyncWebServerRequest* request) {
+      demoRunning = false;
+      demoStep = 0;
+      clearAlerts();
+      Serial.println("🧪 Demo parada manualmente.");
+      sendJson(request, 200, "{\"success\":true,\"message\":\"Demo parada\"}");
+    },
+    NULL,
+    [](AsyncWebServerRequest* request, uint8_t* data, size_t len, size_t index, size_t total) {
+      if (index + len >= total) {
+        demoRunning = false;
+        demoStep = 0;
+        clearAlerts();
+        Serial.println("🧪 Demo parada manualmente.");
+        sendJson(request, 200, "{\"success\":true,\"message\":\"Demo parada\"}");
+      }
+    }
+  );
 
   server.on("/", HTTP_GET, [](AsyncWebServerRequest* request) {
     String html  = "<h1>🌿 Eco-Dispenser</h1>";

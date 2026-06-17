@@ -444,19 +444,64 @@ export async function startDispenserCycle(
 
 export type { DemoStatus } from "./espLocal";
 
-export async function startCalibrationDemo(ipAddress: string) {
-  const { startDemoLocal } = await import("./espLocal");
-  return startDemoLocal(ipAddress);
+export async function startCalibrationDemo(hardwareId: string, ipAddress?: string | null) {
+  if (ipAddress) {
+    const { startDemoLocal } = await import("./espLocal");
+    try {
+      return await startDemoLocal(ipAddress);
+    } catch (localErr) {
+      try {
+        return await requestJson<{ success: boolean; message?: string }>(
+          `${dispenserPath(hardwareId)}/demo`,
+          { method: "POST" }
+        );
+      } catch {
+        throw localErr;
+      }
+    }
+  }
+  return requestJson<{ success: boolean; message?: string }>(
+    `${dispenserPath(hardwareId)}/demo`,
+    { method: "POST" }
+  );
 }
 
-export async function getCalibrationDemoStatus(ipAddress: string) {
-  const { getDemoStatusLocal } = await import("./espLocal");
-  return getDemoStatusLocal(ipAddress);
+export async function getCalibrationDemoStatus(hardwareId: string, ipAddress?: string | null) {
+  if (ipAddress) {
+    const { getDemoStatusLocal } = await import("./espLocal");
+    try {
+      return await getDemoStatusLocal(ipAddress);
+    } catch (localErr) {
+      try {
+        return await requestJson<DemoStatus>(`${dispenserPath(hardwareId)}/demo-status`);
+      } catch {
+        throw localErr;
+      }
+    }
+  }
+  return requestJson<DemoStatus>(`${dispenserPath(hardwareId)}/demo-status`);
 }
 
-export async function stopCalibrationDemo(ipAddress: string) {
-  const { stopDemoLocal } = await import("./espLocal");
-  return stopDemoLocal(ipAddress);
+export async function stopCalibrationDemo(hardwareId: string, ipAddress?: string | null) {
+  if (ipAddress) {
+    const { stopDemoLocal } = await import("./espLocal");
+    try {
+      return await stopDemoLocal(ipAddress);
+    } catch (localErr) {
+      try {
+        return await requestJson<{ success: boolean; message?: string }>(
+          `${dispenserPath(hardwareId)}/demo-stop`,
+          { method: "POST" }
+        );
+      } catch {
+        throw localErr;
+      }
+    }
+  }
+  return requestJson<{ success: boolean; message?: string }>(
+    `${dispenserPath(hardwareId)}/demo-stop`,
+    { method: "POST" }
+  );
 }
 
 export function mapPatientStatus(patient: Patient) {

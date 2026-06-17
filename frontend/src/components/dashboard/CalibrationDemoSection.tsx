@@ -94,7 +94,7 @@ export function CalibrationDemoSection({ dispenser }: CalibrationDemoSectionProp
 
     pollRef.current = setInterval(async () => {
       try {
-        const status: DemoStatus = await getCalibrationDemoStatus(ip);
+        const status: DemoStatus = await getCalibrationDemoStatus(dispenser.hardware_id, ip);
 
         if (status.step !== lastStepRef.current) {
           lastStepRef.current = status.step;
@@ -148,7 +148,7 @@ export function CalibrationDemoSection({ dispenser }: CalibrationDemoSectionProp
     setCountdown(0);
 
     try {
-      await startCalibrationDemo(ip);
+      await startCalibrationDemo(dispenser.hardware_id, ip);
       setDemoState("running");
       startPolling();
     } catch (err) {
@@ -160,7 +160,7 @@ export function CalibrationDemoSection({ dispenser }: CalibrationDemoSectionProp
   async function handleStop() {
     if (!ip) return;
     try {
-      await stopCalibrationDemo(ip);
+      await stopCalibrationDemo(dispenser.hardware_id, ip);
     } catch {
       // Ignore stop errors
     }

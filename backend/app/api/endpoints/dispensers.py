@@ -38,7 +38,14 @@ from app.schemas.dispenser import (
 )
 from app.schemas.schedule import PeriodSchedulePublic, PeriodSchedulePut
 from app.services.dispenser_online import refresh_dispenser_online_state
-from app.services.esp_proxy import get_hardware_status, post_calibrate, post_confirm
+from app.services.esp_proxy import (
+    get_hardware_status,
+    post_calibrate,
+    post_confirm,
+    post_demo,
+    get_demo_status,
+    post_demo_stop,
+)
 from app.services.period_config import default_period_times
 
 logger = logging.getLogger(__name__)
@@ -518,6 +525,90 @@ async def start_dispenser_cycle(
         current_slot=current_slot,
         hardware_id=hardware_id,
     )
+
+
+@router.post("/{hardware_id}/demo")
+async def start_demo_cycle(
+    hardware_id: str,
+    current_user=Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Proxy demo command to ESP32."""
+    dispenser = _get_dispenser_for_caregiver(db, hardware_id, current_user.username)
+    ip = _require_dispenser_ip(dispenser)
+
+    if not _is_private_lan_ip(ip):
+        raise HTTPException(
+            status_code=503,
+            detail=_unreachable_detail(ip, reason="demo"),
+        )
+
+    ok, _ = await post_demo(ip)
+    if not ok:
+        raise HTTPException(
+            status_code=502,
+            detail={
+                "code": "ESP_DEMO_FAILED",
+                "message": "Falha ao iniciar demo no dispensador.",
+            },
+        )
+    return {"success": True, "message": "Demo iniciada com sucesso"}
+
+
+@router.get("/{hardware_id}/demo-status")
+async def read_demo_status(
+    hardware_id: str,
+    current_user=Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Proxy demo status from ESP32."""
+    dispenser = _get_dispenser_for_caregiver(db, hardware_id, current_user.username)
+    ip = _require_dispenser_ip(dispenser)
+
+    if not _is_private_lan_ip(ip):
+        raise HTTPException(
+            status_code=503,
+            detail=_unreachable_detail(ip, reason="demo-status"),
+        )
+
+    status = await get_demo_status(ip)
+    if not status:
+        raise HTTPException(
+            status_code=502,
+            detail={
+                "code": "ESP_DEMO_STATUS_FAILED",
+                "message": "Falha ao obter status da demo.",
+            },
+        )
+    return status
+
+
+@router.post("/{hardware_id}/demo-stop")
+async def stop_demo_cycle(
+    hardware_id: str,
+    current_user=Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Proxy demo stop command to ESP32."""
+    dispenser = _get_dispenser_for_caregiver(db, hardware_id, current_user.username)
+    ip = _require_dispenser_ip(dispenser)
+
+    if not _is_private_lan_ip(ip):
+        raise HTTPException(
+            status_code=503,
+            detail=_unreachable_detail(ip, reason="demo-stop"),
+        )
+
+    ok, _ = await post_demo_stop(ip)
+    if not ok:
+        raise HTTPException(
+            status_code=502,
+            detail={
+                "code": "ESP_DEMO_STOP_FAILED",
+                "message": "Falha ao parar demo no dispensador.",
+            },
+        )
+    return {"success": True, "message": "Demo parada com sucesso"}
 
 
 @router.get("/{hardware_id}/deletion-status", response_model=DispenserDeletionStatus)
