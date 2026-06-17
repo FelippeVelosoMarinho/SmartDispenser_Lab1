@@ -612,6 +612,29 @@ async def stop_demo_cycle(
     return {"success": True, "message": "Demo parada com sucesso"}
 
 
+@router.post("/{hardware_id}/reset-demo")
+async def reset_demo_logs(
+    hardware_id: str,
+    current_user=Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Limpa todo o histórico de dispensação e para qualquer demo em andamento."""
+    dispenser = _get_dispenser_for_caregiver(db, hardware_id, current_user.username)
+    
+    # 1. Limpar logs
+    from app.models.domain import DispensationLog
+    db.query(DispensationLog).filter(DispensationLog.dispenser_id_legacy == hardware_id).delete(synchronize_session=False)
+    db.commit()
+    
+    # 2. Tentar parar a demo na placa se estiver online
+    ip = dispenser.ip_address
+    if ip and not _is_private_lan_ip(ip):
+        await post_demo_stop(ip)
+        
+    return {"success": True, "message": "Demo resetada e histórico limpo com sucesso."}
+
+
+
 @router.get("/{hardware_id}/deletion-status", response_model=DispenserDeletionStatus)
 async def dispenser_deletion_status(
     hardware_id: str,

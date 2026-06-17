@@ -442,7 +442,12 @@ export async function startDispenserCycle(
 
 // ── Demo de calibração (comunicação direta com ESP) ───────────────────
 
-export type { DemoStatus } from "./espLocal";
+export interface DemoStatus {
+  running: boolean;
+  step: number;
+  phase: string;
+}
+export type { DemoStatus as DemoStatusLocal } from "./espLocal";
 
 export async function startCalibrationDemo(hardwareId: string, ipAddress?: string | null) {
   if (ipAddress) {
@@ -500,6 +505,13 @@ export async function stopCalibrationDemo(hardwareId: string, ipAddress?: string
   }
   return requestJson<{ success: boolean; message?: string }>(
     `${dispenserPath(hardwareId)}/demo-stop`,
+    { method: "POST" }
+  );
+}
+
+export async function resetCalibrationDemo(hardwareId: string) {
+  return requestJson<{ success: boolean; message?: string }>(
+    `${dispenserPath(hardwareId)}/reset-demo`,
     { method: "POST" }
   );
 }
@@ -620,6 +632,7 @@ export async function getDispenserDetails(dispenserId: string): Promise<Dispense
       patient_name: null,
       is_online: false,
       critical_stock: false,
+      is_refilling: false,
       last_sync: null,
       drawers: [
         {
@@ -713,4 +726,22 @@ export async function deleteSchedule(scheduleId: string) {
     method: "DELETE",
   });
 }
+
+export interface IotEventCreate {
+  schedule_id?: string | null;
+  patient_id?: string | null;
+  dispenser_id: string;
+  success: boolean;
+  error_message?: string | null;
+  medication_id?: string | null;
+  event_type?: string;
+}
+
+export async function processIotEvent(input: IotEventCreate) {
+  return requestJson<any>("/event", {
+    method: "POST",
+    body: JSON.stringify(input),
+  });
+}
+
 

@@ -4,6 +4,7 @@ import {
   startCalibrationDemo,
   getCalibrationDemoStatus,
   stopCalibrationDemo,
+  processIotEvent,
 } from "../../lib/api";
 
 interface CalibrationDemoSectionProps {
@@ -97,8 +98,28 @@ export function CalibrationDemoSection({ dispenser }: CalibrationDemoSectionProp
         const status: DemoStatus = await getCalibrationDemoStatus(dispenser.hardware_id, ip);
 
         if (status.step !== lastStepRef.current) {
+          const previousStep = lastStepRef.current;
           lastStepRef.current = status.step;
-          setCountdown(30);
+          
+          if (status.step > 0 && status.step > previousStep) {
+            setCountdown(30);
+
+            // Fetch medication from the corresponding slot to log correctly
+            const slot = dispenser.drawers?.[0]?.slots?.find(s => s.slot_number === status.step);
+            const medName = slot?.medications?.[0]?.medication?.name || "Medicamento";
+            
+            const periodNames = ["Manhã", "Tarde", "Noite"];
+            const period = periodNames[status.step - 1] || `Dose ${status.step}`;
+            const finalMedName = `${medName} (Remédio da ${period})`;
+            
+            processIotEvent({
+              dispenser_id: dispenser.hardware_id,
+              patient_id: dispenser.patient_id,
+              success: true,
+              medication_id: finalMedName,
+              event_type: "demo",
+            }).catch(err => console.error("Failed to mock demo event:", err));
+          }
         }
 
         setCurrentStep(status.step);
@@ -149,7 +170,7 @@ export function CalibrationDemoSection({ dispenser }: CalibrationDemoSectionProp
 
     try {
       const res = await startCalibrationDemo(dispenser.hardware_id, ip);
-      if (res && res.message && res.message.includes("enfileirada")) {
+      if (res && 'message' in res && typeof res.message === 'string' && res.message.includes("enfileirada")) {
         setDemoState("done");
         setCurrentPhase("done");
         setError(res.message); // Usar a caixa de erro para mostrar a info de sucesso/enfileiramento por enquanto

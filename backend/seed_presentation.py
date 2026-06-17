@@ -70,13 +70,13 @@ def seed(db: Session):
     # 2. Paciente professor
     patient = db.query(Patient).filter(
         Patient.caregiver_username == CAREGIVER_USERNAME,
-        Patient.full_name == "Prof. João"
+        Patient.full_name == "Professor"
     ).first()
     if not patient:
         patient = Patient(
-            full_name="Prof. João",
-            name="Prof. João",
-            age=52,
+            full_name="Professor",
+            name="Professor",
+            age=25,
             condition="Merecedor de coisas boas",
             caregiver_username=CAREGIVER_USERNAME,
         )
@@ -149,7 +149,7 @@ def seed(db: Session):
     print("\n=== Seed concluído! ===")
     print(f"  Caregiver: {CAREGIVER_USERNAME} / 123Seguro&")
     print(f"  Email notificações: {CAREGIVER_EMAIL}")
-    print(f"  Paciente: Prof. João")
+    print(f"  Paciente: Professor")
     print(f"  Dispenser: {HARDWARE_ID}")
     print(f"  {len(MEDICATIONS)} medicamentos nos primeiros slots\n")
 
