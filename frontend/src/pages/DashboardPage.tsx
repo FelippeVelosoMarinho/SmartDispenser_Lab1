@@ -61,8 +61,9 @@ export function DashboardPage() {
   useEffect(() => {
     fetchDashboardData();
 
-    // Poll quiet updates in the background every 5 seconds
+    // Poll quiet updates in the background every 10 seconds
     const interval = setInterval(() => {
+      if (document.hidden) return;
       listDispensers().then(async (dispList) => {
         setDispensers(dispList);
         if (dispList.length > 0) {
@@ -85,7 +86,7 @@ export function DashboardPage() {
           });
         }
       }).catch(err => console.error("Telemetry polling error:", err));
-    }, 5000);
+    }, 10000);
 
     return () => clearInterval(interval);
   }, []);

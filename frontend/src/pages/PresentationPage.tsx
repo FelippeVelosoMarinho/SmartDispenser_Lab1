@@ -133,7 +133,11 @@ export function PresentationPage() {
 
   useEffect(() => {
     fetchData();
-    const interval = setInterval(fetchData, 15000);
+    const interval = setInterval(() => {
+      if (!document.hidden) {
+        fetchData();
+      }
+    }, 10000);
     return () => clearInterval(interval);
   }, []);
 
