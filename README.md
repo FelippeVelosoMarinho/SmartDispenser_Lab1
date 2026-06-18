@@ -11,6 +11,9 @@
   <a href="https://pill.josoesantos.dev" target="_blank">
     <img src="https://img.shields.io/badge/Acessar%20Portal-🐱%20PillHub-00c853?style=for-the-badge&logo=react&logoColor=white" alt="Acessar Dashboard PillHub" />
   </a>
+  <a href="https://www.youtube.com/watch?v=6nbSMtq0r1w" target="_blank">
+    <img src="https://img.shields.io/badge/Assistir%20Demonstração-🎥%20YouTube-ff0000?style=for-the-badge&logo=youtube&logoColor=white" alt="Assistir no YouTube" />
+  </a>
 </div>
 
 Sistema de monitoramento e controle em tempo real para dispensers inteligentes, integrando Hardware (ESP32-C3), Backend (FastAPI) e Frontend (React).
