@@ -1,6 +1,17 @@
-# 🌿 PillHub
+# 🐱 PillHub
 
-<img justify-content="center" align-items="center" width="320" height="320" alt="pill_remaster" src="https://github.com/user-attachments/assets/e6a6fa6d-384c-40c2-bf85-f11015b20003" />
+<div align="center">
+  <!-- Imagens Lado a Lado -->
+  <img height="250" alt="pill_remaster" src="https://github.com/user-attachments/assets/e6a6fa6d-384c-40c2-bf85-f11015b20003" style="margin-right: 10px;" />
+  <img height="250" alt="WhatsApp Image 2026-06-18 at 17 15 39" src="https://github.com/user-attachments/assets/f7cefda6-a986-4512-a1ff-bd352ffb6513" />
+
+  <br><br>
+
+  <!-- Botão de Acesso ao Dashboard -->
+  <a href="https://pill.josoesantos.dev" target="_blank">
+    <img src="https://img.shields.io/badge/Acessar%20Portal-🐱%20PillHub-00c853?style=for-the-badge&logo=react&logoColor=white" alt="Acessar Dashboard PillHub" />
+  </a>
+</div>
 
 Sistema de monitoramento e controle em tempo real para dispensers inteligentes, integrando Hardware (ESP32-C3), Backend (FastAPI) e Frontend (React).
 
